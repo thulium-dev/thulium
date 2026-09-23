@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
+import 'package:thulium_auth/thulium_auth.dart';
 
+import 'auth/secure_auth_session_store.dart';
 import 'pages/home_page.dart';
 import 'pages/welcome_page.dart';
 
 /// The root application widget owns global locale and theme state.
 final class ThuliumApp extends StatefulWidget {
-  const ThuliumApp({super.key});
+  const ThuliumApp({this.sessionStore, super.key});
+
+  /// Allows tests and alternate clients to provide their own session storage.
+  final AuthSessionStore? sessionStore;
 
   @override
   State<ThuliumApp> createState() => _ThuliumAppState();
@@ -18,6 +23,29 @@ final class _ThuliumAppState extends State<ThuliumApp> {
   // the theme button, the app switches to an explicit light or dark mode.
   ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale('en');
+  bool _isRestoringSession = true;
+  bool _hasSession = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final client = TsinghuaAuthClient(
+        sessionStore: widget.sessionStore ?? SecureAuthSessionStore(),
+      );
+      _hasSession = await client.restore() != null;
+    } catch (error) {
+      // A secure-storage failure must not prevent access to the sign-in page.
+      // Keep the failure visible in diagnostic logs without exposing secrets.
+      debugPrint('Thulium session restoration failed: $error');
+    } finally {
+      if (mounted) setState(() => _isRestoringSession = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +87,15 @@ final class _ThuliumAppState extends State<ThuliumApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: WelcomePage(
-        onLocaleSelected: _setLocale,
-        onThemeToggle: _toggleTheme,
-      ),
+      home: _isRestoringSession
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : _hasSession
+          ? HomePage(onLocaleSelected: _setLocale, onThemeToggle: _toggleTheme)
+          : WelcomePage(
+              onLocaleSelected: _setLocale,
+              onThemeToggle: _toggleTheme,
+              onLoginSuccess: () => setState(() => _hasSession = true),
+            ),
     );
   }
 

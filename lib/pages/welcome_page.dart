@@ -3,7 +3,6 @@ import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../widgets/language_button.dart';
-import 'home_page.dart';
 import 'login_page.dart';
 
 /// The unauthenticated landing page shown before the student signs in.
@@ -11,11 +10,13 @@ final class WelcomePage extends StatelessWidget {
   const WelcomePage({
     required this.onLocaleSelected,
     required this.onThemeToggle,
+    required this.onLoginSuccess,
     super.key,
   });
 
   final ValueChanged<Locale> onLocaleSelected;
   final VoidCallback onThemeToggle;
+  final VoidCallback onLoginSuccess;
 
   @override
   Widget build(BuildContext context) {
@@ -50,15 +51,8 @@ final class WelcomePage extends StatelessWidget {
                             MaterialPageRoute<void>(
                               builder: (_) => LoginPage(
                                 onLoginSuccess: () {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => HomePage(
-                                        onLocaleSelected: onLocaleSelected,
-                                        onThemeToggle: onThemeToggle,
-                                      ),
-                                    ),
-                                    (route) => false,
-                                  );
+                                  Navigator.of(context).pop();
+                                  onLoginSuccess();
                                 },
                               ),
                             ),
