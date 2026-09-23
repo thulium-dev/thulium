@@ -176,7 +176,7 @@ jobs:
         if: matrix.target == 'linux'
         run: |
           mkdir -p dist
-          tar -C build/linux/x64/release -czf dist/thulium-linux-x64.tar.gz bundle
+          tar -C build/linux/x64/release -czf dist/thulium-desktop-linux-x64.tar.gz bundle
 
       - name: Build Windows release
         if: matrix.target == 'windows'
@@ -187,7 +187,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/thulium-windows-x64.zip -Force
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/thulium-desktop-windows-x64.zip -Force
 
       - name: Build macOS release
         if: matrix.target == 'macos'
@@ -198,12 +198,12 @@ jobs:
         run: |
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
-            build/macos/Build/Products/Release/thulium.app dist/thulium-macos.zip
+            build/macos/Build/Products/Release/thulium-desktop.app dist/thulium-desktop-macos.zip
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: thulium-${{ matrix.target }}
+          name: thulium-desktop-${{ matrix.target }}
           path: dist/*
           if-no-files-found: error
           retention-days: 14
