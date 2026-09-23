@@ -7,7 +7,9 @@ import '../auth/secure_auth_session_store.dart';
 
 /// Collects credentials and performs the shared Tsinghua authentication flow.
 final class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({required this.onLoginSuccess, super.key});
+
+  final VoidCallback onLoginSuccess;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -49,7 +51,7 @@ final class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
         fingerprint: 'thulium-flutter',
       );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) widget.onLoginSuccess();
     } catch (error) {
       // Do not expose server internals or distinguish which credential was
       // incorrect. The same localized message also covers network failures.

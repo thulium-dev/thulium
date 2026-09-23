@@ -32,5 +32,17 @@
   "totpMethod": "TOTP",
   "verificationCodeTitle": "驗證碼",
   "verificationCodeHint": "請輸入驗證碼",
-  "confirmAction": "確認"
+  "confirmAction": "確認",
+  "eventsTab": "事件",
+  "plansTab": "計畫",
+  "studyTab": "學習",
+  "lifeTab": "生活",
+  "eventsTitle": "學生事件",
+  "eventsDescription": "即將開始的課程、校曆提醒和其他與學生相關的事件將在這裡顯示。",
+  "plansTitle": "學生計畫",
+  "plansDescription": "你的課程表和自訂計畫將在這裡顯示。",
+  "studyTitle": "學習",
+  "studyDescription": "學習工具和學習資源將在這裡顯示。",
+  "lifeTitle": "生活",
+  "lifeDescription": "校園生活服務和日常工具將在這裡顯示。"
 }

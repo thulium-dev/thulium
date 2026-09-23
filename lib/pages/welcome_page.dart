@@ -3,10 +3,12 @@ import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../widgets/language_button.dart';
+import 'home_page.dart';
+import 'login_page.dart';
 
-/// The authenticated application shell with the primary navigation sections.
-final class HomePage extends StatefulWidget {
-  const HomePage({
+/// The unauthenticated landing page shown before the student signs in.
+final class WelcomePage extends StatelessWidget {
+  const WelcomePage({
     required this.onLocaleSelected,
     required this.onThemeToggle,
     super.key,
@@ -16,37 +18,16 @@ final class HomePage extends StatefulWidget {
   final VoidCallback onThemeToggle;
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-final class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sections = [
-      (title: l10n.eventsTitle, description: l10n.eventsDescription),
-      (title: l10n.plansTitle, description: l10n.plansDescription),
-      (title: l10n.studyTitle, description: l10n.studyDescription),
-      (title: l10n.lifeTitle, description: l10n.lifeDescription),
-    ];
-    final labels = [l10n.eventsTab, l10n.plansTab, l10n.studyTab, l10n.lifeTab];
-    final icons = [
-      Icons.event_outlined,
-      Icons.calendar_month_outlined,
-      Icons.menu_book_outlined,
-      Icons.home_outlined,
-    ];
 
     return FScaffold(
       child: SafeArea(
-        bottom: false,
         child: Stack(
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
+                constraints: const BoxConstraints(maxWidth: 560),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -54,13 +35,36 @@ final class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sections[_selectedIndex].title,
+                        l10n.welcomeTitle,
                         style: context.theme.typography.xl2,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        sections[_selectedIndex].description,
+                        l10n.welcomeDescription,
                         style: context.theme.typography.md,
+                      ),
+                      const SizedBox(height: 24),
+                      FButton(
+                        onPress: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => LoginPage(
+                                onLoginSuccess: () {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => HomePage(
+                                        onLocaleSelected: onLocaleSelected,
+                                        onThemeToggle: onThemeToggle,
+                                      ),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(l10n.explore),
                       ),
                     ],
                   ),
@@ -73,7 +77,7 @@ final class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LanguageButton(onSelected: widget.onLocaleSelected),
+                  LanguageButton(onSelected: onLocaleSelected),
                   IconButton(
                     tooltip: l10n.theme,
                     icon: Icon(
@@ -81,28 +85,13 @@ final class _HomePageState extends State<HomePage> {
                           ? Icons.light_mode_outlined
                           : Icons.dark_mode_outlined,
                     ),
-                    onPressed: widget.onThemeToggle,
+                    onPressed: onThemeToggle,
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-      footer: FBottomNavigationBar(
-        index: _selectedIndex,
-        onChange: (index) => setState(() => _selectedIndex = index),
-        children: [
-          for (var index = 0; index < labels.length; index++)
-            MergeSemantics(
-              child: Semantics(
-                label: labels[index],
-                button: true,
-                selected: index == _selectedIndex,
-                child: FBottomNavigationBarItem(icon: Icon(icons[index])),
-              ),
-            ),
-        ],
       ),
     );
   }

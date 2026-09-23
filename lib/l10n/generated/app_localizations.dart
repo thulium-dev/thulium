@@ -255,6 +255,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm'**
   String get confirmAction;
+
+  /// No description provided for @eventsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get eventsTab;
+
+  /// No description provided for @plansTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans'**
+  String get plansTab;
+
+  /// No description provided for @studyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyTab;
+
+  /// No description provided for @lifeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Life'**
+  String get lifeTab;
+
+  /// No description provided for @eventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Student events'**
+  String get eventsTitle;
+
+  /// No description provided for @eventsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming classes, academic calendar reminders, and other student-related events will appear here.'**
+  String get eventsDescription;
+
+  /// No description provided for @plansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Student plans'**
+  String get plansTitle;
+
+  /// No description provided for @plansDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your timetable and custom plans will appear here.'**
+  String get plansDescription;
+
+  /// No description provided for @studyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyTitle;
+
+  /// No description provided for @studyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Study tools and learning resources will appear here.'**
+  String get studyDescription;
+
+  /// No description provided for @lifeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Life'**
+  String get lifeTitle;
+
+  /// No description provided for @lifeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus life services and everyday tools will appear here.'**
+  String get lifeDescription;
 }
 
 class _AppLocalizationsDelegate

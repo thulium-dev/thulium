@@ -32,5 +32,17 @@
   "totpMethod": "TOTP",
   "verificationCodeTitle": "Verification code",
   "verificationCodeHint": "Enter the verification code",
-  "confirmAction": "Confirm"
+  "confirmAction": "Confirm",
+  "eventsTab": "Events",
+  "plansTab": "Plans",
+  "studyTab": "Study",
+  "lifeTab": "Life",
+  "eventsTitle": "Student events",
+  "eventsDescription": "Upcoming classes, academic calendar reminders, and other student-related events will appear here.",
+  "plansTitle": "Student plans",
+  "plansDescription": "Your timetable and custom plans will appear here.",
+  "studyTitle": "Study",
+  "studyDescription": "Study tools and learning resources will appear here.",
+  "lifeTitle": "Life",
+  "lifeDescription": "Campus life services and everyday tools will appear here."
 }

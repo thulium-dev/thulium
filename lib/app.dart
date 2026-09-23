@@ -3,6 +3,7 @@ import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import 'pages/home_page.dart';
+import 'pages/welcome_page.dart';
 
 /// The root application widget owns global locale and theme state.
 final class ThuliumApp extends StatefulWidget {
@@ -28,6 +29,10 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       theme: lightTheme.toApproximateMaterialTheme(),
       darkTheme: darkTheme.toApproximateMaterialTheme(),
       themeMode: _themeMode,
+      // Keep Material's theme transition aligned with Forui's default
+      // 200 ms linear FTheme transition so both widget systems change together.
+      themeAnimationDuration: const Duration(milliseconds: 200),
+      themeAnimationCurve: Curves.linear,
       locale: _locale,
       localizationsDelegates: [
         // AppLocalizations contains all user-facing Thulium strings. No
@@ -37,17 +42,27 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
-        // Resolve Forui from MaterialApp's effective brightness so
-        // ThemeMode.system updates correctly when the OS theme changes.
-        final foruiTheme = Theme.of(context).brightness == Brightness.dark
-            ? darkTheme
-            : lightTheme;
+        // Resolve both theme targets from the same mode value. Deriving this
+        // from Theme.of(context) would read Material's in-progress transition
+        // and could start the Forui transition partway through it.
+        final dark = switch (_themeMode) {
+          ThemeMode.light => false,
+          ThemeMode.dark => true,
+          ThemeMode.system =>
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+        };
+        final foruiTheme = dark ? darkTheme : lightTheme;
+        // FTheme and MaterialApp now begin their matching 200 ms linear
+        // transitions in the same frame.
         return FTheme(
           data: foruiTheme,
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: HomePage(onLocaleSelected: _setLocale, onThemeToggle: _toggleTheme),
+      home: WelcomePage(
+        onLocaleSelected: _setLocale,
+        onThemeToggle: _toggleTheme,
+      ),
     );
   }
 

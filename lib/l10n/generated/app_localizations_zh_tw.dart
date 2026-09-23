@@ -85,4 +85,40 @@ class AppLocalizationsZhTw extends AppLocalizations {
 
   @override
   String get confirmAction => '確認';
+
+  @override
+  String get eventsTab => '事件';
+
+  @override
+  String get plansTab => '計畫';
+
+  @override
+  String get studyTab => '學習';
+
+  @override
+  String get lifeTab => '生活';
+
+  @override
+  String get eventsTitle => '學生事件';
+
+  @override
+  String get eventsDescription => '即將開始的課程、校曆提醒和其他與學生相關的事件將在這裡顯示。';
+
+  @override
+  String get plansTitle => '學生計畫';
+
+  @override
+  String get plansDescription => '你的課程表和自訂計畫將在這裡顯示。';
+
+  @override
+  String get studyTitle => '學習';
+
+  @override
+  String get studyDescription => '學習工具和學習資源將在這裡顯示。';
+
+  @override
+  String get lifeTitle => '生活';
+
+  @override
+  String get lifeDescription => '校園生活服務和日常工具將在這裡顯示。';
 }

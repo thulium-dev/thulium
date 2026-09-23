@@ -89,4 +89,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confirmAction => 'Confirm';
+
+  @override
+  String get eventsTab => 'Events';
+
+  @override
+  String get plansTab => 'Plans';
+
+  @override
+  String get studyTab => 'Study';
+
+  @override
+  String get lifeTab => 'Life';
+
+  @override
+  String get eventsTitle => 'Student events';
+
+  @override
+  String get eventsDescription =>
+      'Upcoming classes, academic calendar reminders, and other student-related events will appear here.';
+
+  @override
+  String get plansTitle => 'Student plans';
+
+  @override
+  String get plansDescription =>
+      'Your timetable and custom plans will appear here.';
+
+  @override
+  String get studyTitle => 'Study';
+
+  @override
+  String get studyDescription =>
+      'Study tools and learning resources will appear here.';
+
+  @override
+  String get lifeTitle => 'Life';
+
+  @override
+  String get lifeDescription =>
+      'Campus life services and everyday tools will appear here.';
 }

@@ -87,6 +87,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get confirmAction => '确认';
+
+  @override
+  String get eventsTab => '事件';
+
+  @override
+  String get plansTab => '计划';
+
+  @override
+  String get studyTab => '学习';
+
+  @override
+  String get lifeTab => '生活';
+
+  @override
+  String get eventsTitle => '学生事件';
+
+  @override
+  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示。';
+
+  @override
+  String get plansTitle => '学生计划';
+
+  @override
+  String get plansDescription => '你的课程表和自定义计划将在这里显示。';
+
+  @override
+  String get studyTitle => '学习';
+
+  @override
+  String get studyDescription => '学习工具和学习资源将在这里显示。';
+
+  @override
+  String get lifeTitle => '生活';
+
+  @override
+  String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -172,6 +208,42 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get confirmAction => '确认';
+
+  @override
+  String get eventsTab => '事件';
+
+  @override
+  String get plansTab => '计划';
+
+  @override
+  String get studyTab => '学习';
+
+  @override
+  String get lifeTab => '生活';
+
+  @override
+  String get eventsTitle => '学生事件';
+
+  @override
+  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示。';
+
+  @override
+  String get plansTitle => '学生计划';
+
+  @override
+  String get plansDescription => '你的课程表和自定义计划将在这里显示。';
+
+  @override
+  String get studyTitle => '学习';
+
+  @override
+  String get studyDescription => '学习工具和学习资源将在这里显示。';
+
+  @override
+  String get lifeTitle => '生活';
+
+  @override
+  String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -257,4 +329,40 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get confirmAction => '確認';
+
+  @override
+  String get eventsTab => '事件';
+
+  @override
+  String get plansTab => '計畫';
+
+  @override
+  String get studyTab => '學習';
+
+  @override
+  String get lifeTab => '生活';
+
+  @override
+  String get eventsTitle => '學生事件';
+
+  @override
+  String get eventsDescription => '即將開始的課程、校曆提醒和其他與學生相關的事件將在這裡顯示。';
+
+  @override
+  String get plansTitle => '學生計畫';
+
+  @override
+  String get plansDescription => '你的課程表和自訂計畫將在這裡顯示。';
+
+  @override
+  String get studyTitle => '學習';
+
+  @override
+  String get studyDescription => '學習工具和學習資源將在這裡顯示。';
+
+  @override
+  String get lifeTitle => '生活';
+
+  @override
+  String get lifeDescription => '校園生活服務和日常工具將在這裡顯示。';
 }
