@@ -18,44 +18,16 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: '1.46.0'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           cache: true
 
-      - name: Resolve Flutter dependencies
-        run: flutter pub get --enforce-lockfile
-
-      - name: Resolve shared authentication dependencies
-        working-directory: packages/auth
-        run: dart pub get --enforce-lockfile
-
-      - name: Resolve CLI dependencies
-        working-directory: packages/cli
-        run: dart pub get --enforce-lockfile
-
-      - name: Check Dart formatting
-        run: >-
-          dart format --output=none --set-exit-if-changed
-          lib test
-          packages/auth/lib packages/auth/test
-          packages/cli/bin packages/cli/lib
-
-      - name: Analyze Flutter application
-        run: flutter analyze
-
-      - name: Test Flutter application
-        run: flutter test
-
-      - name: Analyze shared authentication package
-        working-directory: packages/auth
-        run: dart analyze
-
-      - name: Test shared authentication package
-        working-directory: packages/auth
-        run: dart test
-
-      - name: Analyze CLI package
-        working-directory: packages/cli
-        run: dart analyze
+      - name: Run project quality checks
+        run: just ci

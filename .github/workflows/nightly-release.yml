@@ -23,47 +23,19 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: '1.46.0'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           cache: true
 
-      - name: Resolve Flutter dependencies
-        run: flutter pub get --enforce-lockfile
-
-      - name: Resolve shared authentication dependencies
-        working-directory: packages/auth
-        run: dart pub get --enforce-lockfile
-
-      - name: Resolve CLI dependencies
-        working-directory: packages/cli
-        run: dart pub get --enforce-lockfile
-
-      - name: Check Dart formatting
-        run: >-
-          dart format --output=none --set-exit-if-changed
-          lib test
-          packages/auth/lib packages/auth/test
-          packages/cli/bin packages/cli/lib
-
-      - name: Analyze Flutter application
-        run: flutter analyze
-
-      - name: Test Flutter application
-        run: flutter test
-
-      - name: Analyze shared authentication package
-        working-directory: packages/auth
-        run: dart analyze
-
-      - name: Test shared authentication package
-        working-directory: packages/auth
-        run: dart test
-
-      - name: Analyze CLI package
-        working-directory: packages/cli
-        run: dart analyze
+      - name: Run project quality checks
+        run: just ci
 
   build-mobile-web:
     name: Build ${{ matrix.target }} release
@@ -84,18 +56,20 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: '1.46.0'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           cache: true
 
-      - name: Resolve dependencies
-        run: flutter pub get --enforce-lockfile
-
       - name: Build Android APK
         if: matrix.target == 'android'
-        run: flutter build apk --release --split-per-abi
+        run: just build-android-release
 
       - name: Prepare Android artifact
         if: matrix.target == 'android'
@@ -107,7 +81,7 @@ jobs:
 
       - name: Build unsigned iOS app
         if: matrix.target == 'ios'
-        run: flutter build ios --release --no-codesign
+        run: just build-ios-release
 
       - name: Package iOS artifact
         if: matrix.target == 'ios'
@@ -118,7 +92,7 @@ jobs:
 
       - name: Build web release
         if: matrix.target == 'web'
-        run: flutter build web --release
+        run: just build-web-release
 
       - name: Package web artifact
         if: matrix.target == 'web'
@@ -153,6 +127,11 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: '1.46.0'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -165,12 +144,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
 
-      - name: Resolve dependencies
-        run: flutter pub get --enforce-lockfile
-
       - name: Build Linux release
         if: matrix.target == 'linux'
-        run: flutter build linux --release
+        run: just build-linux-release
 
       - name: Package Linux artifact
         if: matrix.target == 'linux'
@@ -180,7 +156,7 @@ jobs:
 
       - name: Build Windows release
         if: matrix.target == 'windows'
-        run: flutter build windows --release
+        run: just build-windows-release
 
       - name: Package Windows artifact
         if: matrix.target == 'windows'
@@ -191,7 +167,7 @@ jobs:
 
       - name: Build macOS release
         if: matrix.target == 'macos'
-        run: flutter build macos --release
+        run: just build-macos-release
 
       - name: Package macOS artifact
         if: matrix.target == 'macos'
@@ -230,15 +206,16 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Set up just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: '1.46.0'
+
       - name: Set up Flutter and Dart
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.8
           cache: true
-
-      - name: Resolve CLI dependencies
-        working-directory: packages/cli
-        run: dart pub get --enforce-lockfile
 
       - name: Prepare CLI output directory
         if: runner.os != 'Windows'
@@ -252,8 +229,7 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path dist | Out-Null
 
       - name: Compile CLI executable
-        working-directory: packages/cli
-        run: dart compile exe bin/thulium.dart -o dist/${{ matrix.output }}
+        run: just build-cli dist/${{ matrix.output }}
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
