@@ -40,6 +40,21 @@ final class _HomePageState extends State<HomePage> {
     ];
 
     return FScaffold(
+      footer: FBottomNavigationBar(
+        index: _selectedIndex,
+        onChange: (index) => setState(() => _selectedIndex = index),
+        children: [
+          for (var index = 0; index < labels.length; index++)
+            MergeSemantics(
+              child: Semantics(
+                label: labels[index],
+                button: true,
+                selected: index == _selectedIndex,
+                child: FBottomNavigationBarItem(icon: Icon(icons[index])),
+              ),
+            ),
+        ],
+      ),
       child: SafeArea(
         bottom: false,
         child: Stack(
@@ -88,21 +103,6 @@ final class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
-      footer: FBottomNavigationBar(
-        index: _selectedIndex,
-        onChange: (index) => setState(() => _selectedIndex = index),
-        children: [
-          for (var index = 0; index < labels.length; index++)
-            MergeSemantics(
-              child: Semantics(
-                label: labels[index],
-                button: true,
-                selected: index == _selectedIndex,
-                child: FBottomNavigationBarItem(icon: Icon(icons[index])),
-              ),
-            ),
-        ],
       ),
     );
   }

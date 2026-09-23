@@ -142,6 +142,9 @@ final class TsinghuaAuthClient {
     this.twoFactorCodeHandler,
     this.trace,
   }) : _http = httpClient ?? http.Client(),
+       // Preserve the public `sessionStore:` injection API. Initializing this
+       // private field directly would expose an inaccessible named parameter.
+       // ignore: prefer_initializing_formals
        _sessionStore = sessionStore;
 
   /// The HTTP client is injectable so callers can configure proxies, testing
