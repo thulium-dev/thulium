@@ -1,0 +1,58 @@
+name: Feature Request
+description: Propose a feature or improvement for Thulium.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user need or workflow gap should this address?
+      placeholder: As a Tsinghua student, I need to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the expected behavior and where it should be available.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product Area
+      options:
+        - Student events and calendar
+        - Timetable and plans
+        - Study
+        - Campus life
+        - Authentication
+        - Dart CLI
+        - Localization or accessibility
+        - Developer tooling or CI
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: platforms
+    attributes:
+      label: Platforms
+      description: Which platforms should support this feature?
+      placeholder: Android, iOS, Linux, macOS, Windows, Web, and/or Dart CLI
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: What should be true when this work is complete?
+      placeholder: |
+        - The user can...
+        - The behavior is available on...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Optional. Mention other approaches you considered.

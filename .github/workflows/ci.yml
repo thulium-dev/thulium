@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Dart and Flutter checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Check Dart formatting
+        run: >-
+          dart format --output=none --set-exit-if-changed
+          lib test
+          packages/auth/lib packages/auth/test
+          packages/cli/bin packages/cli/lib
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze Flutter application
+        run: flutter analyze
+
+      - name: Test Flutter application
+        run: flutter test
+
+      - name: Resolve shared authentication dependencies
+        working-directory: packages/auth
+        run: dart pub get --enforce-lockfile
+
+      - name: Analyze shared authentication package
+        working-directory: packages/auth
+        run: dart analyze
+
+      - name: Test shared authentication package
+        working-directory: packages/auth
+        run: dart test
+
+      - name: Resolve CLI dependencies
+        working-directory: packages/cli
+        run: dart pub get --enforce-lockfile
+
+      - name: Analyze CLI package
+        working-directory: packages/cli
+        run: dart analyze
+
