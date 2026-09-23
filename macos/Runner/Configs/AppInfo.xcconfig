@@ -8,7 +8,7 @@
 PRODUCT_NAME = thulium
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = cn.tsinghua.thulium.thulium
+PRODUCT_BUNDLE_IDENTIFIER = dev.thulium.app
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 cn.tsinghua.thulium. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 dev.thulium.app. All rights reserved.

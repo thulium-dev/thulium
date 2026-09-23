@@ -1,4 +1,4 @@
-package cn.tsinghua.thulium.thulium
+package dev.thulium.app
 
 import io.flutter.embedding.android.FlutterActivity
 
