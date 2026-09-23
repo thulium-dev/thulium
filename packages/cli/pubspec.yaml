@@ -7,6 +7,9 @@ environment:
 
 dependencies:
   args: ^2.7.0
+  keybay: ^0.1.1
+  thulium_auth:
+    path: ../auth
 
 dev_dependencies:
   lints: ^6.0.0

@@ -33,6 +33,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
+  flutter_secure_storage: ^11.2.0
+  thulium_auth:
+    path: packages/auth
 
   # Forui 0.22.x supports the Flutter 3.44 toolchain currently installed here.
   # Upgrade to ^0.26.0 after moving to Flutter 3.47+.
