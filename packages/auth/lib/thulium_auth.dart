@@ -137,11 +137,12 @@ typedef AuthTraceHandler = void Function(String message);
 final class TsinghuaAuthClient {
   TsinghuaAuthClient({
     http.Client? httpClient,
-    this._sessionStore,
+    AuthSessionStore? sessionStore,
     this.twoFactorMethodHandler,
     this.twoFactorCodeHandler,
     this.trace,
-  }) : _http = httpClient ?? http.Client();
+  }) : _http = httpClient ?? http.Client(),
+       _sessionStore = sessionStore;
 
   /// The HTTP client is injectable so callers can configure proxies, testing
   /// transports, or platform-specific networking behavior.

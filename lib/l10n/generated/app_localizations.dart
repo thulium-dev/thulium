@@ -153,6 +153,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'繁體中文'**
   String get traditionalChineseLanguage;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Thulium'**
+  String get loginTitle;
+
+  /// No description provided for @studentIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tsinghua student ID'**
+  String get studentIdLabel;
+
+  /// No description provided for @studentIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your student ID'**
+  String get studentIdHint;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @passwordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get passwordHint;
+
+  /// No description provided for @signInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signInAction;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get requiredField;
+
+  /// No description provided for @loginError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Check your student ID and password, then try again.'**
+  String get loginError;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @twoFactorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-factor authentication'**
+  String get twoFactorTitle;
+
+  /// No description provided for @wechatMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat'**
+  String get wechatMethod;
+
+  /// No description provided for @smsMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS ({phone})'**
+  String smsMethod(String phone);
+
+  /// No description provided for @totpMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTP'**
+  String get totpMethod;
+
+  /// No description provided for @verificationCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get verificationCodeTitle;
+
+  /// No description provided for @verificationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the verification code'**
+  String get verificationCodeHint;
+
+  /// No description provided for @confirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmAction;
 }
 
 class _AppLocalizationsDelegate

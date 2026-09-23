@@ -34,4 +34,55 @@ class AppLocalizationsZhTw extends AppLocalizations {
 
   @override
   String get traditionalChineseLanguage => '繁體中文';
+
+  @override
+  String get loginTitle => '登入 Thulium';
+
+  @override
+  String get studentIdLabel => '清華學號';
+
+  @override
+  String get studentIdHint => '請輸入清華學號';
+
+  @override
+  String get passwordLabel => '密碼';
+
+  @override
+  String get passwordHint => '請輸入密碼';
+
+  @override
+  String get signInAction => '登入';
+
+  @override
+  String get requiredField => '此欄位為必填項目。';
+
+  @override
+  String get loginError => '登入失敗，請檢查學號和密碼後重試。';
+
+  @override
+  String get showPassword => '顯示密碼';
+
+  @override
+  String get hidePassword => '隱藏密碼';
+
+  @override
+  String get twoFactorTitle => '雙重驗證';
+
+  @override
+  String get wechatMethod => '企業微信';
+
+  @override
+  String smsMethod(Object phone) => '簡訊（$phone）';
+
+  @override
+  String get totpMethod => 'TOTP';
+
+  @override
+  String get verificationCodeTitle => '驗證碼';
+
+  @override
+  String get verificationCodeHint => '請輸入驗證碼';
+
+  @override
+  String get confirmAction => '確認';
 }

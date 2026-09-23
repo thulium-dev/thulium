@@ -35,4 +35,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get traditionalChineseLanguage => '繁體中文';
+
+  @override
+  String get loginTitle => 'Sign in to Thulium';
+
+  @override
+  String get studentIdLabel => 'Tsinghua student ID';
+
+  @override
+  String get studentIdHint => 'Enter your student ID';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordHint => 'Enter your password';
+
+  @override
+  String get signInAction => 'Sign in';
+
+  @override
+  String get requiredField => 'This field is required.';
+
+  @override
+  String get loginError =>
+      'Sign-in failed. Check your student ID and password, then try again.';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get twoFactorTitle => 'Two-factor authentication';
+
+  @override
+  String get wechatMethod => 'WeChat';
+
+  @override
+  String smsMethod(String phone) {
+    return 'SMS ($phone)';
+  }
+
+  @override
+  String get totpMethod => 'TOTP';
+
+  @override
+  String get verificationCodeTitle => 'Verification code';
+
+  @override
+  String get verificationCodeHint => 'Enter the verification code';
+
+  @override
+  String get confirmAction => 'Confirm';
 }

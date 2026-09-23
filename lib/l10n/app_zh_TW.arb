@@ -8,5 +8,29 @@
   "theme": "主題",
   "englishLanguage": "English",
   "simplifiedChineseLanguage": "简体中文",
-  "traditionalChineseLanguage": "繁體中文"
+  "traditionalChineseLanguage": "繁體中文",
+  "loginTitle": "登入 Thulium",
+  "studentIdLabel": "清華學號",
+  "studentIdHint": "請輸入清華學號",
+  "passwordLabel": "密碼",
+  "passwordHint": "請輸入密碼",
+  "signInAction": "登入",
+  "requiredField": "此欄位為必填項目。",
+  "loginError": "登入失敗，請檢查學號和密碼後重試。",
+  "showPassword": "顯示密碼",
+  "hidePassword": "隱藏密碼",
+  "twoFactorTitle": "雙重驗證",
+  "wechatMethod": "企業微信",
+  "smsMethod": "簡訊（{phone}）",
+  "@smsMethod": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "totpMethod": "TOTP",
+  "verificationCodeTitle": "驗證碼",
+  "verificationCodeHint": "請輸入驗證碼",
+  "confirmAction": "確認"
 }
