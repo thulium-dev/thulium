@@ -95,6 +95,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backAction => '返回';
 
   @override
+  String get settingsTitle => '设置';
+
+  @override
+  String get logoutAction => '退出登录';
+
+  @override
+  String get logoutError => '无法清除已保存的登录状态，请重试。';
+
+  @override
   String get eventsTab => '事件';
 
   @override
@@ -222,6 +231,15 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get backAction => '返回';
 
   @override
+  String get settingsTitle => '设置';
+
+  @override
+  String get logoutAction => '退出登录';
+
+  @override
+  String get logoutError => '无法清除已保存的登录状态，请重试。';
+
+  @override
   String get eventsTab => '事件';
 
   @override
@@ -347,6 +365,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get backAction => '返回';
+
+  @override
+  String get settingsTitle => '設定';
+
+  @override
+  String get logoutAction => '登出';
+
+  @override
+  String get logoutError => '無法清除已儲存的登入狀態，請重試。';
 
   @override
   String get eventsTab => '事件';

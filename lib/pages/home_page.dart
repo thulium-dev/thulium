@@ -3,17 +3,20 @@ import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../widgets/language_button.dart';
+import 'settings_page.dart';
 
 /// The authenticated application shell with the primary navigation sections.
 final class HomePage extends StatefulWidget {
   const HomePage({
     required this.onLocaleSelected,
     required this.onThemeToggle,
+    required this.onLogout,
     super.key,
   });
 
   final ValueChanged<Locale> onLocaleSelected;
   final VoidCallback onThemeToggle;
+  final Future<bool> Function() onLogout;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -97,6 +100,15 @@ final class _HomePageState extends State<HomePage> {
                           : Icons.dark_mode_outlined,
                     ),
                     onPressed: widget.onThemeToggle,
+                  ),
+                  IconButton(
+                    tooltip: l10n.settingsTitle,
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => SettingsPage(onLogout: widget.onLogout),
+                      ),
+                    ),
                   ),
                 ],
               ),

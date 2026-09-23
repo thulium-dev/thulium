@@ -47,6 +47,30 @@ final class _ThuliumAppState extends State<ThuliumApp> {
     }
   }
 
+  Future<bool> _logout() async {
+    final sessionStore = widget.sessionStore ?? SecureAuthSessionStore();
+    try {
+      // Restore the persisted cookies before calling logout so the identity
+      // service can invalidate the active remote session as well.
+      final client = TsinghuaAuthClient(sessionStore: sessionStore);
+      await client.restore();
+      await client.logout().timeout(const Duration(seconds: 8));
+    } catch (error) {
+      // Logout should still work offline: the auth client's finally block
+      // clears local data, and this fallback covers failures during restore.
+      debugPrint('Thulium remote logout failed: $error');
+      try {
+        await sessionStore.clear();
+      } catch (storageError) {
+        debugPrint('Thulium local session removal failed: $storageError');
+        return false;
+      }
+    }
+
+    if (mounted) setState(() => _hasSession = false);
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final lightTheme = FThemes.neutral.light.touch;
@@ -90,7 +114,11 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       home: _isRestoringSession
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _hasSession
-          ? HomePage(onLocaleSelected: _setLocale, onThemeToggle: _toggleTheme)
+          ? HomePage(
+              onLocaleSelected: _setLocale,
+              onThemeToggle: _toggleTheme,
+              onLogout: _logout,
+            )
           : WelcomePage(
               onLocaleSelected: _setLocale,
               onThemeToggle: _toggleTheme,

@@ -268,6 +268,24 @@ abstract class AppLocalizations {
   /// **'Back'**
   String get backAction;
 
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @logoutAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logoutAction;
+
+  /// No description provided for @logoutError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear the saved session. Please try again.'**
+  String get logoutError;
+
   /// No description provided for @eventsTab.
   ///
   /// In en, this message translates to:

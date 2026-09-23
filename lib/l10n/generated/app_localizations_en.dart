@@ -97,6 +97,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backAction => 'Back';
 
   @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get logoutAction => 'Log out';
+
+  @override
+  String get logoutError =>
+      'Could not clear the saved session. Please try again.';
+
+  @override
   String get eventsTab => 'Events';
 
   @override

@@ -90,6 +90,15 @@ class AppLocalizationsZhTw extends AppLocalizations {
   String get backAction => '返回';
 
   @override
+  String get settingsTitle => '設定';
+
+  @override
+  String get logoutAction => '登出';
+
+  @override
+  String get logoutError => '無法清除已儲存的登入狀態，請重試。';
+
+  @override
   String get confirmAction => '確認';
 
   @override

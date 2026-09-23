@@ -26,4 +26,19 @@ void main() {
     expect(find.text('Student events'), findsOneWidget);
     expect(find.text('Welcome, THUer'), findsNothing);
   });
+
+  testWidgets('opens settings from the authenticated home', (tester) async {
+    final store = MemoryAuthSessionStore();
+    await store.write(
+      const AuthSession(userId: '2022012050', fingerprint: 'test', cookies: {}),
+    );
+
+    await tester.pumpWidget(ThuliumApp(sessionStore: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Log out'), findsOneWidget);
+  });
 }
