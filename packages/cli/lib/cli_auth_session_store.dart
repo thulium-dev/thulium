@@ -4,7 +4,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
 
-const _THULIUM_SECRET_STORE_ID = 'cn.tsinghua.thulium.cli';
+const _THULIUM_SECRET_STORE_ID = 'dev.thulium.cli';
 const _THULIUM_SESSION_KEY = 'auth-session';
 
 /// Adapts the Dart secret-storage backend to the shared authentication API.

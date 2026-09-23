@@ -45,7 +45,6 @@ class HomePage extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return FScaffold(
-      header: Text(l10n.appTitle),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -62,15 +61,7 @@ class HomePage extends StatelessWidget {
                   style: context.theme.typography.md,
                 ),
                 const SizedBox(height: 24),
-                FButton(
-                  onPress: () {},
-                  prefix: Image.asset(
-                    'assets/thulium.png',
-                    width: 20,
-                    height: 20,
-                  ),
-                  child: Text(l10n.explore),
-                ),
+                FButton(onPress: () {}, child: Text(l10n.explore)),
               ],
             ),
           ),

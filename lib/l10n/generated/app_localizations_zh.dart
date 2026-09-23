@@ -9,13 +9,13 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => '清华便利';
+  String get appTitle => 'Thulium';
 
   @override
-  String get welcomeTitle => '你好，清华同学';
+  String get welcomeTitle => '你好，THUer';
 
   @override
-  String get welcomeDescription => '校园信息、常用服务与生活工具，将在这里汇聚。';
+  String get welcomeDescription => '校园信息、常用服务与生活工具，将在这里汇聚';
 
   @override
   String get explore => '开始探索';
@@ -26,13 +26,13 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   AppLocalizationsZhCn() : super('zh_CN');
 
   @override
-  String get appTitle => '清华便利';
+  String get appTitle => 'Thulium';
 
   @override
   String get welcomeTitle => '你好，清华同学';
 
   @override
-  String get welcomeDescription => '校园信息、常用服务与生活工具，将在这里汇聚。';
+  String get welcomeDescription => '校园信息、常用服务与生活工具，将在这里汇聚';
 
   @override
   String get explore => '开始探索';

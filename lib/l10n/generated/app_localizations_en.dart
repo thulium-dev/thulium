@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Thulium';
 
   @override
-  String get welcomeTitle => 'Welcome, Tsinghua student';
+  String get welcomeTitle => 'Welcome, THUer';
 
   @override
   String get welcomeDescription =>
