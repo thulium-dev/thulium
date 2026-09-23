@@ -1,0 +1,12 @@
+name: thulium_cli
+description: Command-line tools for the Thulium project.
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  args: ^2.7.0
+
+dev_dependencies:
+  lints: ^6.0.0
