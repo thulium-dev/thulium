@@ -1,11 +1,11 @@
 {
-  "@@locale": "zh",
+  "@@locale": "zh_TW",
   "appTitle": "Thulium",
   "welcomeTitle": "你好，THUer",
-  "welcomeDescription": "校园信息、常用服务与生活工具，将在这里汇聚",
-  "explore": "开始探索",
-  "language": "语言",
-  "theme": "主题",
+  "welcomeDescription": "校園資訊、常用服務與生活工具，將在這裡匯聚",
+  "explore": "開始探索",
+  "language": "語言",
+  "theme": "主題",
   "englishLanguage": "English",
   "simplifiedChineseLanguage": "简体中文",
   "traditionalChineseLanguage": "繁體中文"

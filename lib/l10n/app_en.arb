@@ -3,5 +3,10 @@
   "appTitle": "Thulium",
   "welcomeTitle": "Welcome, THUer",
   "welcomeDescription": "Campus information, useful services, and everyday tools in one place.",
-  "explore": "Explore"
+  "explore": "Explore",
+  "language": "Language",
+  "theme": "Theme",
+  "englishLanguage": "English",
+  "simplifiedChineseLanguage": "简体中文",
+  "traditionalChineseLanguage": "繁體中文"
 }

@@ -4,28 +4,27 @@ import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for English (`en`).
-class AppLocalizationsEn extends AppLocalizations {
-  AppLocalizationsEn([String locale = 'en']) : super(locale);
+/// The translations for Chinese, as used in Taiwan (`zh_TW`).
+class AppLocalizationsZhTw extends AppLocalizations {
+  AppLocalizationsZhTw([String locale = 'zh_TW']) : super(locale);
 
   @override
   String get appTitle => 'Thulium';
 
   @override
-  String get welcomeTitle => 'Welcome, THUer';
+  String get welcomeTitle => '你好，THUer';
 
   @override
-  String get welcomeDescription =>
-      'Campus information, useful services, and everyday tools in one place.';
+  String get welcomeDescription => '校園資訊、常用服務與生活工具，將在這裡匯聚';
 
   @override
-  String get explore => 'Explore';
+  String get explore => '開始探索';
 
   @override
-  String get language => 'Language';
+  String get language => '語言';
 
   @override
-  String get theme => 'Theme';
+  String get theme => '主題';
 
   @override
   String get englishLanguage => 'English';
