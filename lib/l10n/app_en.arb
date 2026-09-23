@@ -33,6 +33,8 @@
   "verificationCodeTitle": "Verification code",
   "verificationCodeHint": "Enter the verification code",
   "confirmAction": "Confirm",
+  "cancelAction": "Cancel",
+  "backAction": "Back",
   "eventsTab": "Events",
   "plansTab": "Plans",
   "studyTab": "Study",

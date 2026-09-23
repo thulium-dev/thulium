@@ -256,6 +256,18 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirmAction;
 
+  /// No description provided for @cancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelAction;
+
+  /// No description provided for @backAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get backAction;
+
   /// No description provided for @eventsTab.
   ///
   /// In en, this message translates to:

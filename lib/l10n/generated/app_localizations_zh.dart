@@ -89,6 +89,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmAction => '确认';
 
   @override
+  String get cancelAction => '取消';
+
+  @override
+  String get backAction => '返回';
+
+  @override
   String get eventsTab => '事件';
 
   @override
@@ -210,6 +216,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get confirmAction => '确认';
 
   @override
+  String get cancelAction => '取消';
+
+  @override
+  String get backAction => '返回';
+
+  @override
   String get eventsTab => '事件';
 
   @override
@@ -329,6 +341,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get confirmAction => '確認';
+
+  @override
+  String get cancelAction => '取消';
+
+  @override
+  String get backAction => '返回';
 
   @override
   String get eventsTab => '事件';

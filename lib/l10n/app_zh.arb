@@ -33,6 +33,8 @@
   "verificationCodeTitle": "验证码",
   "verificationCodeHint": "请输入验证码",
   "confirmAction": "确认",
+  "cancelAction": "取消",
+  "backAction": "返回",
   "eventsTab": "事件",
   "plansTab": "计划",
   "studyTab": "学习",

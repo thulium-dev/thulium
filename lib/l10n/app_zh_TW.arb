@@ -33,6 +33,8 @@
   "verificationCodeTitle": "驗證碼",
   "verificationCodeHint": "請輸入驗證碼",
   "confirmAction": "確認",
+  "cancelAction": "取消",
+  "backAction": "返回",
   "eventsTab": "事件",
   "plansTab": "計畫",
   "studyTab": "學習",

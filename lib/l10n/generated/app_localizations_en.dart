@@ -91,6 +91,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmAction => 'Confirm';
 
   @override
+  String get cancelAction => 'Cancel';
+
+  @override
+  String get backAction => 'Back';
+
+  @override
   String get eventsTab => 'Events';
 
   @override

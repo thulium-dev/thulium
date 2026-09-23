@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart' show TextInputAction;
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
@@ -27,7 +28,6 @@ final class _LoginPageState extends State<LoginPage> {
   );
 
   bool _isSubmitting = false;
-  bool _isPasswordVisible = false;
   String? _errorMessage;
 
   @override
@@ -84,20 +84,33 @@ final class _LoginPageState extends State<LoginPage> {
       methods.add((method: TwoFactorMethod.totp, label: l10n.totpMethod));
     }
 
-    final selected = await showDialog<TwoFactorMethod>(
+    final selected = await showFDialog<TwoFactorMethod>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context, _, animation) => FDialog.adaptive(
+        animation: animation,
         title: Text(l10n.twoFactorTitle),
-        content: Column(
+        body: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final option in methods)
-              ListTile(
-                title: Text(option.label),
-                onTap: () => Navigator.of(context).pop(option.method),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: FButton(
+                  variant: FButtonVariant.outline,
+                  onPress: () => Navigator.of(context).pop(option.method),
+                  child: Text(option.label),
+                ),
               ),
           ],
         ),
+        actions: [
+          FButton(
+            variant: FButtonVariant.outline,
+            onPress: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancelAction),
+          ),
+        ],
       ),
     );
     if (selected == null) {
@@ -110,25 +123,26 @@ final class _LoginPageState extends State<LoginPage> {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
     try {
-      final code = await showDialog<String>(
+      final code = await showFDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context, _, animation) => FDialog.adaptive(
+          animation: animation,
           title: Text(l10n.verificationCodeTitle),
-          content: TextField(
-            controller: controller,
+          body: FTextField(
+            control: FTextFieldControl.managed(controller: controller),
             keyboardType: TextInputType.number,
             autofocus: true,
-            decoration: InputDecoration(hintText: l10n.verificationCodeHint),
+            hint: l10n.verificationCodeHint,
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
+            FButton(
+              onPress: () => Navigator.of(context).pop(controller.text.trim()),
               child: Text(l10n.confirmAction),
+            ),
+            FButton(
+              variant: FButtonVariant.outline,
+              onPress: () => Navigator.of(context).pop(),
+              child: Text(l10n.cancelAction),
             ),
           ],
         ),
@@ -160,52 +174,41 @@ final class _LoginPageState extends State<LoginPage> {
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        tooltip: MaterialLocalizations.of(
+                      child: FButton.icon(
+                        semanticsLabel: l10n.backAction,
+                        variant: FButtonVariant.ghost,
+                        onPress: () => Navigator.of(context).pop(),
+                        child: context.theme.icons.arrowLeft(
                           context,
-                        ).backButtonTooltip,
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.of(context).pop(),
+                          semanticsLabel: l10n.backAction,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     Text(l10n.loginTitle, style: context.theme.typography.xl2),
                     const SizedBox(height: 32),
-                    TextFormField(
-                      controller: _studentIdController,
+                    FTextFormField(
+                      control: FTextFieldControl.managed(
+                        controller: _studentIdController,
+                      ),
+                      label: Text(l10n.studentIdLabel),
+                      hint: l10n.studentIdHint,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: l10n.studentIdLabel,
-                        hintText: l10n.studentIdHint,
-                      ),
-                      validator: (value) => value == null || value.isEmpty
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
                           ? l10n.requiredField
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: !_isPasswordVisible,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: l10n.passwordLabel,
-                        hintText: l10n.passwordHint,
-                        suffixIcon: IconButton(
-                          tooltip: _isPasswordVisible
-                              ? l10n.hidePassword
-                              : l10n.showPassword,
-                          icon: Icon(
-                            _isPasswordVisible
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                          ),
-                          onPressed: () => setState(
-                            () => _isPasswordVisible = !_isPasswordVisible,
-                          ),
-                        ),
+                    FTextFormField.password(
+                      control: FTextFieldControl.managed(
+                        controller: _passwordController,
                       ),
-                      onFieldSubmitted: (_) => _submit(),
+                      label: Text(l10n.passwordLabel),
+                      hint: l10n.passwordHint,
+                      textInputAction: TextInputAction.done,
+                      onSubmit: (_) => _submit(),
                       validator: (value) => value == null || value.isEmpty
                           ? l10n.requiredField
                           : null,
@@ -214,8 +217,8 @@ final class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       Text(
                         _errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                        style: context.theme.typography.sm.copyWith(
+                          color: context.theme.colors.error,
                         ),
                       ),
                     ],
@@ -223,10 +226,11 @@ final class _LoginPageState extends State<LoginPage> {
                     FButton(
                       onPress: _isSubmitting ? null : () => _submit(),
                       child: _isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: FCircularProgress(
+                                size: FCircularProgressSizeVariant.sm,
+                              ),
                             )
                           : Text(l10n.signInAction),
                     ),
