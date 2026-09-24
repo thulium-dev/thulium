@@ -39,9 +39,6 @@ build-android-release: flutter-deps
 build-ios-release: flutter-deps
     {{ FLUTTER }} build ios --release --no-codesign
 
-build-web-release: flutter-deps
-    {{ FLUTTER }} build web --release
-
 build-linux-release: flutter-deps
     {{ FLUTTER }} build linux --release
 

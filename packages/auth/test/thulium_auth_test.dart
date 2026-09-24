@@ -65,6 +65,7 @@ void main() {
     );
 
     expect(events, ['choose-method', 'read-code']);
+    expect(client.requests[1].headers['Cookie'], 'SESSION=session-value');
   });
 }
 
@@ -92,6 +93,9 @@ final class _FakeAuthClient extends http.BaseClient {
     return http.StreamedResponse(
       Stream<List<int>>.value(utf8.encode(body)),
       200,
+      headers: request.url.path == '/login'
+          ? const {'set-cookie': 'SESSION=session-value; Path=/'}
+          : const {},
     );
   }
 }

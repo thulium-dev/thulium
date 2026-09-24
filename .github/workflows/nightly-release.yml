@@ -37,7 +37,7 @@ jobs:
       - name: Run project quality checks
         run: just ci
 
-  build-mobile-web:
+  build-mobile:
     name: Build ${{ matrix.target }} release
     needs: quality
     runs-on: ${{ matrix.os }}
@@ -49,9 +49,6 @@ jobs:
             os: ubuntu-latest
           - target: ios
             os: macos-latest
-          - target: web
-            os: ubuntu-latest
-
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -89,16 +86,6 @@ jobs:
           mkdir -p dist
           ditto -c -k --sequesterRsrc --keepParent \
             build/ios/iphoneos/Runner.app dist/thulium-ios-unsigned.zip
-
-      - name: Build web release
-        if: matrix.target == 'web'
-        run: just build-web-release
-
-      - name: Package web artifact
-        if: matrix.target == 'web'
-        run: |
-          mkdir -p dist
-          tar -C build/web -czf dist/thulium-web.tar.gz .
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
