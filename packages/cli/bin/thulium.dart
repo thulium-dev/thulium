@@ -69,6 +69,9 @@ Future<void> _runCommand(ArgResults command) async {
     case 'login':
       await _login(client, force: command.command!['force'] as bool);
     case 'logout':
+      // Each CLI invocation starts with an empty in-memory cookie jar. Restore
+      // the persisted session so the logout request can invalidate it remotely.
+      await client.restore();
       await client.logout();
       stdout.writeln('Logged out.');
     case 'status':
