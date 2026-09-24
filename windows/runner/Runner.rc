@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "cn.tsinghua.thulium" "\0"
-            VALUE "FileDescription", "thulium" "\0"
+            VALUE "CompanyName", "dev.thulium.app" "\0"
+            VALUE "FileDescription", "Thulium" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "thulium" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 cn.tsinghua.thulium. All rights reserved." "\0"
-            VALUE "OriginalFilename", "thulium.exe" "\0"
-            VALUE "ProductName", "thulium" "\0"
+            VALUE "InternalName", "thulium-desktop" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 dev.thulium.app. All rights reserved." "\0"
+            VALUE "OriginalFilename", "thulium-desktop.exe" "\0"
+            VALUE "ProductName", "Thulium" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

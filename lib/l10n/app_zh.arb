@@ -1,7 +1,54 @@
 {
   "@@locale": "zh",
-  "appTitle": "清华便利",
-  "welcomeTitle": "你好，清华同学",
-  "welcomeDescription": "校园信息、常用服务与生活工具，将在这里汇聚。",
-  "explore": "开始探索"
+  "appTitle": "Thulium",
+  "welcomeTitle": "你好，THUer",
+  "welcomeDescription": "校园信息、常用服务与生活工具，将在这里汇聚",
+  "explore": "开始探索",
+  "language": "语言",
+  "theme": "主题",
+  "englishLanguage": "English",
+  "simplifiedChineseLanguage": "简体中文",
+  "traditionalChineseLanguage": "繁體中文",
+  "loginTitle": "登录 Thulium",
+  "studentIdLabel": "清华学号",
+  "studentIdHint": "请输入清华学号",
+  "passwordLabel": "密码",
+  "passwordHint": "请输入密码",
+  "signInAction": "登录",
+  "requiredField": "此字段为必填项。",
+  "loginError": "登录失败，请检查学号和密码后重试。",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码",
+  "twoFactorTitle": "二次认证",
+  "wechatMethod": "企业微信",
+  "smsMethod": "短信（{phone}）",
+  "@smsMethod": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "totpMethod": "TOTP",
+  "verificationCodeTitle": "验证码",
+  "verificationCodeHint": "请输入验证码",
+  "verificationCodeInvalid": "验证码不正确，请重试。",
+  "confirmAction": "确认",
+  "cancelAction": "取消",
+  "backAction": "返回",
+  "settingsTitle": "设置",
+  "logoutAction": "退出登录",
+  "logoutError": "无法清除已保存的登录状态，请重试。",
+  "eventsTab": "事件",
+  "plansTab": "计划",
+  "studyTab": "学习",
+  "lifeTab": "生活",
+  "eventsTitle": "学生事件",
+  "eventsDescription": "即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示。",
+  "plansTitle": "学生计划",
+  "plansDescription": "你的课程表和自定义计划将在这里显示。",
+  "studyTitle": "学习",
+  "studyDescription": "学习工具和学习资源将在这里显示。",
+  "lifeTitle": "生活",
+  "lifeDescription": "校园生活服务和日常工具将在这里显示。"
 }

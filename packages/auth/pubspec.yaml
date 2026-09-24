@@ -1,0 +1,15 @@
+name: thulium_auth
+description: Shared Tsinghua WebVPN and identity authentication for Thulium clients.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  dart_sm: ^0.1.5
+  http: ^1.4.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

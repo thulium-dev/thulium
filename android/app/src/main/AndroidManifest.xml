@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for WebVPN and identity-provider authentication. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
-        android:label="thulium"
+        android:label="Thulium"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

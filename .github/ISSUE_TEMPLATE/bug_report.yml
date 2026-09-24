@@ -1,0 +1,74 @@
+name: Bug Report
+description: Report a reproducible problem in Thulium.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please avoid including passwords, verification codes, session cookies, or other private account data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+      placeholder: The timetable tab stays blank after signing in...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps To Reproduce
+      description: List the exact steps needed to reproduce the problem.
+      placeholder: |
+        1. Open Thulium...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What happened instead? Include sanitized logs or screenshots when useful.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Linux
+        - macOS
+        - Windows
+        - Web
+        - Dart CLI
+        - Multiple platforms
+        - Unknown
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App Version Or Commit
+      description: Include the release version or commit SHA if known.
+      placeholder: 1.0.0 or main@abcdef0
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Add relevant OS, device, browser, and Flutter/Dart details.
+      value: |
+        - OS and version:
+        - Device or browser:
+        - App version or commit:

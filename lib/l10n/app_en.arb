@@ -1,7 +1,54 @@
 {
   "@@locale": "en",
   "appTitle": "Thulium",
-  "welcomeTitle": "Welcome, Tsinghua student",
+  "welcomeTitle": "Welcome, THUer",
   "welcomeDescription": "Campus information, useful services, and everyday tools in one place.",
-  "explore": "Explore"
+  "explore": "Explore",
+  "language": "Language",
+  "theme": "Theme",
+  "englishLanguage": "English",
+  "simplifiedChineseLanguage": "简体中文",
+  "traditionalChineseLanguage": "繁體中文",
+  "loginTitle": "Sign in to Thulium",
+  "studentIdLabel": "Tsinghua student ID",
+  "studentIdHint": "Enter your student ID",
+  "passwordLabel": "Password",
+  "passwordHint": "Enter your password",
+  "signInAction": "Sign in",
+  "requiredField": "This field is required.",
+  "loginError": "Sign-in failed. Check your student ID and password, then try again.",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "twoFactorTitle": "Two-factor authentication",
+  "wechatMethod": "WeChat",
+  "smsMethod": "SMS ({phone})",
+  "@smsMethod": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "totpMethod": "TOTP",
+  "verificationCodeTitle": "Verification code",
+  "verificationCodeHint": "Enter the verification code",
+  "verificationCodeInvalid": "That code was not accepted. Please try again.",
+  "confirmAction": "Confirm",
+  "cancelAction": "Cancel",
+  "backAction": "Back",
+  "settingsTitle": "Settings",
+  "logoutAction": "Log out",
+  "logoutError": "Could not clear the saved session. Please try again.",
+  "eventsTab": "Events",
+  "plansTab": "Plans",
+  "studyTab": "Study",
+  "lifeTab": "Life",
+  "eventsTitle": "Student events",
+  "eventsDescription": "Upcoming classes, academic calendar reminders, and other student-related events will appear here.",
+  "plansTitle": "Student plans",
+  "plansDescription": "Your timetable and custom plans will appear here.",
+  "studyTitle": "Study",
+  "studyDescription": "Study tools and learning resources will appear here.",
+  "lifeTitle": "Life",
+  "lifeDescription": "Campus life services and everyday tools will appear here."
 }

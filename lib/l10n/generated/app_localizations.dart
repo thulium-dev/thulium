@@ -97,6 +97,7 @@ abstract class AppLocalizations {
     Locale('en'),
     Locale('zh', 'CN'),
     Locale('zh'),
+    Locale('zh', 'TW'),
   ];
 
   /// No description provided for @appTitle.
@@ -108,7 +109,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Welcome, Tsinghua student'**
+  /// **'Welcome, THUer'**
   String get welcomeTitle;
 
   /// No description provided for @welcomeDescription.
@@ -122,6 +123,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Explore'**
   String get explore;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get theme;
+
+  /// No description provided for @englishLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get englishLanguage;
+
+  /// No description provided for @simplifiedChineseLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'简体中文'**
+  String get simplifiedChineseLanguage;
+
+  /// No description provided for @traditionalChineseLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'繁體中文'**
+  String get traditionalChineseLanguage;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Thulium'**
+  String get loginTitle;
+
+  /// No description provided for @studentIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tsinghua student ID'**
+  String get studentIdLabel;
+
+  /// No description provided for @studentIdHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your student ID'**
+  String get studentIdHint;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @passwordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get passwordHint;
+
+  /// No description provided for @signInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signInAction;
+
+  /// No description provided for @requiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required.'**
+  String get requiredField;
+
+  /// No description provided for @loginError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed. Check your student ID and password, then try again.'**
+  String get loginError;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @twoFactorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-factor authentication'**
+  String get twoFactorTitle;
+
+  /// No description provided for @wechatMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat'**
+  String get wechatMethod;
+
+  /// No description provided for @smsMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS ({phone})'**
+  String smsMethod(String phone);
+
+  /// No description provided for @totpMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTP'**
+  String get totpMethod;
+
+  /// No description provided for @verificationCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get verificationCodeTitle;
+
+  /// No description provided for @verificationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the verification code'**
+  String get verificationCodeHint;
+
+  /// No description provided for @verificationCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That code was not accepted. Please try again.'**
+  String get verificationCodeInvalid;
+
+  /// No description provided for @confirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmAction;
+
+  /// No description provided for @cancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelAction;
+
+  /// No description provided for @backAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get backAction;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @logoutAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logoutAction;
+
+  /// No description provided for @logoutError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear the saved session. Please try again.'**
+  String get logoutError;
+
+  /// No description provided for @eventsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get eventsTab;
+
+  /// No description provided for @plansTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans'**
+  String get plansTab;
+
+  /// No description provided for @studyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyTab;
+
+  /// No description provided for @lifeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Life'**
+  String get lifeTab;
+
+  /// No description provided for @eventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Student events'**
+  String get eventsTitle;
+
+  /// No description provided for @eventsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming classes, academic calendar reminders, and other student-related events will appear here.'**
+  String get eventsDescription;
+
+  /// No description provided for @plansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Student plans'**
+  String get plansTitle;
+
+  /// No description provided for @plansDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your timetable and custom plans will appear here.'**
+  String get plansDescription;
+
+  /// No description provided for @studyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyTitle;
+
+  /// No description provided for @studyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Study tools and learning resources will appear here.'**
+  String get studyDescription;
+
+  /// No description provided for @lifeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Life'**
+  String get lifeTitle;
+
+  /// No description provided for @lifeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus life services and everyday tools will appear here.'**
+  String get lifeDescription;
 }
 
 class _AppLocalizationsDelegate
@@ -149,6 +390,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
         switch (locale.countryCode) {
           case 'CN':
             return AppLocalizationsZhCn();
+          case 'TW':
+            return AppLocalizationsZhTw();
         }
         break;
       }

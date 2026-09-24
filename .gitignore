@@ -1,6 +1,7 @@
 # Flutter and Dart generated files.
 /.temp/
 /.dart_tool/
+**/.dart_tool/
 /.packages
 /.flutter-plugins
 /.flutter-plugins-dependencies
