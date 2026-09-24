@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_cli/cli_auth_session_store.dart';
 
@@ -45,13 +47,23 @@ ArgParser _buildParser() {
   );
   parser.addCommand('logout');
   parser.addCommand('status');
+  parser.addCommand(
+    'session',
+    ArgParser()
+      ..addCommand('inspect')
+      ..addCommand('reveal-cookies'),
+  );
+  parser.addCommand(
+    'schedule',
+    ArgParser()..addFlag('verbose', help: 'Print safe request diagnostics.'),
+  );
   return parser;
 }
 
 Future<void> _runCommand(ArgResults command) async {
   final name = command.command?.name;
   if (name == null) {
-    stdout.writeln('Usage: thulium <login|logout|status>');
+    stdout.writeln('Usage: thulium <login|logout|status|session|schedule>');
     return;
   }
 
@@ -60,7 +72,7 @@ Future<void> _runCommand(ArgResults command) async {
     sessionStore: store,
     twoFactorMethodHandler: _handleTwoFactorMethod,
     twoFactorCodeHandler: _readTwoFactorCode,
-    trace: name == 'login' && command.command!['verbose'] as bool
+    trace: _verboseRequested(name, command.command!)
         ? (message) => stderr.writeln('[auth] $message')
         : null,
   );
@@ -81,8 +93,152 @@ Future<void> _runCommand(ArgResults command) async {
       } else {
         stdout.writeln('Logged in as ${session.userId}.');
       }
+    case 'session':
+      await _runSessionCommand(client, command.command!);
+    case 'schedule':
+      final session = await client.restore();
+      if (session == null) {
+        throw StateError('Not logged in. Run `thulium login` first.');
+      }
+      stdout.writeln('Fetching the current academic timetable...');
+      final schedule = await CourseScheduleService(client).loadCurrentTerm();
+      _printSchedule(schedule);
   }
 }
+
+Future<void> _runSessionCommand(
+  TsinghuaAuthClient client,
+  ArgResults command,
+) async {
+  final action = command.command?.name;
+  if (action == null) {
+    stdout.writeln('Usage: thulium session <inspect|reveal-cookies>');
+    return;
+  }
+  if (action == 'reveal-cookies' &&
+      (!stdin.hasTerminal || !stdout.hasTerminal)) {
+    throw StateError(
+      'Cookie values can only be revealed in an interactive terminal.',
+    );
+  }
+
+  final session = await client.restore();
+  if (session == null) {
+    stdout.writeln('No stored session. Run `thulium login` first.');
+    return;
+  }
+
+  switch (action) {
+    case 'inspect':
+      _printSessionMetadata(session);
+    case 'reveal-cookies':
+      await _revealSessionCookies(session);
+  }
+}
+
+void _printSessionMetadata(AuthSession session) {
+  final now = DateTime.now().toUtc();
+  final cookies = session.scopedCookies;
+  stdout.writeln('Account: ${session.userId}');
+  stdout.writeln('Scoped cookies: ${cookies.length}');
+  if (cookies.isEmpty) {
+    stdout.writeln('No scoped cookies are stored.');
+    return;
+  }
+
+  for (final cookie in cookies) {
+    final expiry = cookie.expiresAt?.toUtc();
+    final expiryLabel = expiry == null
+        ? 'session cookie'
+        : expiry.isBefore(now)
+        ? 'expired ${expiry.toIso8601String()}'
+        : 'expires ${expiry.toIso8601String()}';
+    stdout.writeln(
+      '- ${cookie.name}: domain=${cookie.domain}, path=${cookie.path}, '
+      'hostOnly=${cookie.hostOnly}, secure=${cookie.secure}, $expiryLabel',
+    );
+  }
+  stdout.writeln('Cookie values are hidden.');
+}
+
+Future<void> _revealSessionCookies(AuthSession session) async {
+  if (!stdin.hasTerminal || !stdout.hasTerminal) {
+    throw StateError(
+      'Cookie values can only be revealed in an interactive terminal.',
+    );
+  }
+
+  stderr.writeln(
+    'Warning: These cookies are active login credentials. Anyone who sees '
+    'them may be able to use your account until the session expires or is '
+    'revoked. Do not capture, share, or redirect this output.',
+  );
+  if (_readLine('Type REVEAL COOKIES to continue: ') != 'REVEAL COOKIES') {
+    stdout.writeln('Cancelled.');
+    return;
+  }
+
+  if (session.scopedCookies.isEmpty) {
+    stdout.writeln('No scoped cookies are stored.');
+    return;
+  }
+
+  stdout.writeln('Stored cookie values (sensitive):');
+  for (final cookie in session.scopedCookies) {
+    // JSON string encoding keeps control characters from affecting the
+    // terminal while leaving each secret value visible for manual inspection.
+    stdout.writeln(
+      '${cookie.name}=${jsonEncode(cookie.value)}\t'
+      'domain=${cookie.domain}; path=${cookie.path}; '
+      'hostOnly=${cookie.hostOnly}; secure=${cookie.secure}',
+    );
+  }
+}
+
+bool _verboseRequested(String commandName, ArgResults command) =>
+    (commandName == 'login' || commandName == 'schedule') &&
+    command['verbose'] as bool;
+
+void _printSchedule(CourseSchedule schedule) {
+  final courses = schedule.occurrences.toList()
+    ..sort((left, right) => left.startsAt.compareTo(right.startsAt));
+  stdout.writeln('${schedule.term.name} (${schedule.term.weekCount} weeks)');
+  stdout.writeln('Fetched ${courses.length} course occurrences.');
+  if (courses.isEmpty) {
+    stdout.writeln('No course occurrences were returned.');
+    return;
+  }
+
+  for (final course in courses) {
+    final start = course.startsAt;
+    final end = course.endsAt;
+    final date =
+        '${start.year.toString().padLeft(4, '0')}-'
+        '${start.month.toString().padLeft(2, '0')}-'
+        '${start.day.toString().padLeft(2, '0')}';
+    final startTime =
+        '${start.hour.toString().padLeft(2, '0')}:'
+        '${start.minute.toString().padLeft(2, '0')}';
+    final endTime =
+        '${end.hour.toString().padLeft(2, '0')}:'
+        '${end.minute.toString().padLeft(2, '0')}';
+    final location = course.location.isEmpty ? '' : ' @ ${course.location}';
+    stdout.writeln(
+      '$date ${_WEEKDAY_NAMES[start.weekday - 1]} '
+      '$startTime-$endTime  ${course.name}$location',
+    );
+  }
+}
+
+const _WEEKDAY_NAMES = <String>[
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
 
 Future<void> _login(TsinghuaAuthClient client, {required bool force}) async {
   while (true) {
