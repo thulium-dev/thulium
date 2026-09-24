@@ -23,7 +23,13 @@ final class _SettingsPageState extends State<SettingsPage> {
     });
 
     final succeeded = await widget.onLogout();
-    if (!mounted || succeeded) return;
+    if (!mounted) return;
+    if (succeeded) {
+      // Settings is pushed over the authenticated home. Remove that route so
+      // the root app can reveal the welcome page after its session state flips.
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
 
     setState(() {
       _isLoggingOut = false;
