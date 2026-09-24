@@ -37,9 +37,11 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       final client = TsinghuaAuthClient(
         sessionStore: widget.sessionStore ?? SecureAuthSessionStore(),
       );
+      // Restore the locally persisted session at launch without probing the
+      // portal. Protected requests can validate it lazily after an auth error.
       _hasSession = await client.restore() != null;
     } catch (error) {
-      // A secure-storage failure must not prevent access to the sign-in page.
+      // A secure-storage failure must not block access to the sign-in page.
       // Keep the failure visible in diagnostic logs without exposing secrets.
       debugPrint('Thulium session restoration failed: $error');
     } finally {

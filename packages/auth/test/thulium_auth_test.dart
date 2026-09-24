@@ -74,6 +74,36 @@ void main() {
     expect(await store.read(), isNull);
   });
 
+  test('validates a restored session against the information portal', () async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+    final client = _SessionValidationClient(studentId: '1234567890');
+    final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
+
+    expect(await auth.restore(), isNotNull);
+    expect(await auth.validateSession(), isTrue);
+    expect(await store.read(), isNotNull);
+    expect(client.requests, hasLength(2));
+    expect(client.requests.last.url.queryParameters['_csrf'], 'csrf-value');
+    expect(client.requests.last.headers['Cookie'], 'SESSION=webvpn-session');
+  });
+
+  test(
+    'clears a restored session rejected by the information portal',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(_savedSession());
+      final client = _SessionValidationClient(studentId: 'different-student');
+      final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
+
+      await auth.restore();
+
+      expect(await auth.validateSession(), isFalse);
+      expect(auth.session, isNull);
+      expect(await store.read(), isNull);
+    },
+  );
+
   test('restores and sends cookies only to their matching host', () async {
     final store = MemoryAuthSessionStore();
     await store.write(
@@ -231,6 +261,44 @@ void main() {
       );
     },
   );
+}
+
+AuthSession _savedSession() => const AuthSession(
+  userId: '1234567890',
+  fingerprint: 'saved-device',
+  cookies: {'SESSION': 'webvpn-session'},
+  scopedCookies: [
+    AuthCookie(
+      name: 'SESSION',
+      value: 'webvpn-session',
+      domain: 'webvpn.tsinghua.edu.cn',
+      path: '/',
+      hostOnly: true,
+      secure: true,
+    ),
+  ],
+);
+
+final class _SessionValidationClient extends http.BaseClient {
+  _SessionValidationClient({required this.studentId});
+
+  final String studentId;
+  final requests = <http.BaseRequest>[];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests.add(request);
+    final body = request.url.path == '/wengine-vpn/cookie'
+        ? 'XSRF-TOKEN=csrf-value; Path=/; Secure'
+        : jsonEncode({
+            'object': {'ryh': studentId},
+          });
+    return http.StreamedResponse(
+      Stream<List<int>>.value(utf8.encode(body)),
+      200,
+      request: request,
+    );
+  }
 }
 
 final class _FakeAuthClient extends http.BaseClient {

@@ -28,6 +28,10 @@ const _DOUBLE_AUTH_URL = '$_ID_HOST_URL/b/doubleAuth/login';
 const _INFO_ROAMING_URL =
     'https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/b/yyfw/vyyfwxx/info/portal_fg/common/onlineAppRedirect';
 const _INFO_ROAMING_ID = '10000ea055dd8d81d09d5a1ba55d39ad';
+const _INFO_CSRF_COOKIE_URL =
+    'https://webvpn.tsinghua.edu.cn/wengine-vpn/cookie?method=get&host=info.tsinghua.edu.cn&scheme=https&path=/f/info/gxfw_fg/common/index';
+const _INFO_USER_DATA_URL =
+    'https://webvpn.tsinghua.edu.cn/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/b/info/gxfw_fg/common/grjbxx';
 const _LOGOUT_URL = 'https://webvpn.tsinghua.edu.cn/logout';
 const _TWO_FACTOR_SUCCESS = 'success';
 const _TWO_FACTOR_FIND_APPROACHES = 'FIND_APPROACHES';
@@ -427,6 +431,59 @@ final class TsinghuaAuthClient {
     return restored;
   }
 
+  /// Verifies restored cookies against the information portal.
+  ///
+  /// Call this after a protected portal request indicates an authentication
+  /// failure, rather than on every application launch. Returns `false` and
+  /// clears the persisted session only when the server explicitly rejects it
+  /// or reports a different student ID. Network and unexpected-response errors
+  /// are thrown so callers can distinguish outages from revoked sessions.
+  Future<bool> validateSession() async {
+    final session = _session;
+    if (session == null) return false;
+
+    final csrfResponse = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
+    if (_isLoginRequired(csrfResponse)) return _clearInvalidSession();
+    final csrfMatch = RegExp(
+      r'XSRF-TOKEN=(.+?);',
+    ).firstMatch('${csrfResponse.body};');
+    if (csrfMatch == null || csrfMatch.group(1)!.isEmpty) {
+      throw StateError('The information portal did not return a CSRF token.');
+    }
+
+    final userDataResponse = await _request(
+      Uri.parse(
+        '$_INFO_USER_DATA_URL?_csrf='
+        '${Uri.encodeQueryComponent(csrfMatch.group(1)!)}',
+      ),
+    );
+    if (_isLoginRequired(userDataResponse)) return _clearInvalidSession();
+
+    final decoded = jsonDecode(userDataResponse.body);
+    if (decoded is! Map<String, dynamic> || decoded['object'] is! Map) {
+      throw StateError('The information portal returned invalid user data.');
+    }
+    final userId = (decoded['object'] as Map)['ryh'];
+    if (userId is! String) {
+      throw StateError('The information portal omitted the student ID.');
+    }
+    if (userId != session.userId) return _clearInvalidSession();
+    return true;
+  }
+
+  bool _isLoginRequired(_Response response) =>
+      response.statusCode == 401 ||
+      response.statusCode == 403 ||
+      response.uri.host == Uri.parse(_ID_HOST_URL).host ||
+      response.body.contains('sm2publicKey');
+
+  Future<bool> _clearInvalidSession() async {
+    _cookieJar.clear();
+    _session = null;
+    await _sessionStore?.clear();
+    return false;
+  }
+
   /// Logs in and persists only the resulting session cookies.
   Future<AuthSession> login({
     required String userId,
@@ -685,7 +742,7 @@ final class TsinghuaAuthClient {
       if (location == null ||
           response.statusCode < 300 ||
           response.statusCode >= 400) {
-        return _Response(response.statusCode, response.headers, body);
+        return _Response(response.statusCode, response.headers, body, current);
       }
       current = current.resolveUri(Uri.parse(location));
       currentMethod =
@@ -707,7 +764,7 @@ final class TsinghuaAuthClient {
 }
 
 final class _Response {
-  const _Response(this.statusCode, this.headers, this.body);
+  const _Response(this.statusCode, this.headers, this.body, this.uri);
 
   /// HTTP status returned by the identity or WebVPN endpoint.
   final int statusCode;
@@ -717,4 +774,7 @@ final class _Response {
 
   /// Response body used to extract login callbacks and authentication data.
   final String body;
+
+  /// Final URL after manually following redirects.
+  final Uri uri;
 }

@@ -16,13 +16,11 @@ void main() {
     expect(find.text('Explore'), findsOneWidget);
   });
 
-  testWidgets('restores the authenticated home from a saved session', (
+  testWidgets('restores the authenticated home without a startup probe', (
     tester,
   ) async {
     final store = MemoryAuthSessionStore();
-    await store.write(
-      const AuthSession(userId: '2022012050', fingerprint: 'test', cookies: {}),
-    );
+    await store.write(_savedSession());
 
     await tester.pumpWidget(ThuliumApp(sessionStore: store));
     await tester.pumpAndSettle();
@@ -33,9 +31,7 @@ void main() {
 
   testWidgets('opens settings from the authenticated home', (tester) async {
     final store = MemoryAuthSessionStore();
-    await store.write(
-      const AuthSession(userId: '2022012050', fingerprint: 'test', cookies: {}),
-    );
+    await store.write(_savedSession());
 
     await tester.pumpWidget(ThuliumApp(sessionStore: store));
     await tester.pumpAndSettle();
@@ -85,3 +81,6 @@ void main() {
     expect(find.text('Log out'), findsNothing);
   });
 }
+
+AuthSession _savedSession() =>
+    const AuthSession(userId: '2022012050', fingerprint: 'test', cookies: {});
