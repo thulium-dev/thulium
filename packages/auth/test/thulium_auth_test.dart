@@ -6,6 +6,68 @@ import 'package:test/test.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 
 void main() {
+  group('TsinghuaWebVpnRedirect', () {
+    test('uses the published information portal redirect path', () {
+      expect(
+        TsinghuaWebVpnRedirect.INFO_PORTAL_REDIRECT_PATH,
+        '/https/77726476706e69737468656265737421f9f9479369247b59700f81b9991b2631506205de/',
+      );
+    });
+
+    test('uses the published course selection redirect path', () {
+      expect(
+        TsinghuaWebVpnRedirect.COURSE_SELECTION_REDIRECT_PATH,
+        '/http/77726476706e69737468656265737421eaff4b8b3f3b2653770bc7b88b5c2d320506b1aec738590a49ba/xklogin.do',
+      );
+    });
+
+    test('builds a proxied URI while preserving target query parameters', () {
+      final proxied = TsinghuaWebVpnRedirect.forTarget(
+        Uri.parse('http://zhjw.cic.tsinghua.edu.cn/jxmh_out.do?m=bks_jxrl_all'),
+      );
+
+      expect(proxied.host, TsinghuaWebVpnRedirect.WEBVPN_HOST);
+      expect(
+        proxied.path,
+        '${TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_REDIRECT_PATH}'
+        'jxmh_out.do',
+      );
+      expect(proxied.queryParameters['m'], 'bks_jxrl_all');
+    });
+
+    test('recovers a service URL from its WebVPN proxy route', () {
+      final original = TsinghuaWebVpnRedirect.originalTarget(
+        Uri.parse(
+          'https://webvpn.tsinghua.edu.cn/http/'
+          '${TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_IDENTIFIER}'
+          '/jxmh_out.do?m=bks_jxrl_all',
+        ),
+      );
+
+      expect(
+        original,
+        Uri.parse('http://zhjw.cic.tsinghua.edu.cn/jxmh_out.do?m=bks_jxrl_all'),
+      );
+    });
+
+    test('does not decode unrelated WebVPN paths as service routes', () {
+      expect(
+        TsinghuaWebVpnRedirect.originalTarget(
+          Uri.parse('https://webvpn.tsinghua.edu.cn/wengine-vpn/cookie'),
+        ),
+        isNull,
+      );
+    });
+
+    test('rejects unlisted destination hosts', () {
+      expect(
+        () =>
+            TsinghuaWebVpnRedirect.forTarget(Uri.parse('https://example.com/')),
+        throwsArgumentError,
+      );
+    });
+  });
+
   test('session serialization does not contain a password field', () {
     final expiration = DateTime.utc(2030, 1, 1);
     final session = AuthSession(
@@ -43,6 +105,19 @@ void main() {
     expect(restored.scopedCookies.first.expiresAt, expiration);
     expect(restored.scopedCookies.last.path, '/b');
     expect(session.toJson().containsKey('password'), isFalse);
+  });
+
+  test('session serialization preserves the trusted-device credential', () {
+    const session = AuthSession(
+      userId: '1234567890',
+      fingerprint: 'device-fingerprint',
+      cookies: {},
+      fingerGenPrint: 'trusted-device-token',
+    );
+
+    final restored = AuthSession.decode(session.encode());
+
+    expect(restored.fingerGenPrint, 'trusted-device-token');
   });
 
   test('memory store restores and clears a session', () async {
@@ -172,6 +247,7 @@ void main() {
           rejectedIncorrectCode = !await verifyCode('incorrect');
           expect(await verifyCode('123456'), isTrue);
         },
+        twoFactorTrustHandler: () async => true,
       );
 
       await auth.login(
@@ -210,12 +286,29 @@ void main() {
         ),
         hasLength(2),
       );
-      final identityLogin = client.requests.singleWhere(
-        (request) => request.url.path == '/do/off/ui/auth/login/check',
+      final identityLogins = client.requests
+          .where((request) => request.url.path == '/do/off/ui/auth/login/check')
+          .toList();
+      expect(identityLogins, hasLength(2));
+      expect(
+        identityLogins.first.headers['Cookie'],
+        isNot(contains('JSESSIONID=')),
       );
-      expect(identityLogin.headers['Cookie'], isNot(contains('JSESSIONID=')));
-      expect(identityLogin.headers['Cookie'], isNot(contains('SESSION=')));
-      expect(identityLogin.headers['Cookie'], contains('SHARED=shared-value'));
+      expect(
+        identityLogins.last.headers['Cookie'],
+        contains('JSESSIONID=identity-session'),
+      );
+      expect(
+        (identityLogins.last as http.Request).body,
+        contains('fingerGenPrint=trusted-device-token'),
+      );
+      for (final identityLogin in identityLogins) {
+        expect(identityLogin.headers['Cookie'], isNot(contains('SESSION=')));
+        expect(
+          identityLogin.headers['Cookie'],
+          contains('SHARED=shared-value'),
+        );
+      }
       final identityTwoFactor = client.requests.firstWhere(
         (request) =>
             request.url.host == 'id.tsinghua.edu.cn' &&
@@ -238,20 +331,35 @@ void main() {
         isNot(contains('JSESSIONID=')),
       );
       expect(insecureRedirect.headers['Cookie'], isNot(contains('SHARED=')));
-      final webVpnRoaming = client.requests.singleWhere(
-        (request) => request.url.path.contains('/https/'),
+      final informationAppLoginPage = client.requests.singleWhere(
+        (request) =>
+            request.url.host == 'id.tsinghua.edu.cn' &&
+            request.url.path.endsWith('10000ea055dd8d81d09d5a1ba55d39ad'),
       );
       expect(
-        webVpnRoaming.headers['Cookie'],
-        contains('JSESSIONID=webvpn-session'),
+        informationAppLoginPage.headers['Cookie'],
+        contains('JSESSIONID=identity-session'),
       );
       expect(
-        webVpnRoaming.headers['Cookie'],
-        isNot(contains('identity-session')),
+        informationAppLoginPage.headers['Cookie'],
+        isNot(contains('webvpn-session')),
       );
       expect(
-        webVpnRoaming.headers['Cookie'],
-        contains('PATH_ONLY=portal-value'),
+        informationAppLoginPage.headers['Cookie'],
+        isNot(contains('PATH_ONLY=portal-value')),
+      );
+      final informationAppRedirect = client.requests.singleWhere(
+        (request) =>
+            request.url.host == 'oauth.tsinghua.edu.cn' &&
+            request.url.path == '/lb-auth/lbredirect',
+      );
+      expect(
+        informationAppRedirect.url.queryParameters['host'],
+        'id.tsinghua.edu.cn',
+      );
+      expect(
+        informationAppRedirect.headers['Cookie'],
+        isNot(contains('JSESSIONID=')),
       );
       expect(
         auth.session!.scopedCookies.where(
@@ -259,6 +367,50 @@ void main() {
         ),
         hasLength(2),
       );
+    },
+  );
+
+  test(
+    'registers a trusted device and reuses finger3 during portal roaming',
+    () async {
+      final client = _FakeAuthClient();
+      final store = MemoryAuthSessionStore();
+      final auth = TsinghuaAuthClient(
+        httpClient: client,
+        sessionStore: store,
+        twoFactorMethodHandler: (_) async => TwoFactorMethod.mobile,
+        twoFactorCodeHandler: (verifyCode) async {
+          expect(await verifyCode('incorrect'), isFalse);
+          expect(await verifyCode('123456'), isTrue);
+        },
+        twoFactorTrustHandler: () async => true,
+      );
+
+      final session = await auth.login(
+        userId: '1234567890',
+        password: 'password',
+        fingerprint: 'device-fingerprint',
+      );
+
+      final trustRequest = client.requests.singleWhere(
+        (request) => request.url.path == '/b/doubleAuth/personal/saveFinger',
+      );
+      final portalLogin =
+          client.requests
+                  .where(
+                    (request) =>
+                        request.url.path == '/do/off/ui/auth/login/check',
+                  )
+                  .last
+              as http.Request;
+      expect(trustRequest, isA<http.Request>());
+      expect(
+        (trustRequest as http.Request).body,
+        contains('device-fingerprint'),
+      );
+      expect(portalLogin.body, contains('fingerGenPrint=trusted-device-token'));
+      expect(session.fingerGenPrint, 'trusted-device-token');
+      expect((await store.read())?.fingerGenPrint, 'trusted-device-token');
     },
   );
 }
@@ -304,6 +456,7 @@ final class _SessionValidationClient extends http.BaseClient {
 final class _FakeAuthClient extends http.BaseClient {
   final requests = <http.BaseRequest>[];
   var _verificationAttempts = 0;
+  var _identityLoginAttempts = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -313,6 +466,13 @@ final class _FakeAuthClient extends http.BaseClient {
       '/login' => '',
       '/login-form' =>
         '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
+      _ when request.url.path.startsWith('/do/off/ui/auth/login/form/') =>
+        '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
+      '/do/off/ui/auth/login/check' when ++_identityLoginAttempts == 1 =>
+        '二次认证',
+      '/do/off/ui/auth/login/check'
+          when requestBody.contains('fingerGenPrint=trusted-device-token') =>
+        '<a href="/information-callback">登录成功。正在重定向到</a>',
       '/do/off/ui/auth/login/check' => '二次认证',
       '/b/doubleAuth/login' when requestBody.contains('FIND_APPROACHES') =>
         '{"result":"success","object":{"hasWeChatBool":true,"phone":null,"hasTotp":false}}',
@@ -324,8 +484,11 @@ final class _FakeAuthClient extends http.BaseClient {
         '{"result":"error","msg":"invalid code"}',
       '/b/doubleAuth/login' =>
         '{"result":"success","object":{"redirectUrl":"http://id.tsinghua.edu.cn/two-factor-redirect"}}',
+      '/b/doubleAuth/personal/saveFinger' =>
+        '{"result":"success","object":"trusted-device-token"}',
       '/two-factor-redirect' => '<a href="/callback">登录成功。正在重定向到</a>',
       '/callback' => '',
+      '/lb-auth/lbredirect' => '',
       _ => '{}',
     };
     return http.StreamedResponse(
