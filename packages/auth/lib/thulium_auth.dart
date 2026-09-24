@@ -7,6 +7,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show HttpDate, HttpException;
 
 import 'package:dart_sm/dart_sm.dart';
 import 'package:http/http.dart' as http;
@@ -33,6 +34,50 @@ const _TWO_FACTOR_FIND_APPROACHES = 'FIND_APPROACHES';
 const _TWO_FACTOR_SEND_CODE = 'SEND_CODE';
 const _TWO_FACTOR_VERIFY_CODE = 'VERITY_CODE';
 const _TWO_FACTOR_VERIFY_TOTP_CODE = 'VERITY_TOTP_CODE';
+const _COOKIE_DOMAIN_SUFFIX = 'tsinghua.edu.cn';
+
+/// A cookie together with the scope required to safely restore it.
+final class AuthCookie {
+  const AuthCookie({
+    required this.name,
+    required this.value,
+    required this.domain,
+    required this.path,
+    required this.hostOnly,
+    required this.secure,
+    this.expiresAt,
+  });
+
+  final String name;
+  final String value;
+  final String domain;
+  final String path;
+  final bool hostOnly;
+  final bool secure;
+  final DateTime? expiresAt;
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'value': value,
+    'domain': domain,
+    'path': path,
+    'hostOnly': hostOnly,
+    'secure': secure,
+    'expiresAt': expiresAt?.toUtc().toIso8601String(),
+  };
+
+  factory AuthCookie.fromJson(Map<String, dynamic> json) => AuthCookie(
+    name: json['name'] as String,
+    value: json['value'] as String,
+    domain: json['domain'] as String,
+    path: json['path'] as String,
+    hostOnly: json['hostOnly'] as bool,
+    secure: json['secure'] as bool,
+    expiresAt: json['expiresAt'] == null
+        ? null
+        : DateTime.parse(json['expiresAt'] as String).toUtc(),
+  );
+}
 
 /// A serializable authenticated session. It contains no password.
 final class AuthSession {
@@ -40,6 +85,7 @@ final class AuthSession {
     required this.userId,
     required this.fingerprint,
     required this.cookies,
+    this.scopedCookies = const [],
   });
 
   /// The numeric Tsinghua account identifier used during sign-in.
@@ -55,11 +101,19 @@ final class AuthSession {
   /// serialized by accident.
   final Map<String, String> cookies;
 
+  /// Full cookie scope used for host-safe request headers after restoration.
+  ///
+  /// [cookies] remains as a compatibility view for callers that only need the
+  /// cookie names and values. New sessions must use this scoped representation
+  /// when restoring authenticated requests.
+  final List<AuthCookie> scopedCookies;
+
   /// Converts the session to a JSON-compatible map for secure persistence.
   Map<String, Object> toJson() => {
     'userId': userId,
     'fingerprint': fingerprint,
     'cookies': cookies,
+    'scopedCookies': scopedCookies.map((cookie) => cookie.toJson()).toList(),
   };
 
   /// Reconstructs a session previously produced by [toJson].
@@ -67,6 +121,12 @@ final class AuthSession {
     userId: json['userId'] as String,
     fingerprint: json['fingerprint'] as String,
     cookies: Map<String, String>.from(json['cookies'] as Map),
+    scopedCookies: (json['scopedCookies'] as List? ?? const [])
+        .map(
+          (cookie) =>
+              AuthCookie.fromJson(Map<String, dynamic>.from(cookie as Map)),
+        )
+        .toList(growable: false),
   );
 
   /// Encodes this session as a single string for key-value secure stores.
@@ -75,6 +135,181 @@ final class AuthSession {
   /// Decodes a session string created by [encode].
   factory AuthSession.decode(String value) =>
       AuthSession.fromJson(jsonDecode(value) as Map<String, dynamic>);
+}
+
+/// Stores cookies as distinct name/domain/path entries rather than globally.
+final class _CookieJar {
+  final List<AuthCookie> _cookies = <AuthCookie>[];
+
+  List<AuthCookie> get cookies {
+    _removeExpired();
+    return List<AuthCookie>.unmodifiable(_cookies);
+  }
+
+  void clear() => _cookies.clear();
+
+  void restore(Iterable<AuthCookie> cookies) {
+    _cookies
+      ..clear()
+      ..addAll(cookies);
+    _removeExpired();
+  }
+
+  void capture(Uri origin, String? setCookieHeader) {
+    if (setCookieHeader == null) return;
+
+    // Some HTTP adapters combine repeated Set-Cookie headers. The comma in an
+    // Expires date is not followed by a cookie-pair, so this splits only at
+    // cookie boundaries while retaining the date value.
+    final headers = setCookieHeader.split(RegExp(r',(?=\s*[^;,=]+=)'));
+    for (final header in headers) {
+      _captureOne(origin, header.trim());
+    }
+    _removeExpired();
+  }
+
+  String headerFor(Uri uri) {
+    _removeExpired();
+    final matching = _matching(uri);
+    return matching
+        .map((cookie) => '${cookie.name}=${cookie.value}')
+        .join('; ');
+  }
+
+  Iterable<String> namesFor(Uri uri) =>
+      _matching(uri).map((cookie) => cookie.name);
+
+  Map<String, String> get legacyValues {
+    _removeExpired();
+    return {for (final cookie in _cookies) cookie.name: cookie.value};
+  }
+
+  List<AuthCookie> _matching(Uri uri) {
+    _removeExpired();
+    return _cookies.where((cookie) => _matches(cookie, uri)).toList()
+      ..sort((left, right) => right.path.length.compareTo(left.path.length));
+  }
+
+  void _captureOne(Uri origin, String header) {
+    final attributes = header.split(';');
+    if (attributes.isEmpty) return;
+    final pairSeparator = attributes.first.indexOf('=');
+    if (pairSeparator <= 0) return;
+
+    final name = attributes.first.substring(0, pairSeparator).trim();
+    final value = attributes.first.substring(pairSeparator + 1).trim();
+    if (name.isEmpty) return;
+
+    final originHost = origin.host.toLowerCase();
+    var domain = originHost;
+    var hostOnly = true;
+    var path = _defaultPath(origin.path);
+    var secure = false;
+    DateTime? expiresAt;
+    int? maxAge;
+
+    for (final attribute in attributes.skip(1)) {
+      final separator = attribute.indexOf('=');
+      final key =
+          (separator < 0 ? attribute : attribute.substring(0, separator))
+              .trim()
+              .toLowerCase();
+      final value = separator < 0
+          ? ''
+          : attribute.substring(separator + 1).trim();
+      switch (key) {
+        case 'domain':
+          final candidate = value.toLowerCase().replaceFirst(
+            RegExp(r'^\.'),
+            '',
+          );
+          if (candidate.isEmpty ||
+              !_domainMatches(originHost, candidate) ||
+              !_isAllowedDomainScope(candidate)) {
+            return;
+          }
+          domain = candidate;
+          hostOnly = false;
+        case 'path':
+          if (value.startsWith('/')) path = value;
+        case 'secure':
+          secure = true;
+        case 'max-age':
+          maxAge = int.tryParse(value);
+        case 'expires':
+          try {
+            expiresAt = HttpDate.parse(value).toUtc();
+          } on HttpException {
+            // Ignore malformed dates and retain a valid Max-Age if present.
+          }
+      }
+    }
+
+    if (maxAge != null) {
+      if (maxAge <= 0) {
+        _remove(name, domain, path);
+        return;
+      }
+      expiresAt = DateTime.now().toUtc().add(Duration(seconds: maxAge));
+    }
+
+    _remove(name, domain, path);
+    _cookies.add(
+      AuthCookie(
+        name: name,
+        value: value,
+        domain: domain,
+        path: path,
+        hostOnly: hostOnly,
+        secure: secure,
+        expiresAt: expiresAt,
+      ),
+    );
+  }
+
+  bool _matches(AuthCookie cookie, Uri uri) {
+    final host = uri.host.toLowerCase();
+    if (cookie.hostOnly
+        ? host != cookie.domain
+        : !_domainMatches(host, cookie.domain)) {
+      return false;
+    }
+    if (cookie.secure && uri.scheme != 'https') return false;
+
+    final requestPath = uri.path.isEmpty ? '/' : uri.path;
+    if (requestPath == cookie.path) return true;
+    if (!requestPath.startsWith(cookie.path)) return false;
+    return cookie.path.endsWith('/') ||
+        requestPath.codeUnitAt(cookie.path.length) == 0x2f;
+  }
+
+  void _removeExpired() {
+    final now = DateTime.now().toUtc();
+    _cookies.removeWhere(
+      (cookie) => cookie.expiresAt != null && !cookie.expiresAt!.isAfter(now),
+    );
+  }
+
+  void _remove(String name, String domain, String path) {
+    _cookies.removeWhere(
+      (cookie) =>
+          cookie.name == name && cookie.domain == domain && cookie.path == path,
+    );
+  }
+
+  static String _defaultPath(String requestPath) {
+    if (!requestPath.startsWith('/') || requestPath.lastIndexOf('/') <= 0) {
+      return '/';
+    }
+    return requestPath.substring(0, requestPath.lastIndexOf('/'));
+  }
+
+  static bool _domainMatches(String host, String domain) =>
+      host == domain || host.endsWith('.$domain');
+
+  static bool _isAllowedDomainScope(String domain) =>
+      domain == _COOKIE_DOMAIN_SUFFIX ||
+      domain.endsWith('.$_COOKIE_DOMAIN_SUFFIX');
 }
 
 /// Storage abstraction implemented by a platform-specific secure store.
@@ -166,9 +401,8 @@ final class TsinghuaAuthClient {
   /// cookie values and are disabled by default.
   final AuthTraceHandler? trace;
 
-  /// Cookies are kept in memory for the lifetime of this client and copied into
-  /// [AuthSession] only after the complete login flow succeeds.
-  final Map<String, String> _cookies = <String, String>{};
+  /// Cookies stay scoped to their originating host/path throughout the flow.
+  final _CookieJar _cookieJar = _CookieJar();
 
   AuthSession? get session => _session;
   AuthSession? _session;
@@ -177,10 +411,19 @@ final class TsinghuaAuthClient {
   Future<AuthSession?> restore() async {
     final restored = await _sessionStore?.read();
     if (restored == null) return null;
+
+    // Older sessions stored only cookie names and values, losing the origin
+    // host and path. Reusing those unscoped values would disclose credentials
+    // across Tsinghua services, so require one fresh sign-in after upgrading.
+    if (restored.cookies.isNotEmpty && restored.scopedCookies.isEmpty) {
+      await _sessionStore?.clear();
+      _session = null;
+      _cookieJar.clear();
+      return null;
+    }
+
     _session = restored;
-    _cookies
-      ..clear()
-      ..addAll(restored.cookies);
+    _cookieJar.restore(restored.scopedCookies);
     return restored;
   }
 
@@ -193,7 +436,7 @@ final class TsinghuaAuthClient {
     if (!RegExp(r'^\d+$').hasMatch(userId)) {
       throw const FormatException('The user ID must contain only digits.');
     }
-    _cookies.clear();
+    _cookieJar.clear();
 
     final loginPage = await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
     final publicKey = _extract(
@@ -226,7 +469,8 @@ final class TsinghuaAuthClient {
     final result = AuthSession(
       userId: userId,
       fingerprint: fingerprint,
-      cookies: Map<String, String>.unmodifiable(_cookies),
+      cookies: Map<String, String>.unmodifiable(_cookieJar.legacyValues),
+      scopedCookies: _cookieJar.cookies,
     );
     _session = result;
     await _sessionStore?.write(result);
@@ -237,7 +481,7 @@ final class TsinghuaAuthClient {
     try {
       await _request(Uri.parse(_LOGOUT_URL));
     } finally {
-      _cookies.clear();
+      _cookieJar.clear();
       _session = null;
       await _sessionStore?.clear();
     }
@@ -417,26 +661,26 @@ final class TsinghuaAuthClient {
       trace?.call(
         'HTTP $currentMethod ${current.host}${current.path} '
         'formKeys=${currentForm?.keys.join(',') ?? '-'} '
-        'cookieNames=${_cookies.keys.join(',')}',
+        'cookieNames=${_cookieJar.namesFor(current).join(',')}',
       );
       final request = http.Request(currentMethod, current)
         // The client handles redirects below so cookies from each intermediate
         // response are captured before the next request is constructed.
         ..followRedirects = false
         ..headers['User-Agent'] = _USER_AGENT
-        ..headers['Cookie'] = _cookieHeader();
+        ..headers['Cookie'] = _cookieJar.headerFor(current);
       if (currentForm != null) {
         request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         request.bodyFields = currentForm;
       }
       final response = await _http.send(request);
       final body = await response.stream.bytesToString();
-      _captureCookies(response.headers['set-cookie']);
+      _cookieJar.capture(current, response.headers['set-cookie']);
       final location = response.headers['location'];
       trace?.call(
         'HTTP response status=${response.statusCode} '
         'location=${location == null ? '-' : 'present'} '
-        'cookieNames=${_cookies.keys.join(',')}',
+        'cookieNames=${_cookieJar.namesFor(current).join(',')}',
       );
       if (location == null ||
           response.statusCode < 300 ||
@@ -453,20 +697,6 @@ final class TsinghuaAuthClient {
       currentForm = currentMethod == 'GET' ? null : currentForm;
     }
     throw StateError('Too many redirects during authentication.');
-  }
-
-  String _cookieHeader() =>
-      _cookies.entries.map((entry) => '${entry.key}=${entry.value}').join('; ');
-
-  void _captureCookies(String? header) {
-    if (header == null) return;
-    for (final cookie in header.split(RegExp(r',(?=\s*[^;,=]+=)'))) {
-      final pair = cookie.split(';').first.trim();
-      final separator = pair.indexOf('=');
-      if (separator > 0) {
-        _cookies[pair.substring(0, separator)] = pair.substring(separator + 1);
-      }
-    }
   }
 
   String? _extract(String input, String pattern) => RegExp(
