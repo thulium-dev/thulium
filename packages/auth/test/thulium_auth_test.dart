@@ -73,7 +73,11 @@ void main() {
       expect(events, ['choose-method', 'read-code']);
       expect(rejectedEmptyCode, isTrue);
       expect(rejectedIncorrectCode, isTrue);
-      expect(client.requests[1].headers['Cookie'], 'SESSION=session-value');
+      expect(client.requests[2].headers['Cookie'], 'SESSION=session-value');
+      expect(
+        client.requests.every((request) => !request.followRedirects),
+        isTrue,
+      );
       expect(
         client.requests.where(
           (request) =>
@@ -101,7 +105,8 @@ final class _FakeAuthClient extends http.BaseClient {
     requests.add(request);
     final requestBody = request is http.Request ? request.body : '';
     final body = switch (request.url.path) {
-      '/login' =>
+      '/login' => '',
+      '/login-form' =>
         '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
       '/do/off/ui/auth/login/check' => '二次认证',
       '/b/doubleAuth/login' when requestBody.contains('FIND_APPROACHES') =>
@@ -120,9 +125,12 @@ final class _FakeAuthClient extends http.BaseClient {
     };
     return http.StreamedResponse(
       Stream<List<int>>.value(utf8.encode(body)),
-      200,
+      request.url.path == '/login' ? 302 : 200,
       headers: request.url.path == '/login'
-          ? const {'set-cookie': 'SESSION=session-value; Path=/'}
+          ? const {
+              'location': '/login-form',
+              'set-cookie': 'SESSION=session-value; Path=/',
+            }
           : const {},
     );
   }

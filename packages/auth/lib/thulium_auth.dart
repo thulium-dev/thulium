@@ -420,6 +420,9 @@ final class TsinghuaAuthClient {
         'cookieNames=${_cookies.keys.join(',')}',
       );
       final request = http.Request(currentMethod, current)
+        // The client handles redirects below so cookies from each intermediate
+        // response are captured before the next request is constructed.
+        ..followRedirects = false
         ..headers['User-Agent'] = _USER_AGENT
         ..headers['Cookie'] = _cookieHeader();
       if (currentForm != null) {
