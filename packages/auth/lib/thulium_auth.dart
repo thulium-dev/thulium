@@ -127,8 +127,10 @@ final class TwoFactorOptions {
 typedef TwoFactorMethodHandler =
     Future<TwoFactorMethod> Function(TwoFactorOptions options);
 
-/// Lets a client collect the code after the identity provider sends it.
-typedef TwoFactorCodeHandler = Future<String> Function();
+/// Lets a client collect codes and keep its input surface open until verified.
+typedef TwoFactorCodeVerifier = Future<bool> Function(String code);
+typedef TwoFactorCodeHandler =
+    Future<void> Function(TwoFactorCodeVerifier verifyCode);
 
 /// Receives safe authentication diagnostics without credential values.
 typedef AuthTraceHandler = void Function(String message);
@@ -289,32 +291,49 @@ final class TsinghuaAuthClient {
     _ensureTwoFactorSuccess(sendCode, 'send the verification code');
     trace?.call('2FA verification code request succeeded.');
 
-    // This callback intentionally runs after SEND_CODE succeeds. Combining
-    // method selection and code input would ask users for a code before the
-    // provider has sent it.
-    final code = await codeHandler();
-    final verified = _decodeJsonObject(
-      (await _request(
-        Uri.parse(_DOUBLE_AUTH_URL),
-        method: 'POST',
-        form: {
-          'action': method == TwoFactorMethod.totp
-              ? _TWO_FACTOR_VERIFY_TOTP_CODE
-              : _TWO_FACTOR_VERIFY_CODE,
-          'vericode': code,
-        },
-      )).body,
-    );
-    _ensureTwoFactorSuccess(verified, 'verify the code');
-    trace?.call('2FA code verification succeeded.');
+    // Let the input surface stay open while the user corrects the code. The
+    // verifier rejects empty values locally and reports an unsuccessful
+    // provider response as false; transport and decoding errors still throw.
+    Map<String, dynamic>? verified;
+    await codeHandler((code) async {
+      if (code.trim().isEmpty) return false;
+
+      final response = _decodeJsonObject(
+        (await _request(
+          Uri.parse(_DOUBLE_AUTH_URL),
+          method: 'POST',
+          form: {
+            'action': method == TwoFactorMethod.totp
+                ? _TWO_FACTOR_VERIFY_TOTP_CODE
+                : _TWO_FACTOR_VERIFY_CODE,
+            'vericode': code,
+          },
+        )).body,
+      );
+      if (response['result'] == _TWO_FACTOR_SUCCESS) {
+        verified = response;
+        trace?.call('2FA code verification succeeded.');
+        return true;
+      }
+
+      // Only a well-formed server rejection reaches this branch. A caller can
+      // keep its input surface open without treating network failures as a
+      // rejected code.
+      trace?.call('2FA code verification was rejected; requesting another.');
+      return false;
+    });
+    if (verified == null) {
+      throw StateError('Two-factor code entry ended before verification.');
+    }
+    final verifiedResponse = verified!;
 
     // The successful verification response places redirectUrl inside object,
     // as in the thu-info implementation. Keep the top-level fallback for
     // compatible identity-service deployments.
-    final verifiedObject = verified['object'];
+    final verifiedObject = verifiedResponse['object'];
     final redirect = verifiedObject is Map
         ? verifiedObject['redirectUrl'] as String?
-        : verified['redirectUrl'] as String?;
+        : verifiedResponse['redirectUrl'] as String?;
     if (redirect == null || redirect.isEmpty) {
       throw StateError(
         'The identity provider did not return a two-factor redirect.',

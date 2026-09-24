@@ -167,15 +167,15 @@ Future<TwoFactorMethod> _handleTwoFactorMethod(TwoFactorOptions options) async {
   return methods[choice - 1].method;
 }
 
-Future<String> _readTwoFactorCode() async {
+Future<void> _readTwoFactorCode(TwoFactorCodeVerifier verifyCode) async {
   // This callback runs only after SEND_CODE succeeds, so the notification is
   // expected to be available before the user is asked for the code.
   stdout.writeln('A verification code was sent.');
-  final code = _readLine('Verification code: ');
-  if (code.isEmpty) {
-    throw const FormatException('Verification code is required.');
+  while (true) {
+    final code = _readLine('Verification code: ');
+    if (await verifyCode(code)) return;
+    stdout.writeln('The verification code was not accepted. Please try again.');
   }
-  return code;
 }
 
 String _buildFingerprint() {

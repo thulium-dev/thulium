@@ -86,6 +86,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verificationCodeHint => '请输入验证码';
 
   @override
+  String get verificationCodeInvalid => '验证码不正确，请重试。';
+
+  @override
   String get confirmAction => '确认';
 
   @override
@@ -222,6 +225,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get verificationCodeHint => '请输入验证码';
 
   @override
+  String get verificationCodeInvalid => '验证码不正确，请重试。';
+
+  @override
   String get confirmAction => '确认';
 
   @override
@@ -356,6 +362,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get verificationCodeHint => '請輸入驗證碼';
+
+  @override
+  String get verificationCodeInvalid => '驗證碼不正確，請重試。';
 
   @override
   String get confirmAction => '確認';

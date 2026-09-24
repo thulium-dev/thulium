@@ -84,6 +84,9 @@ class AppLocalizationsZhTw extends AppLocalizations {
   String get verificationCodeHint => '請輸入驗證碼';
 
   @override
+  String get verificationCodeInvalid => '驗證碼不正確，請重試。';
+
+  @override
   String get cancelAction => '取消';
 
   @override

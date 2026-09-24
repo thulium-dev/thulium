@@ -250,6 +250,12 @@ abstract class AppLocalizations {
   /// **'Enter the verification code'**
   String get verificationCodeHint;
 
+  /// No description provided for @verificationCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That code was not accepted. Please try again.'**
+  String get verificationCodeInvalid;
+
   /// No description provided for @confirmAction.
   ///
   /// In en, this message translates to:

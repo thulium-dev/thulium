@@ -88,6 +88,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationCodeHint => 'Enter the verification code';
 
   @override
+  String get verificationCodeInvalid =>
+      'That code was not accepted. Please try again.';
+
+  @override
   String get confirmAction => 'Confirm';
 
   @override

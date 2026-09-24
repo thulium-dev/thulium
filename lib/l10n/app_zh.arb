@@ -32,6 +32,7 @@
   "totpMethod": "TOTP",
   "verificationCodeTitle": "验证码",
   "verificationCodeHint": "请输入验证码",
+  "verificationCodeInvalid": "验证码不正确，请重试。",
   "confirmAction": "确认",
   "cancelAction": "取消",
   "backAction": "返回",

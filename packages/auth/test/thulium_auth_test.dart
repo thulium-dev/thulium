@@ -34,43 +34,67 @@ void main() {
     expect(await store.read(), isNull);
   });
 
-  test('requests the two-factor code before reading it', () async {
-    final client = _FakeAuthClient();
-    final events = <String>[];
-    final auth = TsinghuaAuthClient(
-      httpClient: client,
-      twoFactorMethodHandler: (_) async {
-        events.add('choose-method');
-        return TwoFactorMethod.wechat;
-      },
-      twoFactorCodeHandler: () async {
-        events.add('read-code');
-        expect(
-          client.requests.any(
-            (request) =>
-                request is http.Request &&
-                !request.body.contains('FIND_APPROACHES') &&
-                request.body.contains('SEND_CODE'),
-          ),
-          isTrue,
-        );
-        return '123456';
-      },
-    );
+  test(
+    'retries a rejected two-factor code without sending another code',
+    () async {
+      final client = _FakeAuthClient();
+      final events = <String>[];
+      var rejectedEmptyCode = false;
+      var rejectedIncorrectCode = false;
+      final auth = TsinghuaAuthClient(
+        httpClient: client,
+        twoFactorMethodHandler: (_) async {
+          events.add('choose-method');
+          return TwoFactorMethod.wechat;
+        },
+        twoFactorCodeHandler: (verifyCode) async {
+          events.add('read-code');
+          expect(
+            client.requests.any(
+              (request) =>
+                  request is http.Request &&
+                  !request.body.contains('FIND_APPROACHES') &&
+                  request.body.contains('SEND_CODE'),
+            ),
+            isTrue,
+          );
+          rejectedEmptyCode = !await verifyCode('');
+          rejectedIncorrectCode = !await verifyCode('incorrect');
+          expect(await verifyCode('123456'), isTrue);
+        },
+      );
 
-    await auth.login(
-      userId: '1234567890',
-      password: 'password',
-      fingerprint: 'fingerprint',
-    );
+      await auth.login(
+        userId: '1234567890',
+        password: 'password',
+        fingerprint: 'fingerprint',
+      );
 
-    expect(events, ['choose-method', 'read-code']);
-    expect(client.requests[1].headers['Cookie'], 'SESSION=session-value');
-  });
+      expect(events, ['choose-method', 'read-code']);
+      expect(rejectedEmptyCode, isTrue);
+      expect(rejectedIncorrectCode, isTrue);
+      expect(client.requests[1].headers['Cookie'], 'SESSION=session-value');
+      expect(
+        client.requests.where(
+          (request) =>
+              request is http.Request && request.body.contains('SEND_CODE'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        client.requests.where(
+          (request) =>
+              request is http.Request && request.body.contains('VERITY_CODE'),
+        ),
+        hasLength(2),
+      );
+    },
+  );
 }
 
 final class _FakeAuthClient extends http.BaseClient {
   final requests = <http.BaseRequest>[];
+  var _verificationAttempts = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -84,6 +108,10 @@ final class _FakeAuthClient extends http.BaseClient {
         '{"result":"success","object":{"hasWeChatBool":true,"phone":null,"hasTotp":false}}',
       '/b/doubleAuth/login' when requestBody.contains('SEND_CODE') =>
         '{"result":"success"}',
+      '/b/doubleAuth/login'
+          when requestBody.contains('VERITY_CODE') &&
+              ++_verificationAttempts == 1 =>
+        '{"result":"error","msg":"invalid code"}',
       '/b/doubleAuth/login' =>
         '{"result":"success","object":{"redirectUrl":"/two-factor-redirect"}}',
       '/two-factor-redirect' => '<a href="/callback">登录成功。正在重定向到</a>',

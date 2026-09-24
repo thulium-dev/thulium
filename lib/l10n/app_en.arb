@@ -32,6 +32,7 @@
   "totpMethod": "TOTP",
   "verificationCodeTitle": "Verification code",
   "verificationCodeHint": "Enter the verification code",
+  "verificationCodeInvalid": "That code was not accepted. Please try again.",
   "confirmAction": "Confirm",
   "cancelAction": "Cancel",
   "backAction": "Back",

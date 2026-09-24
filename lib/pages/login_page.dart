@@ -16,6 +16,115 @@ final class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
+/// Keeps the verification input mounted until the identity provider accepts it.
+final class _VerificationCodeDialog extends StatefulWidget {
+  const _VerificationCodeDialog({
+    required this.animation,
+    required this.title,
+    required this.hint,
+    required this.invalidMessage,
+    required this.confirmLabel,
+    required this.cancelLabel,
+    required this.verifyCode,
+  });
+
+  final Animation<double> animation;
+  final String title;
+  final String hint;
+  final String invalidMessage;
+  final String confirmLabel;
+  final String cancelLabel;
+  final TwoFactorCodeVerifier verifyCode;
+
+  @override
+  State<_VerificationCodeDialog> createState() =>
+      _VerificationCodeDialogState();
+}
+
+final class _VerificationCodeDialogState
+    extends State<_VerificationCodeDialog> {
+  final _controller = TextEditingController();
+  bool _isVerifying = false;
+  bool _isInvalid = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verify() async {
+    final code = _controller.text.trim();
+    if (code.isEmpty) {
+      setState(() => _isInvalid = true);
+      return;
+    }
+
+    setState(() => _isVerifying = true);
+    try {
+      if (await widget.verifyCode(code)) {
+        if (mounted) Navigator.of(context).pop(true);
+      } else if (mounted) {
+        setState(() => _isInvalid = true);
+      }
+    } catch (_) {
+      // A transport failure is not a bad code; end this dialog so the outer
+      // login flow can report its normal sign-in error instead of hanging.
+      if (mounted) Navigator.of(context).pop(false);
+    } finally {
+      if (mounted) setState(() => _isVerifying = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FDialog.adaptive(
+    animation: widget.animation,
+    title: Text(widget.title),
+    body: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FTextField(
+          control: FTextFieldControl.managed(
+            controller: _controller,
+            onChange: (_) {
+              if (_isInvalid) setState(() => _isInvalid = false);
+            },
+          ),
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          hint: widget.hint,
+        ),
+        if (_isInvalid) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.invalidMessage,
+            style: context.theme.typography.sm.copyWith(
+              color: context.theme.colors.error,
+            ),
+          ),
+        ],
+      ],
+    ),
+    actions: [
+      FButton(
+        onPress: _isVerifying ? null : _verify,
+        child: _isVerifying
+            ? const SizedBox.square(
+                dimension: 20,
+                child: FCircularProgress(size: FCircularProgressSizeVariant.sm),
+              )
+            : Text(widget.confirmLabel),
+      ),
+      FButton(
+        variant: FButtonVariant.outline,
+        onPress: _isVerifying ? null : () => Navigator.of(context).pop(false),
+        child: Text(widget.cancelLabel),
+      ),
+    ],
+  );
+}
+
 final class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _studentIdController = TextEditingController();
@@ -119,40 +228,22 @@ final class _LoginPageState extends State<LoginPage> {
     return selected;
   }
 
-  Future<String> _readTwoFactorCode() async {
+  Future<void> _readTwoFactorCode(TwoFactorCodeVerifier verifyCode) async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController();
-    try {
-      final code = await showFDialog<String>(
-        context: context,
-        builder: (context, _, animation) => FDialog.adaptive(
-          animation: animation,
-          title: Text(l10n.verificationCodeTitle),
-          body: FTextField(
-            control: FTextFieldControl.managed(controller: controller),
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            hint: l10n.verificationCodeHint,
-          ),
-          actions: [
-            FButton(
-              onPress: () => Navigator.of(context).pop(controller.text.trim()),
-              child: Text(l10n.confirmAction),
-            ),
-            FButton(
-              variant: FButtonVariant.outline,
-              onPress: () => Navigator.of(context).pop(),
-              child: Text(l10n.cancelAction),
-            ),
-          ],
-        ),
-      );
-      if (code == null || code.isEmpty) {
-        throw StateError('Verification code entry canceled.');
-      }
-      return code;
-    } finally {
-      controller.dispose();
+    final verified = await showFDialog<bool>(
+      context: context,
+      builder: (context, _, animation) => _VerificationCodeDialog(
+        animation: animation,
+        title: l10n.verificationCodeTitle,
+        hint: l10n.verificationCodeHint,
+        invalidMessage: l10n.verificationCodeInvalid,
+        confirmLabel: l10n.confirmAction,
+        cancelLabel: l10n.cancelAction,
+        verifyCode: verifyCode,
+      ),
+    );
+    if (verified != true) {
+      throw StateError('Verification code entry canceled.');
     }
   }
 
