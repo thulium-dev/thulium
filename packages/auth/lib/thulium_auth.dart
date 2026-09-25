@@ -12,8 +12,10 @@ import 'dart:convert';
 import 'dart:io' show HttpDate, HttpException;
 
 import 'package:dart_sm/dart_sm.dart';
+import 'package:fast_gbk/fast_gbk.dart' as gbk_codec;
 import 'package:http/http.dart' as http;
 
+import 'src/response_diagnostics.dart';
 import 'tsinghua_webvpn_redirect.dart';
 
 // Entry point that starts the WebVPN OAuth flow and redirects to the identity
@@ -57,6 +59,24 @@ const _WEBVPN_INFRASTRUCTURE_COOKIE_NAMES = <String>{
   'heartbeat',
   'refresh',
 };
+const _CSRF_FETCH_ATTEMPTS = 2;
+const _CSRF_RETRY_DELAY = Duration(milliseconds: 200);
+
+/// The WebVPN cookie endpoint did not supply a usable portal CSRF token.
+/// This does not by itself prove that the saved identity session has expired.
+final class PortalCsrfUnavailable implements Exception {
+  const PortalCsrfUnavailable(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'PortalCsrfUnavailable: $message';
+}
+
+/// An authenticated portal endpoint explicitly redirected to sign-in.
+final class PortalSessionRejected implements Exception {
+  const PortalSessionRejected();
+}
 
 /// A cookie together with the scope required to safely restore it.
 final class AuthCookie {
@@ -366,6 +386,26 @@ abstract interface class AuthSessionStore {
   Future<void> clear();
 }
 
+/// Credentials are stored separately from cookies by a platform secret store.
+///
+/// A saved password is recoverable by this application so it can authenticate
+/// again. The operating system's keyring protects it at rest; this does not
+/// eliminate risk from a compromised account or unlocked device.
+final class AuthCredentials {
+  const AuthCredentials({required this.userId, required this.password});
+
+  final String userId;
+  final String password;
+}
+
+abstract interface class AuthCredentialStore {
+  Future<AuthCredentials?> readCredentials();
+
+  Future<void> writeCredentials(AuthCredentials credentials);
+
+  Future<void> clearCredentials();
+}
+
 /// A no-op in-memory store useful for CLI sessions and tests.
 final class MemoryAuthSessionStore implements AuthSessionStore {
   AuthSession? _session;
@@ -420,6 +460,7 @@ final class TsinghuaAuthClient {
   TsinghuaAuthClient({
     http.Client? httpClient,
     AuthSessionStore? sessionStore,
+    this.credentialStore,
     this.twoFactorMethodHandler,
     this.twoFactorCodeHandler,
     this.twoFactorTrustHandler,
@@ -437,6 +478,9 @@ final class TsinghuaAuthClient {
   /// The optional platform-specific store used for session restoration.
   final AuthSessionStore? _sessionStore;
 
+  /// Optional secret store used for automatic credential-based reauthentication.
+  final AuthCredentialStore? credentialStore;
+
   /// Called to choose a second-factor method before a code is sent.
   final TwoFactorMethodHandler? twoFactorMethodHandler;
 
@@ -449,6 +493,25 @@ final class TsinghuaAuthClient {
   /// Optional diagnostic callback. Messages contain no passwords, codes, or
   /// cookie values and are disabled by default.
   final AuthTraceHandler? trace;
+
+  /// Reports a bounded, redacted preview only when a caller rejects a response.
+  /// Full response bodies can contain service tickets and must not be logged.
+  void traceUnexpectedResponse(String stage, http.Response response) {
+    if (trace == null) return;
+    try {
+      trace!(
+        describeUnexpectedResponse(
+          stage: stage,
+          statusCode: response.statusCode,
+          uri: response.request?.url ?? Uri(),
+          headers: response.headers,
+          body: response.body,
+        ),
+      );
+    } catch (_) {
+      // Diagnostic output must never replace the original request failure.
+    }
+  }
 
   /// Cookies stay scoped to their originating host/path throughout the flow.
   final _CookieJar _cookieJar = _CookieJar();
@@ -488,25 +551,33 @@ final class TsinghuaAuthClient {
     final session = _session;
     if (session == null) return false;
 
-    final csrfResponse = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
-    if (_isLoginRequired(csrfResponse)) return _clearInvalidSession();
-    final csrfMatch = RegExp(
-      r'XSRF-TOKEN=(.+?);',
-    ).firstMatch('${csrfResponse.body};');
-    if (csrfMatch == null || csrfMatch.group(1)!.isEmpty) {
-      throw StateError('The information portal did not return a CSRF token.');
+    final userId = await _fetchInformationPortalUserId();
+    if (userId != session.userId) return _clearInvalidSession();
+    await _persistSession();
+    return true;
+  }
+
+  Future<String?> _fetchInformationPortalUserId() async {
+    late final String csrf;
+    try {
+      csrf = await _portalCsrf();
+    } on PortalSessionRejected {
+      return null;
     }
-
     final userDataResponse = await _request(
-      Uri.parse(
-        '$_INFO_USER_DATA_URL?_csrf='
-        '${Uri.encodeQueryComponent(csrfMatch.group(1)!)}',
-      ),
+      Uri.parse('$_INFO_USER_DATA_URL?_csrf=${Uri.encodeQueryComponent(csrf)}'),
     );
-    if (_isLoginRequired(userDataResponse)) return _clearInvalidSession();
+    if (_isLoginRequired(userDataResponse)) return null;
 
-    final decoded = jsonDecode(userDataResponse.body);
+    Object? decoded;
+    try {
+      decoded = jsonDecode(userDataResponse.body);
+    } on FormatException {
+      _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
+      rethrow;
+    }
     if (decoded is! Map<String, dynamic> || decoded['object'] is! Map) {
+      _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
       throw StateError(
         'The information portal user-data endpoint returned an unexpected '
         'JSON envelope (${_describeEnvelope(userDataResponse, decoded)}).',
@@ -516,15 +587,16 @@ final class TsinghuaAuthClient {
     if (userId is! String) {
       throw StateError('The information portal omitted the student ID.');
     }
-    if (userId != session.userId) return _clearInvalidSession();
-    return true;
+    return userId;
   }
 
   /// Sends an authenticated GET request while preserving scoped cookies.
   ///
   /// The response's redirect chain is followed manually so Set-Cookie headers
-  /// are captured at each hop. The updated cookie jar is persisted before this
-  /// method returns.
+  /// are captured at each hop. Academic-calendar requests use the same WebVPN
+  /// route as their roaming login; sending them directly would create a
+  /// separate unauthenticated JSESSIONID and land on timeout.jsp. The updated
+  /// cookie jar is persisted before this method returns.
   Future<http.Response> getAuthenticated(Uri uri) async {
     if (_session == null) {
       throw StateError(
@@ -535,14 +607,13 @@ final class TsinghuaAuthClient {
       throw ArgumentError.value(uri, 'uri', 'Only Tsinghua hosts are allowed.');
     }
 
-    final response = await _request(uri);
+    final requestUri =
+        uri.host.toLowerCase() == TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_HOST
+        ? TsinghuaWebVpnRedirect.forTarget(uri)
+        : uri;
+    final response = await _request(requestUri);
     await _persistSession();
-    return http.Response(
-      response.body,
-      response.statusCode,
-      request: http.Request('GET', response.uri),
-      headers: response.headers,
-    );
+    return _asTextResponse(response);
   }
 
   /// Establishes a WebVPN session for a campus service using its roaming ID.
@@ -559,8 +630,7 @@ final class TsinghuaAuthClient {
       throw ArgumentError.value(roamingId, 'roamingId');
     }
 
-    final csrfResponse = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
-    final csrfToken = _extractCsrfToken(csrfResponse.body);
+    final csrfToken = await _portalCsrf();
     final roamingResponse = await _request(
       Uri.parse(_INFO_ROAMING_URL).replace(
         queryParameters: {
@@ -570,8 +640,15 @@ final class TsinghuaAuthClient {
         },
       ),
     );
-    final roamingJson = jsonDecode(roamingResponse.body);
+    Object? roamingJson;
+    try {
+      roamingJson = jsonDecode(roamingResponse.body);
+    } on FormatException {
+      _traceUnexpectedRawResponse('portal-roaming', roamingResponse);
+      rethrow;
+    }
     if (roamingJson is! Map<String, dynamic> || roamingJson['object'] is! Map) {
+      _traceUnexpectedRawResponse('portal-roaming', roamingResponse);
       throw StateError(
         'The information portal roaming endpoint returned an unexpected '
         'JSON envelope (${_describeEnvelope(roamingResponse, roamingJson)}).',
@@ -579,6 +656,7 @@ final class TsinghuaAuthClient {
     }
     final rawTarget = (roamingJson['object'] as Map)['roamingurl'];
     if (rawTarget is! String || rawTarget.isEmpty) {
+      _traceUnexpectedRawResponse('portal-roaming', roamingResponse);
       throw StateError('The information portal omitted the roaming URL.');
     }
 
@@ -587,20 +665,190 @@ final class TsinghuaAuthClient {
     );
     final response = await _request(target);
     await _persistSession();
+    return _asTextResponse(response);
+  }
+
+  http.Response _asTextResponse(_Response response) {
+    // The body has already been decoded from the remote charset. Label the
+    // re-encoded response as UTF-8 so package:http does not encode it as
+    // Latin-1 when a campus page omitted its charset declaration.
+    final headers = Map<String, String>.from(response.headers)
+      ..remove('content-length');
+    final mediaType = headers['content-type']?.split(';').first.trim();
+    headers['content-type'] =
+        '${mediaType == null || mediaType.isEmpty ? 'text/plain' : mediaType}; '
+        'charset=utf-8';
     return http.Response(
       response.body,
       response.statusCode,
       request: http.Request('GET', response.uri),
-      headers: response.headers,
+      headers: headers,
     );
   }
 
-  String _extractCsrfToken(String body) {
-    final match = RegExp(r'XSRF-TOKEN=(.+?);').firstMatch('$body;');
-    if (match == null || match.group(1)!.isEmpty) {
-      throw StateError('The information portal did not return a CSRF token.');
+  String _readInformationPortalCsrf(_Response response) {
+    // The WebVPN cookie endpoint returns a cookie string in its response body,
+    // not in Set-Cookie. OneTHU imports that string into its jar before using
+    // the target service. Keep each imported cookie scoped to the service that
+    // owns it; WebVPN infrastructure cookies remain with the proxy host.
+    final pairs = <String, String>{};
+    if (response.statusCode == 200 && !response.body.contains('<')) {
+      for (final part in response.body.split(RegExp(r'[;\r\n]'))) {
+        final separator = part.indexOf('=');
+        if (separator <= 0) continue;
+        final name = part.substring(0, separator).trim();
+        final value = part.substring(separator + 1).trim();
+        if (!RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(name) ||
+            const {
+              'path',
+              'domain',
+              'expires',
+              'max-age',
+              'samesite',
+            }.contains(name.toLowerCase())) {
+          continue;
+        }
+        pairs[name] = value;
+      }
     }
-    return match.group(1)!;
+
+    final csrf = pairs['XSRF-TOKEN'];
+    if (csrf == null || csrf.isEmpty) {
+      _traceUnexpectedRawResponse('portal-csrf-cookie', response);
+      final kind = response.body.trim().isEmpty
+          ? 'empty'
+          : response.body.trimLeft().startsWith('<')
+          ? 'html'
+          : response.body.trimLeft().startsWith('{')
+          ? 'json'
+          : 'other';
+      throw PortalCsrfUnavailable(
+        'The information portal did not return a CSRF token '
+        '(HTTP ${response.statusCode}, path=${response.uri.path}, '
+        'bodyType=$kind, bodyLength=${response.body.length}).',
+      );
+    }
+
+    final infoOrigin = Uri.parse('https://info.tsinghua.edu.cn/');
+    final webVpnOrigin = Uri.parse(TsinghuaWebVpnRedirect.WEBVPN_BASE_URL);
+    for (final entry in pairs.entries) {
+      final origin = _isWebVpnInfrastructureCookie(entry.key)
+          ? webVpnOrigin
+          : infoOrigin;
+      _cookieJar.capture(origin, '${entry.key}=${entry.value}; Path=/; Secure');
+    }
+    trace?.call(
+      'Information-portal cookie bundle imported: names=${pairs.keys.join(',')}',
+    );
+    return csrf;
+  }
+
+  Future<String> _portalCsrf() async {
+    PortalCsrfUnavailable? lastFailure;
+    for (var attempt = 0; attempt < _CSRF_FETCH_ATTEMPTS; attempt++) {
+      final response = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
+      if (_isLoginRequired(response)) throw const PortalSessionRejected();
+      try {
+        return _readInformationPortalCsrf(response);
+      } on PortalCsrfUnavailable catch (error) {
+        lastFailure = error;
+        if (attempt + 1 < _CSRF_FETCH_ATTEMPTS) {
+          await Future<void>.delayed(_CSRF_RETRY_DELAY);
+        }
+      }
+    }
+
+    // An empty cookie-dance response can be transient. Reuse a scoped token
+    // only after the authenticated user-data endpoint confirms its account.
+    final cached = _cachedPortalCsrf();
+    if (cached != null && await _probePortalCsrf(cached)) {
+      trace?.call('A stored portal CSRF token passed the account probe.');
+      return cached;
+    }
+
+    await _trySilentPortalReconnect();
+    final response = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
+    if (_isLoginRequired(response)) throw const PortalSessionRejected();
+    try {
+      final token = _readInformationPortalCsrf(response);
+      if (_session == null || await _probePortalCsrf(token)) return token;
+      throw const PortalCsrfUnavailable(
+        'The reconnected portal token could not be verified for this account.',
+      );
+    } on PortalCsrfUnavailable catch (error) {
+      lastFailure = error;
+    }
+    final refreshed = _cachedPortalCsrf();
+    if (refreshed != null && await _probePortalCsrf(refreshed)) {
+      trace?.call('The portal CSRF token remained usable after reconnect.');
+      return refreshed;
+    }
+    throw lastFailure;
+  }
+
+  String? _cachedPortalCsrf() {
+    final origin = Uri.parse('https://info.tsinghua.edu.cn/');
+    for (final cookie in _cookieJar.cookiesFor(origin)) {
+      if (cookie.name == 'XSRF-TOKEN' && cookie.value.isNotEmpty) {
+        return cookie.value;
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _probePortalCsrf(String token) async {
+    final userId = _session?.userId;
+    if (userId == null) return false;
+    try {
+      final response = await _request(
+        Uri.parse(
+          '$_INFO_USER_DATA_URL?_csrf=${Uri.encodeQueryComponent(token)}',
+        ),
+      );
+      if (_isLoginRequired(response)) return false;
+      final data = jsonDecode(response.body);
+      return data is Map &&
+          data['object'] is Map &&
+          (data['object'] as Map)['ryh'] == userId;
+    } catch (_) {
+      // An inconclusive probe cannot turn a cached token into trusted state.
+      return false;
+    }
+  }
+
+  Future<void> _trySilentPortalReconnect() async {
+    if (_session == null) return;
+    try {
+      trace?.call('Trying portal reconnection with the saved SSO cookies.');
+      await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
+      final portal = await _request(
+        Uri.parse('$_ID_LOGIN_FORM_URL$_INFO_ROAMING_ID'),
+      );
+      if (portal.body.contains('登录成功。正在重定向到')) {
+        await _finishIdentityRedirect(portal.body, throughWebVpnOAuth: true);
+      }
+    } catch (_) {
+      // Existing SSO cookies may be expired. The CLI can request credentials
+      // interactively, but this shared library must never invent a password.
+      trace?.call('Silent portal reconnection did not complete.');
+    }
+  }
+
+  void _traceUnexpectedRawResponse(String stage, _Response response) {
+    if (trace == null) return;
+    try {
+      trace!(
+        describeUnexpectedResponse(
+          stage: stage,
+          statusCode: response.statusCode,
+          uri: response.uri,
+          headers: response.headers,
+          body: response.body,
+        ),
+      );
+    } catch (_) {
+      // Diagnostic output must never replace the original request failure.
+    }
   }
 
   String _describeEnvelope(_Response response, Object? decoded) {
@@ -647,6 +895,7 @@ final class TsinghuaAuthClient {
   bool _isLoginRequired(_Response response) =>
       response.statusCode == 401 ||
       response.statusCode == 403 ||
+      response.uri.path.startsWith('/wengine-vpn/failed') ||
       response.uri.host == Uri.parse(_ID_HOST_URL).host ||
       response.body.contains('sm2publicKey');
 
@@ -669,8 +918,7 @@ final class TsinghuaAuthClient {
     }
 
     // Reuse a trusted-device credential only when both its account and stable
-    // fingerprint match this login. This supports forced reauthentication and
-    // expired cookies without ever retaining the user's password.
+    // fingerprint match this login.
     final previousSession = _session ?? await _sessionStore?.read();
     _fingerGenPrint =
         previousSession != null &&
@@ -678,6 +926,9 @@ final class TsinghuaAuthClient {
             previousSession.fingerprint == fingerprint
         ? previousSession.fingerGenPrint
         : null;
+    // The old account must not be used to probe or silently renew the portal
+    // while a new credential-based login is establishing its own session.
+    _session = null;
     _cookieJar.clear();
 
     final loginPage = await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
@@ -712,6 +963,13 @@ final class TsinghuaAuthClient {
       fingerprint: fingerprint,
     );
 
+    // A CAS success page only proves that the identity provider accepted the
+    // credentials. Confirm the subsequent portal ticket was redeemed for this
+    // account before saving a session that the app or CLI will later restore.
+    if (await _fetchInformationPortalUserId() != userId) {
+      throw StateError('The information portal session was not established.');
+    }
+
     final result = AuthSession(
       userId: userId,
       fingerprint: fingerprint,
@@ -721,6 +979,9 @@ final class TsinghuaAuthClient {
     );
     _session = result;
     await _sessionStore?.write(result);
+    await credentialStore?.writeCredentials(
+      AuthCredentials(userId: userId, password: password),
+    );
     return result;
   }
 
@@ -731,7 +992,13 @@ final class TsinghuaAuthClient {
       _cookieJar.clear();
       _session = null;
       _fingerGenPrint = null;
-      await _sessionStore?.clear();
+      try {
+        await _sessionStore?.clear();
+      } finally {
+        // A session-store failure must not leave a reusable password behind
+        // after the user explicitly requested logout.
+        await credentialStore?.clearCredentials();
+      }
     }
   }
 
@@ -911,9 +1178,12 @@ final class TsinghuaAuthClient {
     final target = callbackUri.hasScheme
         ? callbackUri
         : Uri.parse(_ID_HOST_URL).resolveUri(callbackUri);
-    await _request(
+    final result = await _request(
       throughWebVpnOAuth ? _webVpnOAuthRedirectUri(target) : target,
     );
+    if (result.uri.path.startsWith('/wengine-vpn/failed')) {
+      throw StateError('The WebVPN service ticket could not be redeemed.');
+    }
   }
 
   void _ensureIdentityLoginSucceeded(String body) {
@@ -977,12 +1247,14 @@ final class TsinghuaAuthClient {
     final targetPath = StringBuffer(target.path);
     if (target.hasQuery) targetPath.write('?${target.query}');
     if (target.hasFragment) targetPath.write('#${target.fragment}');
-    return Uri.https(_OAUTH_REDIRECT_HOST, '/lb-auth/lbredirect', {
-      'scheme': target.scheme,
-      'host': target.host,
-      'port': '$port',
-      'uri': targetPath.toString(),
-    });
+    // Match thu-info's getWebVPNUrl: the identity callback path and its query
+    // are forwarded as a raw uri parameter to lbredirect. Encoding the whole
+    // value as a query component makes WebVPN receive a %2F-encoded path.
+    return Uri.parse(
+      'https://$_OAUTH_REDIRECT_HOST/lb-auth/lbredirect?'
+      'scheme=${target.scheme}&host=${target.host}&port=$port&'
+      'uri=$targetPath',
+    );
   }
 
   Future<_Response> _request(
@@ -995,7 +1267,7 @@ final class TsinghuaAuthClient {
     var currentForm = form;
     for (var attempt = 0; attempt < 10; attempt++) {
       trace?.call(
-        'HTTP $currentMethod ${current.host}${current.path} '
+        'HTTP $currentMethod ${current.host}${_safeTracePath(current)} '
         'formKeys=${currentForm?.keys.join(',') ?? '-'} '
         'cookieNames=${_cookieNamesForRequest(current).join(',')}',
       );
@@ -1010,7 +1282,11 @@ final class TsinghuaAuthClient {
         request.bodyFields = currentForm;
       }
       final response = await _http.send(request);
-      final body = await response.stream.bytesToString();
+      final body = _decodeResponseBody(
+        await response.stream.toBytes(),
+        response.headers['content-type'],
+        current,
+      );
       _captureResponseCookies(current, response.headers['set-cookie']);
       final location = response.headers['location'];
       trace?.call(
@@ -1023,7 +1299,14 @@ final class TsinghuaAuthClient {
           response.statusCode >= 400) {
         return _Response(response.statusCode, response.headers, body, current);
       }
-      current = current.resolveUri(Uri.parse(location));
+      final redirected = current.resolveUri(Uri.parse(location));
+      // The academic calendar can redirect to an absolute origin URL. Keep
+      // that hop in the same WebVPN session as the original calendar request.
+      current =
+          redirected.host.toLowerCase() ==
+              TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_HOST
+          ? TsinghuaWebVpnRedirect.forTarget(redirected)
+          : redirected;
       currentMethod =
           response.statusCode == 301 ||
               response.statusCode == 302 ||
@@ -1034,6 +1317,40 @@ final class TsinghuaAuthClient {
     }
     throw StateError('Too many redirects during authentication.');
   }
+
+  String _decodeResponseBody(List<int> bytes, String? contentType, Uri uri) {
+    final declaredCharset = RegExp(
+      r'''charset\s*=\s*["']?([^;\s"']+)''',
+      caseSensitive: false,
+    ).firstMatch(contentType ?? '')?.group(1)?.toLowerCase();
+    final isGbk = switch (declaredCharset) {
+      'gbk' || 'gb2312' || 'gb18030' || 'cp936' => true,
+      _ => false,
+    };
+    if (isGbk) return gbk_codec.gbk.decode(bytes);
+    if (declaredCharset == 'iso-8859-1' || declaredCharset == 'latin1') {
+      return latin1.decode(bytes);
+    }
+
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      // Some older campus pages omit a charset even though the body is GBK.
+      // Their redirect links remain ASCII, but decoding as UTF-8 would fail
+      // before the authentication flow can follow those links.
+      trace?.call(
+        'Response is not UTF-8; decoding as GBK for '
+        '${uri.host}${_safeTracePath(uri)} '
+        '(contentType=${contentType ?? '-'}).',
+      );
+      return gbk_codec.gbk.decode(bytes);
+    }
+  }
+
+  String _safeTracePath(Uri uri) => uri.path.replaceAll(
+    RegExp(r';jsessionid=[^/;]+', caseSensitive: false),
+    ';jsessionid=[redacted]',
+  );
 
   /// Combines proxy cookies with cookies scoped to the encoded service URL.
   /// Service cookies take precedence when names collide.

@@ -89,6 +89,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verificationCodeInvalid => '验证码不正确，请重试。';
 
   @override
+  String get trustDeviceTitle => '信任此设备？';
+
+  @override
+  String get trustDeviceDescription =>
+      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任。';
+
+  @override
+  String get trustDeviceAction => '信任设备';
+
+  @override
+  String get notNowAction => '暂不';
+
+  @override
   String get confirmAction => '确认';
 
   @override
@@ -128,7 +141,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get plansTitle => '学生计划';
 
   @override
-  String get plansDescription => '你的课程表和自定义计划将在这里显示。';
+  String get plansDescription => '你的教学日历和自定义计划将在这里显示。';
+
+  @override
+  String calendarWeek(int week) {
+    return '第 $week 周';
+  }
+
+  @override
+  String get calendarPreviousWeek => '上一周';
+
+  @override
+  String get calendarNextWeek => '下一周';
+
+  @override
+  String get calendarRefresh => '刷新日历';
+
+  @override
+  String get calendarLoading => '正在加载日历…';
+
+  @override
+  String get calendarLoadError => '无法加载教学日历。';
+
+  @override
+  String get calendarRetry => '重试';
+
+  @override
+  String get calendarNoCourses => '本周没有课程。';
 
   @override
   String get studyTitle => '学习';
@@ -228,6 +267,19 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get verificationCodeInvalid => '验证码不正确，请重试。';
 
   @override
+  String get trustDeviceTitle => '信任此设备？';
+
+  @override
+  String get trustDeviceDescription =>
+      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任。';
+
+  @override
+  String get trustDeviceAction => '信任设备';
+
+  @override
+  String get notNowAction => '暂不';
+
+  @override
   String get confirmAction => '确认';
 
   @override
@@ -267,7 +319,33 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get plansTitle => '学生计划';
 
   @override
-  String get plansDescription => '你的课程表和自定义计划将在这里显示。';
+  String get plansDescription => '你的教学日历和自定义计划将在这里显示。';
+
+  @override
+  String calendarWeek(int week) {
+    return '第 $week 周';
+  }
+
+  @override
+  String get calendarPreviousWeek => '上一周';
+
+  @override
+  String get calendarNextWeek => '下一周';
+
+  @override
+  String get calendarRefresh => '刷新日历';
+
+  @override
+  String get calendarLoading => '正在加载日历…';
+
+  @override
+  String get calendarLoadError => '无法加载教学日历。';
+
+  @override
+  String get calendarRetry => '重试';
+
+  @override
+  String get calendarNoCourses => '本周没有课程。';
 
   @override
   String get studyTitle => '学习';
@@ -367,6 +445,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get verificationCodeInvalid => '驗證碼不正確，請重試。';
 
   @override
+  String get trustDeviceTitle => '信任此裝置？';
+
+  @override
+  String get trustDeviceDescription =>
+      '清華身分驗證服務可能會記住此裝置，減少後續驗證碼驗證。請僅在你本人控制的裝置上選擇信任。';
+
+  @override
+  String get trustDeviceAction => '信任裝置';
+
+  @override
+  String get notNowAction => '暫不';
+
+  @override
   String get confirmAction => '確認';
 
   @override
@@ -406,7 +497,33 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get plansTitle => '學生計畫';
 
   @override
-  String get plansDescription => '你的課程表和自訂計畫將在這裡顯示。';
+  String get plansDescription => '你的教學日曆和自訂計畫將在這裡顯示。';
+
+  @override
+  String calendarWeek(int week) {
+    return '第 $week 週';
+  }
+
+  @override
+  String get calendarPreviousWeek => '上一週';
+
+  @override
+  String get calendarNextWeek => '下一週';
+
+  @override
+  String get calendarRefresh => '重新整理日曆';
+
+  @override
+  String get calendarLoading => '正在載入日曆…';
+
+  @override
+  String get calendarLoadError => '無法載入教學日曆。';
+
+  @override
+  String get calendarRetry => '重試';
+
+  @override
+  String get calendarNoCourses => '本週沒有課程。';
 
   @override
   String get studyTitle => '學習';

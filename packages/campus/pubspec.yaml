@@ -1,5 +1,5 @@
-name: thulium_auth
-description: Shared Tsinghua WebVPN and identity authentication for Thulium clients.
+name: thulium_campus
+description: Shared Tsinghua campus data clients for Thulium.
 version: 0.1.0
 publish_to: none
 
@@ -7,9 +7,9 @@ environment:
   sdk: ^3.12.2
 
 dependencies:
-  dart_sm: ^0.1.5
-  fast_gbk: ^1.0.0
   http: ^1.4.0
+  thulium_auth:
+    path: ../auth
 
 dev_dependencies:
   lints: ^6.0.0

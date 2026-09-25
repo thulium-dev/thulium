@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
+import 'package:thulium_auth/thulium_auth.dart';
 
 import '../widgets/language_button.dart';
 import 'settings_page.dart';
+import 'calendar_page.dart';
 
 /// The authenticated application shell with the primary navigation sections.
 final class HomePage extends StatefulWidget {
@@ -11,12 +13,16 @@ final class HomePage extends StatefulWidget {
     required this.onLocaleSelected,
     required this.onThemeToggle,
     required this.onLogout,
+    required this.onSessionExpired,
+    this.sessionStore,
     super.key,
   });
 
   final ValueChanged<Locale> onLocaleSelected;
   final VoidCallback onThemeToggle;
   final Future<bool> Function() onLogout;
+  final VoidCallback onSessionExpired;
+  final AuthSessionStore? sessionStore;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -24,6 +30,7 @@ final class HomePage extends StatefulWidget {
 
 final class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  bool _hasOpenedPlans = false;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +52,10 @@ final class _HomePageState extends State<HomePage> {
     return FScaffold(
       footer: FBottomNavigationBar(
         index: _selectedIndex,
-        onChange: (index) => setState(() => _selectedIndex = index),
+        onChange: (index) => setState(() {
+          _selectedIndex = index;
+          if (index == 1) _hasOpenedPlans = true;
+        }),
         children: [
           for (var index = 0; index < labels.length; index++)
             MergeSemantics(
@@ -62,29 +72,44 @@ final class _HomePageState extends State<HomePage> {
         bottom: false,
         child: Stack(
           children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sections[_selectedIndex].title,
-                        style: context.theme.typography.xl2,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        sections[_selectedIndex].description,
-                        style: context.theme.typography.md,
-                      ),
-                    ],
+            if (_selectedIndex != 1)
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          sections[_selectedIndex].title,
+                          style: context.theme.typography.xl2,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          sections[_selectedIndex].description,
+                          style: context.theme.typography.md,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            if (_hasOpenedPlans)
+              Positioned.fill(
+                top: 64,
+                child: Offstage(
+                  offstage: _selectedIndex != 1,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: AcademicCalendarPage(
+                      sessionStore: widget.sessionStore,
+                      onSessionExpired: widget.onSessionExpired,
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               top: 8,
               right: 8,

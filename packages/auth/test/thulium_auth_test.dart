@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dart_sm/dart_sm.dart';
+import 'package:fast_gbk/fast_gbk.dart' as gbk_codec;
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import 'package:thulium_auth/thulium_auth.dart';
@@ -133,6 +134,41 @@ void main() {
     expect(await store.read(), isNull);
   });
 
+  test('persists credentials separately and clears them on logout', () async {
+    final sessionStore = MemoryAuthSessionStore();
+    final credentialStore = _MemoryCredentialStore();
+    final auth = TsinghuaAuthClient(
+      httpClient: _FakeAuthClient(),
+      sessionStore: sessionStore,
+      credentialStore: credentialStore,
+      twoFactorMethodHandler: (_) async => TwoFactorMethod.wechat,
+      twoFactorCodeHandler: (verifyCode) async {
+        expect(await verifyCode('incorrect'), isFalse);
+        expect(await verifyCode('123456'), isTrue);
+      },
+      twoFactorTrustHandler: () async => true,
+    );
+
+    final session = await auth.login(
+      userId: '1234567890',
+      password: 'test-password',
+      fingerprint: 'device-fingerprint',
+    );
+    expect(session.encode(), isNot(contains('test-password')));
+    expect(
+      (await sessionStore.read())!.encode(),
+      isNot(contains('test-password')),
+    );
+    expect(
+      (await credentialStore.readCredentials())?.password,
+      'test-password',
+    );
+
+    await auth.logout();
+    expect(await sessionStore.read(), isNull);
+    expect(await credentialStore.readCredentials(), isNull);
+  });
+
   test('clears legacy sessions that lack cookie scope metadata', () async {
     final store = MemoryAuthSessionStore();
     await store.write(
@@ -149,6 +185,53 @@ void main() {
     expect(await store.read(), isNull);
   });
 
+  test(
+    'unexpected response previews identify pages without exposing secrets',
+    () {
+      final messages = <String>[];
+      final auth = TsinghuaAuthClient(trace: messages.add);
+      auth.traceUnexpectedResponse(
+        'primary-calendar',
+        http.Response(
+          '<html><title>登录超时</title>'
+          '<script>var ticket="private-ticket-value";</script>'
+          '<body>Student 2022012050 must sign in again.</body></html>',
+          200,
+          headers: const {'content-type': 'text/html; charset=utf-8'},
+          request: http.Request(
+            'GET',
+            Uri.parse(
+              'https://webvpn.tsinghua.edu.cn/'
+              'portal3rd.do;jsessionid=private-session-id?ticket=hidden',
+            ),
+          ),
+        ),
+      );
+
+      expect(messages.single, contains('stage=primary-calendar'));
+      expect(messages.single, contains('preview="登录超时 Student'));
+      expect(messages.single, contains('markers=session-timeout'));
+      expect(messages.single, isNot(contains('private-ticket-value')));
+      expect(messages.single, isNot(contains('private-session-id')));
+      expect(messages.single, isNot(contains('2022012050')));
+      expect(messages.single, isNot(contains('ticket=hidden')));
+    },
+  );
+
+  test('diagnostic callback failures do not replace request failures', () {
+    final auth = TsinghuaAuthClient(
+      trace: (_) => throw StateError('diagnostic sink failed'),
+    );
+
+    expect(
+      () => auth.traceUnexpectedResponse(
+        'primary-calendar',
+        http.Response('', 200),
+      ),
+      returnsNormally,
+    );
+  });
+
   test('validates a restored session against the information portal', () async {
     final store = MemoryAuthSessionStore();
     await store.write(_savedSession());
@@ -160,8 +243,134 @@ void main() {
     expect(await store.read(), isNotNull);
     expect(client.requests, hasLength(2));
     expect(client.requests.last.url.queryParameters['_csrf'], 'csrf-value');
-    expect(client.requests.last.headers['Cookie'], 'SESSION=webvpn-session');
+    expect(
+      client.requests.last.headers['Cookie'],
+      contains('SESSION=webvpn-session'),
+    );
+    expect(
+      client.requests.last.headers['Cookie'],
+      contains('XSRF-TOKEN=csrf-value'),
+    );
+    expect(
+      auth.session!.scopedCookies
+          .singleWhere((cookie) => cookie.name == 'XSRF-TOKEN')
+          .domain,
+      'info.tsinghua.edu.cn',
+    );
   });
+
+  test(
+    'empty CSRF response is diagnosed without clearing the session',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(_savedSession());
+      final traces = <String>[];
+      final auth = TsinghuaAuthClient(
+        httpClient: _SessionValidationClient(
+          studentId: '1234567890',
+          emptyCookieResponses: 3,
+        ),
+        sessionStore: store,
+        trace: traces.add,
+      );
+      await auth.restore();
+
+      await expectLater(
+        auth.validateSession(),
+        throwsA(isA<PortalCsrfUnavailable>()),
+      );
+      expect(await store.read(), isNotNull);
+      expect(
+        traces,
+        contains(
+          allOf(
+            contains('stage=portal-csrf-cookie'),
+            contains('bodyType=empty'),
+            contains('preview="<empty>"'),
+          ),
+        ),
+      );
+    },
+  );
+
+  test('retries a transient empty portal cookie response', () async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+    final transport = _SessionValidationClient(
+      studentId: '1234567890',
+      emptyCookieResponses: 1,
+    );
+    final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+    await auth.restore();
+
+    expect(await auth.validateSession(), isTrue);
+    expect(transport.cookieRequests, 2);
+    expect(
+      transport.requests.any((request) => request.url.path == '/login'),
+      isFalse,
+    );
+  });
+
+  test('probes a saved portal token before attempting SSO reconnect', () async {
+    final store = MemoryAuthSessionStore();
+    final saved = _savedSession();
+    await store.write(
+      AuthSession(
+        userId: saved.userId,
+        fingerprint: saved.fingerprint,
+        cookies: saved.cookies,
+        scopedCookies: [
+          ...saved.scopedCookies,
+          const AuthCookie(
+            name: 'XSRF-TOKEN',
+            value: 'csrf-value',
+            domain: 'info.tsinghua.edu.cn',
+            path: '/',
+            hostOnly: true,
+            secure: true,
+          ),
+        ],
+      ),
+    );
+    final transport = _SessionValidationClient(
+      studentId: '1234567890',
+      emptyCookieResponses: 3,
+    );
+    final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+    await auth.restore();
+
+    expect(await auth.validateSession(), isTrue);
+    expect(transport.cookieRequests, 2);
+    expect(
+      transport.requests.any((request) => request.url.path == '/login'),
+      isFalse,
+    );
+  });
+
+  test(
+    'retries the cookie endpoint after saved-cookie SSO reconnect',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(_savedSession());
+      final transport = _SessionValidationClient(
+        studentId: '1234567890',
+        emptyCookieResponses: 2,
+      );
+      final auth = TsinghuaAuthClient(
+        httpClient: transport,
+        sessionStore: store,
+      );
+      await auth.restore();
+
+      expect(await auth.validateSession(), isTrue);
+      expect(transport.cookieRequests, 3);
+      expect(
+        transport.requests.any((request) => request.url.path == '/login'),
+        isTrue,
+      );
+      expect(await store.read(), isNotNull);
+    },
+  );
 
   test(
     'clears a restored session rejected by the information portal',
@@ -218,6 +427,78 @@ void main() {
       'JSESSIONID=webvpn-session',
     );
   });
+
+  test('calendar requests use the WebVPN route after roaming', () async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+    final transport = _GbkResponseClient('GB2312');
+    final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+    await auth.restore();
+
+    await auth.getAuthenticated(
+      Uri.parse(
+        'http://zhjw.cic.tsinghua.edu.cn/jxmh_out.do?'
+        'm=bks_jxrl_all&jsoncallback=m',
+      ),
+    );
+
+    final sent = transport.requests.single.url;
+    expect(sent.host, TsinghuaWebVpnRedirect.WEBVPN_HOST);
+    expect(
+      sent.path,
+      '${TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_REDIRECT_PATH}jxmh_out.do',
+    );
+    expect(sent.queryParameters['jsoncallback'], 'm');
+  });
+
+  test('absolute calendar redirects stay within WebVPN', () async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+    final transport = _CalendarRedirectClient();
+    final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+    await auth.restore();
+
+    await auth.getAuthenticated(
+      Uri.parse('http://zhjw.cic.tsinghua.edu.cn/jxmh_out.do'),
+    );
+
+    expect(transport.requests, hasLength(2));
+    expect(
+      transport.requests.every(
+        (request) => request.url.host == TsinghuaWebVpnRedirect.WEBVPN_HOST,
+      ),
+      isTrue,
+    );
+    expect(
+      transport.requests.last.url.path,
+      '${TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_REDIRECT_PATH}timeout.jsp',
+    );
+  });
+
+  for (final charset in <String?>['GB2312', null]) {
+    test('decodes an older campus response with charset $charset', () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(_savedSession());
+      final traces = <String>[];
+      final auth = TsinghuaAuthClient(
+        httpClient: _GbkResponseClient(charset),
+        sessionStore: store,
+        trace: traces.add,
+      );
+      await auth.restore();
+
+      final response = await auth.getAuthenticated(
+        Uri.parse(
+          'https://webvpn.tsinghua.edu.cn/'
+          'portal3rd.do;jsessionid=private-session-id',
+        ),
+      );
+
+      expect(response.body, '<html>旧版教务</html>');
+      expect(traces.join('\n'), contains(';jsessionid=[redacted]'));
+      expect(traces.join('\n'), isNot(contains('private-session-id')));
+    });
+  }
 
   test(
     'retries a rejected two-factor code without sending another code',
@@ -358,6 +639,13 @@ void main() {
         'id.tsinghua.edu.cn',
       );
       expect(
+        informationAppRedirect.url.toString(),
+        contains(
+          'uri=/f/j_spring_security_thauth_roaming_entry?'
+          'atOnce=atOnce&&ticket=test-ticket',
+        ),
+      );
+      expect(
         informationAppRedirect.headers['Cookie'],
         isNot(contains('JSESSIONID=')),
       );
@@ -365,7 +653,7 @@ void main() {
         auth.session!.scopedCookies.where(
           (cookie) => cookie.name == 'JSESSIONID',
         ),
-        hasLength(2),
+        hasLength(3),
       );
     },
   );
@@ -413,6 +701,47 @@ void main() {
       expect((await store.read())?.fingerGenPrint, 'trusted-device-token');
     },
   );
+
+  test('does not save a login when WebVPN rejects the portal ticket', () async {
+    final store = MemoryAuthSessionStore();
+    final credentialStore = _MemoryCredentialStore();
+    final auth = TsinghuaAuthClient(
+      httpClient: _FakeAuthClient(failInformationRedirect: true),
+      sessionStore: store,
+      credentialStore: credentialStore,
+      twoFactorMethodHandler: (_) async => TwoFactorMethod.wechat,
+      twoFactorCodeHandler: (verifyCode) async {
+        expect(await verifyCode('incorrect'), isFalse);
+        expect(await verifyCode('123456'), isTrue);
+      },
+      twoFactorTrustHandler: () async => true,
+    );
+
+    await expectLater(
+      auth.login(
+        userId: '1234567890',
+        password: 'password',
+        fingerprint: 'device-fingerprint',
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(await store.read(), isNull);
+    expect(await credentialStore.readCredentials(), isNull);
+  });
+}
+
+final class _MemoryCredentialStore implements AuthCredentialStore {
+  AuthCredentials? _credentials;
+
+  @override
+  Future<AuthCredentials?> readCredentials() async => _credentials;
+
+  @override
+  Future<void> writeCredentials(AuthCredentials credentials) async =>
+      _credentials = credentials;
+
+  @override
+  Future<void> clearCredentials() async => _credentials = null;
 }
 
 AuthSession _savedSession() => const AuthSession(
@@ -432,16 +761,23 @@ AuthSession _savedSession() => const AuthSession(
 );
 
 final class _SessionValidationClient extends http.BaseClient {
-  _SessionValidationClient({required this.studentId});
+  _SessionValidationClient({
+    required this.studentId,
+    this.emptyCookieResponses = 0,
+  });
 
   final String studentId;
+  final int emptyCookieResponses;
   final requests = <http.BaseRequest>[];
+  var cookieRequests = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     requests.add(request);
     final body = request.url.path == '/wengine-vpn/cookie'
-        ? 'XSRF-TOKEN=csrf-value; Path=/; Secure'
+        ? ++cookieRequests <= emptyCookieResponses
+              ? ''
+              : 'XSRF-TOKEN=csrf-value; JSESSIONID=portal-session;'
         : jsonEncode({
             'object': {'ryh': studentId},
           });
@@ -453,7 +789,47 @@ final class _SessionValidationClient extends http.BaseClient {
   }
 }
 
+final class _GbkResponseClient extends http.BaseClient {
+  _GbkResponseClient(this.charset);
+
+  final String? charset;
+  final requests = <http.BaseRequest>[];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests.add(request);
+    return http.StreamedResponse(
+      Stream<List<int>>.value(gbk_codec.gbk.encode('<html>旧版教务</html>')),
+      200,
+      headers: {
+        if (charset != null) 'content-type': 'text/html; charset=$charset',
+      },
+      request: request,
+    );
+  }
+}
+
+final class _CalendarRedirectClient extends http.BaseClient {
+  final requests = <http.BaseRequest>[];
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requests.add(request);
+    return http.StreamedResponse(
+      Stream<List<int>>.value(const []),
+      requests.length == 1 ? 302 : 200,
+      request: request,
+      headers: requests.length == 1
+          ? const {'location': 'http://zhjw.cic.tsinghua.edu.cn/timeout.jsp'}
+          : const {},
+    );
+  }
+}
+
 final class _FakeAuthClient extends http.BaseClient {
+  _FakeAuthClient({this.failInformationRedirect = false});
+
+  final bool failInformationRedirect;
   final requests = <http.BaseRequest>[];
   var _verificationAttempts = 0;
   var _identityLoginAttempts = 0;
@@ -472,7 +848,7 @@ final class _FakeAuthClient extends http.BaseClient {
         '二次认证',
       '/do/off/ui/auth/login/check'
           when requestBody.contains('fingerGenPrint=trusted-device-token') =>
-        '<a href="/information-callback">登录成功。正在重定向到</a>',
+        '<a href="https://id.tsinghua.edu.cn/f/j_spring_security_thauth_roaming_entry?atOnce=atOnce&&ticket=test-ticket">登录成功。正在重定向到</a>',
       '/do/off/ui/auth/login/check' => '二次认证',
       '/b/doubleAuth/login' when requestBody.contains('FIND_APPROACHES') =>
         '{"result":"success","object":{"hasWeChatBool":true,"phone":null,"hasTotp":false}}',
@@ -489,11 +865,20 @@ final class _FakeAuthClient extends http.BaseClient {
       '/two-factor-redirect' => '<a href="/callback">登录成功。正在重定向到</a>',
       '/callback' => '',
       '/lb-auth/lbredirect' => '',
+      '/wengine-vpn/failed' => '<html>WebVPN service failed</html>',
+      '/wengine-vpn/cookie' =>
+        'XSRF-TOKEN=csrf-value; JSESSIONID=portal-session;',
+      _ when request.url.path.endsWith('/b/info/gxfw_fg/common/grjbxx') =>
+        '{"result":"success","object":{"ryh":"1234567890"}}',
       _ => '{}',
     };
     return http.StreamedResponse(
       Stream<List<int>>.value(utf8.encode(body)),
-      request.url.path == '/login' ? 302 : 200,
+      request.url.path == '/login'
+          ? 302
+          : request.url.path == '/lb-auth/lbredirect' && failInformationRedirect
+          ? 307
+          : 200,
       headers: switch (request.url.path) {
         '/login' => const {
           'location': '/login-form',
@@ -502,6 +887,9 @@ final class _FakeAuthClient extends http.BaseClient {
         },
         '/do/off/ui/auth/login/check' => const {
           'set-cookie': 'JSESSIONID=identity-session; Path=/; Secure',
+        },
+        '/lb-auth/lbredirect' when failInformationRedirect => const {
+          'location': 'https://webvpn.tsinghua.edu.cn/wengine-vpn/failed',
         },
         _ => const {},
       },

@@ -92,6 +92,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'That code was not accepted. Please try again.';
 
   @override
+  String get trustDeviceTitle => 'Trust this device?';
+
+  @override
+  String get trustDeviceDescription =>
+      'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control.';
+
+  @override
+  String get trustDeviceAction => 'Trust device';
+
+  @override
+  String get notNowAction => 'Not now';
+
+  @override
   String get confirmAction => 'Confirm';
 
   @override
@@ -134,7 +147,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plansDescription =>
-      'Your timetable and custom plans will appear here.';
+      'Your academic calendar and custom plans will appear here.';
+
+  @override
+  String calendarWeek(int week) {
+    return 'Week $week';
+  }
+
+  @override
+  String get calendarPreviousWeek => 'Previous week';
+
+  @override
+  String get calendarNextWeek => 'Next week';
+
+  @override
+  String get calendarRefresh => 'Refresh calendar';
+
+  @override
+  String get calendarLoading => 'Loading calendar…';
+
+  @override
+  String get calendarLoadError => 'Could not load the academic calendar.';
+
+  @override
+  String get calendarRetry => 'Retry';
+
+  @override
+  String get calendarNoCourses => 'No courses scheduled for this week.';
 
   @override
   String get studyTitle => 'Study';

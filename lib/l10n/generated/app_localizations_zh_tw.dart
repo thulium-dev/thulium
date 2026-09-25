@@ -87,6 +87,19 @@ class AppLocalizationsZhTw extends AppLocalizations {
   String get verificationCodeInvalid => '驗證碼不正確，請重試。';
 
   @override
+  String get trustDeviceTitle => '信任此裝置？';
+
+  @override
+  String get trustDeviceDescription =>
+      '清華身分驗證服務可能會記住此裝置，減少後續驗證碼驗證。請僅在你本人控制的裝置上選擇信任。';
+
+  @override
+  String get trustDeviceAction => '信任裝置';
+
+  @override
+  String get notNowAction => '暫不';
+
+  @override
   String get cancelAction => '取消';
 
   @override
@@ -126,7 +139,31 @@ class AppLocalizationsZhTw extends AppLocalizations {
   String get plansTitle => '學生計畫';
 
   @override
-  String get plansDescription => '你的課程表和自訂計畫將在這裡顯示。';
+  String get plansDescription => '你的教學日曆和自訂計畫將在這裡顯示。';
+
+  @override
+  String calendarWeek(int week) => '第 $week 週';
+
+  @override
+  String get calendarPreviousWeek => '上一週';
+
+  @override
+  String get calendarNextWeek => '下一週';
+
+  @override
+  String get calendarRefresh => '重新整理日曆';
+
+  @override
+  String get calendarLoading => '正在載入日曆…';
+
+  @override
+  String get calendarLoadError => '無法載入教學日曆。';
+
+  @override
+  String get calendarRetry => '重試';
+
+  @override
+  String get calendarNoCourses => '本週沒有課程。';
 
   @override
   String get studyTitle => '學習';

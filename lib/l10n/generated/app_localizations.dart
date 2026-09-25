@@ -256,6 +256,30 @@ abstract class AppLocalizations {
   /// **'That code was not accepted. Please try again.'**
   String get verificationCodeInvalid;
 
+  /// No description provided for @trustDeviceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust this device?'**
+  String get trustDeviceTitle;
+
+  /// No description provided for @trustDeviceDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control.'**
+  String get trustDeviceDescription;
+
+  /// No description provided for @trustDeviceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust device'**
+  String get trustDeviceAction;
+
+  /// No description provided for @notNowAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notNowAction;
+
   /// No description provided for @confirmAction.
   ///
   /// In en, this message translates to:
@@ -337,8 +361,56 @@ abstract class AppLocalizations {
   /// No description provided for @plansDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your timetable and custom plans will appear here.'**
+  /// **'Your academic calendar and custom plans will appear here.'**
   String get plansDescription;
+
+  /// No description provided for @calendarWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}'**
+  String calendarWeek(int week);
+
+  /// No description provided for @calendarPreviousWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get calendarPreviousWeek;
+
+  /// No description provided for @calendarNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get calendarNextWeek;
+
+  /// No description provided for @calendarRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh calendar'**
+  String get calendarRefresh;
+
+  /// No description provided for @calendarLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading calendar…'**
+  String get calendarLoading;
+
+  /// No description provided for @calendarLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the academic calendar.'**
+  String get calendarLoadError;
+
+  /// No description provided for @calendarRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get calendarRetry;
+
+  /// No description provided for @calendarNoCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'No courses scheduled for this week.'**
+  String get calendarNoCourses;
 
   /// No description provided for @studyTitle.
   ///

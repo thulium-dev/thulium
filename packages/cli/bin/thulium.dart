@@ -70,8 +70,10 @@ Future<void> _runCommand(ArgResults command) async {
   final store = CliAuthSessionStore();
   final client = TsinghuaAuthClient(
     sessionStore: store,
+    credentialStore: store,
     twoFactorMethodHandler: _handleTwoFactorMethod,
     twoFactorCodeHandler: _readTwoFactorCode,
+    twoFactorTrustHandler: _askToTrustDevice,
     trace: _verboseRequested(name, command.command!)
         ? (message) => stderr.writeln('[auth] $message')
         : null,
@@ -100,10 +102,95 @@ Future<void> _runCommand(ArgResults command) async {
       if (session == null) {
         throw StateError('Not logged in. Run `thulium login` first.');
       }
-      stdout.writeln('Fetching the current academic timetable...');
-      final schedule = await CourseScheduleService(client).loadCurrentTerm();
+      stdout.writeln('Fetching the current academic calendar...');
+      final schedule = await _loadScheduleWithReconnect(client, store, session);
       _printSchedule(schedule);
   }
+}
+
+Future<CourseSchedule> _loadScheduleWithReconnect(
+  TsinghuaAuthClient client,
+  AuthCredentialStore credentialStore,
+  AuthSession savedSession,
+) async {
+  final service = CourseScheduleService(client);
+  try {
+    return await service.loadCurrentTerm();
+  } on CourseScheduleException catch (error) {
+    if (error.cause is! PortalCsrfUnavailable) rethrow;
+    return _reconnectAndRetrySchedule(
+      client,
+      credentialStore,
+      savedSession,
+      error,
+    );
+  } on CourseScheduleSessionExpired catch (error) {
+    return _reconnectAndRetrySchedule(
+      client,
+      credentialStore,
+      savedSession,
+      error,
+    );
+  }
+}
+
+Future<CourseSchedule> _reconnectAndRetrySchedule(
+  TsinghuaAuthClient client,
+  AuthCredentialStore credentialStore,
+  AuthSession savedSession,
+  Object originalError,
+) async {
+  final credentials = await credentialStore.readCredentials();
+  if (credentials != null && credentials.userId == savedSession.userId) {
+    stdout.writeln('Reconnecting with saved credentials...');
+    Object? reconnectError;
+    try {
+      await client.login(
+        userId: credentials.userId,
+        password: credentials.password,
+        fingerprint: savedSession.fingerprint,
+      );
+    } catch (error) {
+      // An expired password or a second-factor prompt can still require an
+      // interactive retry. Never print the saved password in diagnostics.
+      reconnectError = error;
+    }
+    if (reconnectError == null) {
+      stdout.writeln('Reconnected. Retrying the academic calendar once...');
+      return CourseScheduleService(client).loadCurrentTerm();
+    }
+    stderr.writeln('Automatic reconnection failed: $reconnectError');
+  }
+
+  if (!stdin.hasTerminal) {
+    throw StateError(
+      'The saved session could not be reconnected automatically. '
+      'Run `thulium login --force` in an interactive terminal, then retry '
+      '`thulium schedule`. Original error: $originalError',
+    );
+  }
+
+  stdout.writeln('The saved session could not be reconnected silently.');
+  final answer = _readLine(
+    'Sign in again to retry the schedule? [Y/n]: ',
+  ).toLowerCase();
+  if (answer.isNotEmpty && answer != 'y' && answer != 'yes') {
+    throw originalError;
+  }
+  final password = _readSecret('Password: ');
+  if (password.isEmpty) {
+    throw StateError('A password is required to reconnect.');
+  }
+
+  // The account and fingerprint come from the saved session. A successful
+  // login replaces the separately stored credential with the new password.
+  await client.login(
+    userId: savedSession.userId,
+    password: password,
+    fingerprint: savedSession.fingerprint,
+  );
+  stdout.writeln('Reconnected. Retrying the academic calendar once...');
+  return CourseScheduleService(client).loadCurrentTerm();
 }
 
 Future<void> _runSessionCommand(
@@ -278,11 +365,18 @@ Future<void> _loginAttempt(
   final password = _readSecret('Password: ');
   if (password.isEmpty) throw const FormatException('Password is required.');
 
+  // Preserve the trusted-device identity on forced reauthentication. The
+  // account check prevents reusing another user's fingerprint on this host.
+  final previousSession = await client.restore();
+  final fingerprint = previousSession?.userId == userId
+      ? previousSession!.fingerprint
+      : _buildFingerprint();
+
   stdout.writeln('Signing in...');
   final session = await client.login(
     userId: userId,
     password: password,
-    fingerprint: _buildFingerprint(),
+    fingerprint: fingerprint,
   );
   stdout.writeln('Login succeeded for ${session.userId}.');
   stdout.writeln('The session was saved in the operating system keyring.');
@@ -335,6 +429,15 @@ Future<void> _readTwoFactorCode(TwoFactorCodeVerifier verifyCode) async {
     if (await verifyCode(code)) return;
     stdout.writeln('The verification code was not accepted. Please try again.');
   }
+}
+
+Future<bool> _askToTrustDevice() async {
+  stdout.writeln(
+    'Trust this device to reduce future verification prompts? Only choose yes '
+    'on a device you control.',
+  );
+  final answer = _readLine('Trust this device? [y/N]: ').toLowerCase();
+  return answer == 'y' || answer == 'yes';
 }
 
 String _buildFingerprint() {
