@@ -112,7 +112,7 @@ final class _HomePageState extends State<HomePage> {
               ),
             Positioned(
               top: 8,
-              right: 8,
+              left: 8,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -126,16 +126,20 @@ final class _HomePageState extends State<HomePage> {
                     ),
                     onPressed: widget.onThemeToggle,
                   ),
-                  IconButton(
-                    tooltip: l10n.settingsTitle,
-                    icon: const Icon(Icons.settings_outlined),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => SettingsPage(onLogout: widget.onLogout),
-                      ),
-                    ),
-                  ),
                 ],
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                tooltip: l10n.settingsTitle,
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SettingsPage(onLogout: widget.onLogout),
+                  ),
+                ),
               ),
             ),
           ],
