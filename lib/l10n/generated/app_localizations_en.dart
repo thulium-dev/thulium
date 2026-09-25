@@ -183,6 +183,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarNoCourses => 'No courses scheduled for this week.';
 
   @override
+  String get calendarOverlappingPlans => 'Overlapping plans';
+
+  @override
   String get studyTitle => 'Study';
 
   @override

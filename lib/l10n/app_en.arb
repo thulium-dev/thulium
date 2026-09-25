@@ -62,6 +62,7 @@
   "calendarStaleCache": "Showing a saved calendar because the latest update failed.",
   "calendarRetry": "Retry",
   "calendarNoCourses": "No courses scheduled for this week.",
+  "calendarOverlappingPlans": "Overlapping plans",
   "studyTitle": "Study",
   "studyDescription": "Study tools and learning resources will appear here.",
   "lifeTitle": "Life",

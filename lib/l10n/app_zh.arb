@@ -62,6 +62,7 @@
   "calendarStaleCache": "更新失败，当前显示已保存的日历。",
   "calendarRetry": "重试",
   "calendarNoCourses": "本周没有课程。",
+  "calendarOverlappingPlans": "重叠的计划",
   "studyTitle": "学习",
   "studyDescription": "学习工具和学习资源将在这里显示。",
   "lifeTitle": "生活",

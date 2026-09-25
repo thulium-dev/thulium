@@ -12,6 +12,8 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
 import '../widgets/calendar_course_block.dart';
+import '../widgets/calendar_course_layout.dart';
+import '../widgets/calendar_overlap_dialog.dart';
 import '../widgets/calendar_week_pager.dart';
 
 /// Displays one Monday-to-Sunday week of the student's fetched courses.
@@ -33,7 +35,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   static const _HOUR_HEIGHT = 60.0;
   static const _FIRST_HOUR = 8;
   static const _LAST_HOUR = 22;
-  static const _TIME_AXIS_WIDTH = 36.0;
+  static const _TIME_AXIS_WIDTH = 32.0;
   static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
   CourseSchedule? _schedule;
@@ -441,31 +443,70 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
               course.startsAt.day == date.day,
         )
         .toList(growable: false);
+    final groups = layoutCalendarCourseGroups(dailyCourses);
     final colors = context.theme.colors;
-    return Stack(
-      clipBehavior: Clip.hardEdge,
-      children: [
-        for (var hour = 0; hour <= _LAST_HOUR - _FIRST_HOUR; hour++)
-          Positioned(
-            top: hour * _HOUR_HEIGHT,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: _HOUR_HEIGHT,
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: colors.border, width: 0.5),
-                  left: BorderSide(color: colors.border, width: 0.5),
+    return LayoutBuilder(
+      builder: (context, constraints) => Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          for (var hour = 0; hour <= _LAST_HOUR - _FIRST_HOUR; hour++)
+            Positioned(
+              top: hour * _HOUR_HEIGHT,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: _HOUR_HEIGHT,
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: colors.border, width: 0.5),
+                    left: BorderSide(color: colors.border, width: 0.5),
+                  ),
                 ),
               ),
             ),
-          ),
-        for (final course in dailyCourses) _buildCourseBlock(context, course),
-      ],
+          for (final group in groups)
+            for (final placement in group.placements)
+              _buildCourseBlock(context, placement, constraints.maxWidth),
+          // Tap targets span each maximal continuous overlap region, not just
+          // the narrow visible cards. Vertical scroll and week swipes still
+          // win the gesture arena when the user drags instead of tapping.
+          for (final group in groups)
+            if (group.hasOverlap) _buildOverlapTarget(context, group),
+        ],
+      ),
     );
   }
 
-  Widget _buildCourseBlock(BuildContext context, CourseOccurrence course) {
+  Widget _buildOverlapTarget(BuildContext context, CalendarCourseGroup group) {
+    final startMinutes =
+        (group.startsAt.hour - _FIRST_HOUR) * 60 + group.startsAt.minute;
+    final endMinutes =
+        (group.endsAt.hour - _FIRST_HOUR) * 60 + group.endsAt.minute;
+    final totalMinutes = (_LAST_HOUR - _FIRST_HOUR) * 60;
+    final clippedStart = startMinutes.clamp(0, totalMinutes);
+    final clippedEnd = endMinutes.clamp(clippedStart, totalMinutes);
+    return Positioned(
+      top: clippedStart / 60 * _HOUR_HEIGHT,
+      left: 0,
+      right: 0,
+      height: math.max(1, (clippedEnd - clippedStart) / 60 * _HOUR_HEIGHT),
+      child: Semantics(
+        button: true,
+        label: AppLocalizations.of(context)!.calendarOverlappingPlans,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => showCalendarOverlapDialog(context, group),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCourseBlock(
+    BuildContext context,
+    CalendarCoursePlacement placement,
+    double dayWidth,
+  ) {
+    final course = placement.course;
     final startMinutes =
         (course.startsAt.hour - _FIRST_HOUR) * 60 + course.startsAt.minute;
     final durationMinutes = course.endsAt.difference(course.startsAt).inMinutes;
@@ -480,20 +521,26 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       30.0,
       (clippedEnd - clippedStart) / 60 * _HOUR_HEIGHT - 2,
     );
+    final laneWidth = dayWidth / placement.laneCount;
     return Positioned(
       key: ValueKey(
-        '${course.name}|${course.location}|'
+        '${course.category}|${course.name}|${course.location}|'
         '${course.startsAt.toIso8601String()}|${course.endsAt.toIso8601String()}',
       ),
       top: top,
-      left: 1,
-      right: 1,
+      left: placement.lane * laneWidth,
+      width: laneWidth,
       height: height,
-      child: LayoutBuilder(
-        builder: (context, constraints) => CalendarCourseBlock(
-          course: course,
-          width: constraints.maxWidth,
-          height: constraints.maxHeight,
+      child: Padding(
+        // Keep even exceptionally narrow lanes visible without borrowing
+        // pixels from their neighbors.
+        padding: EdgeInsets.symmetric(horizontal: math.min(1, laneWidth / 8)),
+        child: LayoutBuilder(
+          builder: (context, constraints) => CalendarCourseBlock(
+            course: course,
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+          ),
         ),
       ),
     );

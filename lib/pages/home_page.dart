@@ -102,7 +102,7 @@ final class _HomePageState extends State<HomePage> {
                 child: Offstage(
                   offstage: _selectedIndex != 1,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
                     child: AcademicCalendarPage(
                       sessionStore: widget.sessionStore,
                       onSessionExpired: widget.onSessionExpired,

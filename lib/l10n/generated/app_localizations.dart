@@ -424,6 +424,12 @@ abstract class AppLocalizations {
   /// **'No courses scheduled for this week.'**
   String get calendarNoCourses;
 
+  /// No description provided for @calendarOverlappingPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlapping plans'**
+  String get calendarOverlappingPlans;
+
   /// No description provided for @studyTitle.
   ///
   /// In en, this message translates to:

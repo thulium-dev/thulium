@@ -176,6 +176,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarNoCourses => '本周没有课程。';
 
   @override
+  String get calendarOverlappingPlans => '重叠的计划';
+
+  @override
   String get studyTitle => '学习';
 
   @override
@@ -360,6 +363,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarNoCourses => '本周没有课程。';
 
   @override
+  String get calendarOverlappingPlans => '重叠的计划';
+
+  @override
   String get studyTitle => '学习';
 
   @override
@@ -542,6 +548,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get calendarNoCourses => '本週沒有課程。';
+
+  @override
+  String get calendarOverlappingPlans => '重疊的計劃';
 
   @override
   String get studyTitle => '學習';

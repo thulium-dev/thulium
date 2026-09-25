@@ -5,7 +5,7 @@ import 'package:thulium/widgets/calendar_course_block.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
-  testWidgets('switches text orientation with width hysteresis', (
+  testWidgets('separates content thresholds from rotation threshold', (
     tester,
   ) async {
     Future<void> showAtWidth(double width) async {
@@ -32,20 +32,54 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    await showAtWidth(11);
+    final surface = find.byKey(const ValueKey('calendar-course-surface'));
+    final line = find.byKey(const ValueKey('calendar-course-line'));
+    expect(line, findsOneWidget);
+    expect(tester.getCenter(line).dx, tester.getCenter(surface).dx);
+    expect(find.text('Course A'), findsNothing);
+    expect(find.text('Room 101'), findsNothing);
+
+    await showAtWidth(12);
+    expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Course A'), findsOneWidget);
+    expect(find.text('Room 101'), findsNothing);
+
+    await showAtWidth(30);
+    expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Course A'), findsOneWidget);
+    expect(find.text('Room 101'), findsNothing);
+
     await showAtWidth(70);
     expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Course A'), findsOneWidget);
+    expect(find.text('Room 101'), findsOneWidget);
 
     await showAtWidth(105);
     expect(find.byType(RotatedBox), findsNothing);
     expect(find.text('Course A'), findsOneWidget);
     expect(find.text('Room 101'), findsOneWidget);
 
-    // A width between the thresholds keeps the previous wide layout.
+    // The available lane width, not the previous state, selects the tier.
     await showAtWidth(88);
-    expect(find.byType(RotatedBox), findsNothing);
-
-    await showAtWidth(75);
     expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Room 101'), findsOneWidget);
+
+    await showAtWidth(95);
+    expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Room 101'), findsOneWidget);
+
+    await showAtWidth(96);
+    expect(find.byType(RotatedBox), findsNothing);
+    expect(find.text('Room 101'), findsOneWidget);
+
+    await showAtWidth(35);
+    expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Room 101'), findsNothing);
+
+    await showAtWidth(36);
+    expect(find.byType(RotatedBox), findsOneWidget);
+    expect(find.text('Room 101'), findsOneWidget);
   });
 
   testWidgets('respects the reduced-motion setting', (tester) async {
