@@ -232,19 +232,38 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
     final week = _selectedWeek;
     return Row(
       children: [
-        Tooltip(
-          message: l10n.calendarPreviousWeek,
-          child: FButton(
-            variant: FButtonVariant.outline,
-            size: FButtonSizeVariant.sm,
-            mainAxisSize: MainAxisSize.min,
-            onPress: schedule == null || week == null || week <= 1
-                ? null
-                : () => _changeWeek(-1),
-            child: const Icon(Icons.chevron_left),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Tooltip(
+                message: l10n.calendarRefresh,
+                child: FButton(
+                  variant: FButtonVariant.ghost,
+                  size: FButtonSizeVariant.sm,
+                  mainAxisSize: MainAxisSize.min,
+                  onPress: _isLoading
+                      ? null
+                      : () => _loadSchedule(forceRefresh: true),
+                  child: const Icon(Icons.refresh),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: l10n.calendarPreviousWeek,
+                child: FButton(
+                  variant: FButtonVariant.ghost,
+                  size: FButtonSizeVariant.sm,
+                  mainAxisSize: MainAxisSize.min,
+                  onPress: schedule == null || week == null || week <= 1
+                      ? null
+                      : () => _changeWeek(-1),
+                  child: const Icon(Icons.chevron_left),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 8),
         Expanded(
           child: Center(
             child: Text(
@@ -259,33 +278,37 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: l10n.calendarNextWeek,
-          child: FButton(
-            variant: FButtonVariant.outline,
-            size: FButtonSizeVariant.sm,
-            mainAxisSize: MainAxisSize.min,
-            onPress:
-                schedule == null ||
-                    week == null ||
-                    week >= schedule.term.weekCount
-                ? null
-                : () => _changeWeek(1),
-            child: const Icon(Icons.chevron_right),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Tooltip(
-          message: l10n.calendarRefresh,
-          child: FButton(
-            variant: FButtonVariant.ghost,
-            size: FButtonSizeVariant.sm,
-            mainAxisSize: MainAxisSize.min,
-            onPress: _isLoading
-                ? null
-                : () => _loadSchedule(forceRefresh: true),
-            child: const Icon(Icons.refresh),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Tooltip(
+                message: l10n.calendarNextWeek,
+                child: FButton(
+                  variant: FButtonVariant.ghost,
+                  size: FButtonSizeVariant.sm,
+                  mainAxisSize: MainAxisSize.min,
+                  onPress:
+                      schedule == null ||
+                          week == null ||
+                          week >= schedule.term.weekCount
+                      ? null
+                      : () => _changeWeek(1),
+                  child: const Icon(Icons.chevron_right),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: l10n.calendarExport,
+                child: FButton(
+                  variant: FButtonVariant.ghost,
+                  size: FButtonSizeVariant.sm,
+                  mainAxisSize: MainAxisSize.min,
+                  onPress: null,
+                  child: const Icon(Icons.ios_share_outlined),
+                ),
+              ),
+            ],
           ),
         ),
       ],

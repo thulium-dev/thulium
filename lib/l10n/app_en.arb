@@ -56,6 +56,7 @@
   "calendarPreviousWeek": "Previous week",
   "calendarNextWeek": "Next week",
   "calendarRefresh": "Refresh calendar",
+  "calendarExport": "Export calendar (coming soon)",
   "calendarLoading": "Loading calendar…",
   "calendarLoadError": "Could not load the academic calendar.",
   "calendarStaleCache": "Showing a saved calendar because the latest update failed.",

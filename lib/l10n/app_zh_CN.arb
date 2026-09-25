@@ -56,6 +56,7 @@
   "calendarPreviousWeek": "上一周",
   "calendarNextWeek": "下一周",
   "calendarRefresh": "刷新日历",
+  "calendarExport": "导出日历（即将推出）",
   "calendarLoading": "正在加载日历…",
   "calendarLoadError": "无法加载教学日历。",
   "calendarStaleCache": "更新失败，当前显示已保存的日历。",

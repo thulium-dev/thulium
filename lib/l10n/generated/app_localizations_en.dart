@@ -164,6 +164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarRefresh => 'Refresh calendar';
 
   @override
+  String get calendarExport => 'Export calendar (coming soon)';
+
+  @override
   String get calendarLoading => 'Loading calendar…';
 
   @override

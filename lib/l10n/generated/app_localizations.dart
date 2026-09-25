@@ -388,6 +388,12 @@ abstract class AppLocalizations {
   /// **'Refresh calendar'**
   String get calendarRefresh;
 
+  /// No description provided for @calendarExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export calendar (coming soon)'**
+  String get calendarExport;
+
   /// No description provided for @calendarLoading.
   ///
   /// In en, this message translates to:

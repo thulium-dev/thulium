@@ -158,6 +158,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarRefresh => '刷新日历';
 
   @override
+  String get calendarExport => '导出日历（即将推出）';
+
+  @override
   String get calendarLoading => '正在加载日历…';
 
   @override
@@ -339,6 +342,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarRefresh => '刷新日历';
 
   @override
+  String get calendarExport => '导出日历（即将推出）';
+
+  @override
   String get calendarLoading => '正在加载日历…';
 
   @override
@@ -518,6 +524,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get calendarRefresh => '重新整理日曆';
+
+  @override
+  String get calendarExport => '匯出日曆（即將推出）';
 
   @override
   String get calendarLoading => '正在載入日曆…';
