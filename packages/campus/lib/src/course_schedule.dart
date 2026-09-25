@@ -98,9 +98,12 @@ final class CourseScheduleSessionExpired implements Exception {
 /// roaming implementation. Primary-calendar rows are already date-specific;
 /// secondary-course week rules are expanded into dated occurrences here.
 final class CourseScheduleService {
-  const CourseScheduleService(this._authClient);
+  const CourseScheduleService(this._authClient, {this.trace});
 
   final TsinghuaAuthClient _authClient;
+
+  /// Optional stage diagnostics. No account, cookie, or response body is sent.
+  final void Function(String message)? trace;
 
   /// Fetches current-term metadata and combines all available course sources.
   Future<CourseSchedule> loadCurrentTerm() async {
@@ -110,6 +113,7 @@ final class CourseScheduleService {
 
     var stage = 'roaming to the learning platform';
     try {
+      trace?.call('Calendar stage=$stage');
       final landingPage = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
       late final String csrf;
       try {
@@ -120,6 +124,7 @@ final class CourseScheduleService {
         rethrow;
       }
       stage = 'fetching the current academic term';
+      trace?.call('Calendar stage=$stage');
       final semesterResponse = await _authClient.getAuthenticated(
         Uri.parse('$_SEMESTER_LIST_URL${Uri.encodeQueryComponent(csrf)}'),
       );
@@ -150,6 +155,7 @@ final class CourseScheduleService {
       final isGraduate =
           userId.length > 4 && (userId[4] == '2' || userId[4] == '3');
       stage = 'roaming to the academic calendar service';
+      trace?.call('Calendar stage=$stage');
       await _authClient.roamToPortalApp(
         isGraduate
             ? _GRADUATE_ACADEMIC_CALENDAR_ROAMING_ID
@@ -157,9 +163,11 @@ final class CourseScheduleService {
       );
       final occurrences = <CourseOccurrence>[];
       stage = 'fetching primary calendar entries';
+      trace?.call('Calendar stage=$stage');
       occurrences.addAll(await _loadPrimary(term, isGraduate));
       if (!isGraduate) {
         stage = 'fetching secondary undergraduate calendar entries';
+        trace?.call('Calendar stage=$stage');
         occurrences.addAll(await _loadSecondary(term));
       }
 
@@ -174,6 +182,7 @@ final class CourseScheduleService {
         unique.putIfAbsent(key, () => occurrence);
       }
 
+      trace?.call('Calendar completed occurrences=${unique.length}');
       return CourseSchedule(
         term: term,
         occurrences: List<CourseOccurrence>.unmodifiable(unique.values),

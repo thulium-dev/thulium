@@ -61,6 +61,7 @@ const _WEBVPN_INFRASTRUCTURE_COOKIE_NAMES = <String>{
 };
 const _CSRF_FETCH_ATTEMPTS = 2;
 const _CSRF_RETRY_DELAY = Duration(milliseconds: 200);
+const _DEFAULT_REQUEST_TIMEOUT = Duration(seconds: 30);
 
 /// The WebVPN cookie endpoint did not supply a usable portal CSRF token.
 /// This does not by itself prove that the saved identity session has expired.
@@ -76,6 +77,14 @@ final class PortalCsrfUnavailable implements Exception {
 /// An authenticated portal endpoint explicitly redirected to sign-in.
 final class PortalSessionRejected implements Exception {
   const PortalSessionRejected();
+}
+
+/// The identity provider requires an interactive second-factor flow.
+final class TwoFactorInteractionRequired implements Exception {
+  const TwoFactorInteractionRequired();
+
+  @override
+  String toString() => 'Two-factor authentication is required.';
 }
 
 /// A cookie together with the scope required to safely restore it.
@@ -465,6 +474,7 @@ final class TsinghuaAuthClient {
     this.twoFactorCodeHandler,
     this.twoFactorTrustHandler,
     this.trace,
+    this.requestTimeout = _DEFAULT_REQUEST_TIMEOUT,
   }) : _http = httpClient ?? http.Client(),
        // Preserve the public `sessionStore:` injection API. Initializing this
        // private field directly would expose an inaccessible named parameter.
@@ -493,6 +503,10 @@ final class TsinghuaAuthClient {
   /// Optional diagnostic callback. Messages contain no passwords, codes, or
   /// cookie values and are disabled by default.
   final AuthTraceHandler? trace;
+
+  /// Bounds each HTTP connection and body read so a stalled server cannot
+  /// leave the calendar loading indefinitely.
+  final Duration requestTimeout;
 
   /// Reports a bounded, redacted preview only when a caller rejects a response.
   /// Full response bodies can contain service tickets and must not be logged.
@@ -1006,7 +1020,7 @@ final class TsinghuaAuthClient {
     final methodHandler = twoFactorMethodHandler;
     final codeHandler = twoFactorCodeHandler;
     if (methodHandler == null || codeHandler == null) {
-      throw StateError('Two-factor authentication is required.');
+      throw const TwoFactorInteractionRequired();
     }
 
     // The first request only describes the methods available for this account.
@@ -1281,9 +1295,29 @@ final class TsinghuaAuthClient {
         request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         request.bodyFields = currentForm;
       }
-      final response = await _http.send(request);
+      final stopwatch = Stopwatch()..start();
+      late final http.StreamedResponse response;
+      try {
+        response = await _http.send(request).timeout(requestTimeout);
+      } on TimeoutException {
+        trace?.call(
+          'HTTP timeout phase=connect host=${current.host} '
+          'path=${_safeTracePath(current)} elapsedMs=${stopwatch.elapsedMilliseconds}',
+        );
+        rethrow;
+      }
+      late final List<int> bytes;
+      try {
+        bytes = await response.stream.toBytes().timeout(requestTimeout);
+      } on TimeoutException {
+        trace?.call(
+          'HTTP timeout phase=body host=${current.host} '
+          'path=${_safeTracePath(current)} elapsedMs=${stopwatch.elapsedMilliseconds}',
+        );
+        rethrow;
+      }
       final body = _decodeResponseBody(
-        await response.stream.toBytes(),
+        bytes,
         response.headers['content-type'],
         current,
       );
@@ -1291,6 +1325,7 @@ final class TsinghuaAuthClient {
       final location = response.headers['location'];
       trace?.call(
         'HTTP response status=${response.statusCode} '
+        'elapsedMs=${stopwatch.elapsedMilliseconds} '
         'location=${location == null ? '-' : 'present'} '
         'cookieNames=${_cookieNamesForRequest(current).join(',')}',
       );

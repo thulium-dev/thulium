@@ -17,9 +17,18 @@ void main() {
         sessionStore: store,
       );
 
+      final diagnostics = <String>[];
+
       final schedule = await CourseScheduleService(
         authClient,
+        trace: diagnostics.add,
       ).loadCurrentTerm();
+
+      expect(
+        diagnostics,
+        contains('Calendar stage=fetching primary calendar entries'),
+      );
+      expect(diagnostics.last, 'Calendar completed occurrences=1');
 
       expect(schedule.term.name, 'Autumn term');
       expect(schedule.term.weekCount, 16);

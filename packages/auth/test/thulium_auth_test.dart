@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dart_sm/dart_sm.dart';
@@ -428,6 +429,39 @@ void main() {
     );
   });
 
+  test(
+    'times out a stalled authenticated request without clearing cookies',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(_savedSession());
+      final auth = TsinghuaAuthClient(
+        httpClient: _StalledClient(),
+        sessionStore: store,
+        requestTimeout: const Duration(milliseconds: 10),
+      );
+      await auth.restore();
+
+      await expectLater(
+        auth.getAuthenticated(Uri.parse('https://info.tsinghua.edu.cn/test')),
+        throwsA(isA<TimeoutException>()),
+      );
+      expect(await store.read(), isNotNull);
+    },
+  );
+
+  test('signals when reconnect needs interactive two-factor input', () async {
+    final auth = TsinghuaAuthClient(httpClient: _FakeAuthClient());
+
+    await expectLater(
+      auth.login(
+        userId: '1234567890',
+        password: 'password',
+        fingerprint: 'device-fingerprint',
+      ),
+      throwsA(isA<TwoFactorInteractionRequired>()),
+    );
+  });
+
   test('calendar requests use the WebVPN route after roaming', () async {
     final store = MemoryAuthSessionStore();
     await store.write(_savedSession());
@@ -824,6 +858,12 @@ final class _CalendarRedirectClient extends http.BaseClient {
           : const {},
     );
   }
+}
+
+final class _StalledClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      Completer<http.StreamedResponse>().future;
 }
 
 final class _FakeAuthClient extends http.BaseClient {

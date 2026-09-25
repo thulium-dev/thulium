@@ -31,6 +31,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   static const _FIRST_HOUR = 8;
   static const _LAST_HOUR = 22;
   static const _TIME_AXIS_WIDTH = 36.0;
+  static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
   CourseSchedule? _schedule;
   Object? _loadError;
@@ -44,17 +45,48 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   }
 
   Future<void> _loadSchedule() async {
+    debugPrint('[calendar] loading started');
     setState(() {
       _isLoading = true;
       _loadError = null;
     });
 
     try {
+      final sessionStore = widget.sessionStore ?? SecureAuthSessionStore();
+      final credentialStore = sessionStore is AuthCredentialStore
+          ? sessionStore as AuthCredentialStore
+          : null;
       final client = TsinghuaAuthClient(
-        sessionStore: widget.sessionStore ?? SecureAuthSessionStore(),
+        sessionStore: sessionStore,
+        credentialStore: credentialStore,
+        trace: (message) => debugPrint('[auth] $message'),
       );
-      final schedule = await CourseScheduleService(client).loadCurrentTerm();
+      final savedSession = await client.restore();
+      if (savedSession == null) throw const CourseScheduleSessionExpired();
+      final service = CourseScheduleService(
+        client,
+        trace: (message) => debugPrint('[calendar] $message'),
+      );
+      CourseSchedule schedule;
+      try {
+        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+      } on CourseScheduleException catch (error) {
+        if (error.cause is! PortalCsrfUnavailable) rethrow;
+        // An empty WebVPN cookie response alone does not prove logout. Only
+        // after the bounded cookie/SSO recovery fails do we try one fresh
+        // password-based login, then repeat the calendar request once.
+        if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
+        debugPrint('[calendar] reconnect succeeded; retrying once');
+        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+      } on CourseScheduleSessionExpired {
+        if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
+        debugPrint('[calendar] reconnect succeeded; retrying once');
+        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+      }
       if (!mounted) return;
+      debugPrint(
+        '[calendar] loading completed occurrences=${schedule.occurrences.length}',
+      );
       final todayWeek = schedule.term.weekFor(DateTime.now());
       setState(() {
         _schedule = schedule;
@@ -65,13 +97,49 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
         _isLoading = false;
       });
     } on CourseScheduleSessionExpired {
+      debugPrint('[calendar] session expired');
+      widget.onSessionExpired();
+    } on TwoFactorInteractionRequired {
+      debugPrint('[calendar] interactive two-factor verification required');
       widget.onSessionExpired();
     } catch (error) {
+      debugPrint('[calendar] loading failed type=${error.runtimeType}');
       if (!mounted) return;
       setState(() {
         _loadError = error;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<bool> _reconnect(
+    TsinghuaAuthClient client,
+    AuthCredentialStore? credentialStore,
+    AuthSession savedSession,
+  ) async {
+    final credentials = await credentialStore?.readCredentials();
+    if (credentials == null || credentials.userId != savedSession.userId) {
+      debugPrint('[calendar] no matching saved credentials for reconnect');
+      return false;
+    }
+
+    debugPrint('[calendar] reconnecting with saved credentials');
+    try {
+      await client
+          .login(
+            userId: savedSession.userId,
+            password: credentials.password,
+            fingerprint: savedSession.fingerprint,
+          )
+          .timeout(_LOAD_TIMEOUT);
+      return true;
+    } catch (error) {
+      // A trusted device may not need a second factor; otherwise the regular
+      // sign-in screen can collect one. Do not print secrets from the error.
+      debugPrint(
+        '[calendar] credential reconnect failed type=${error.runtimeType}',
+      );
+      rethrow;
     }
   }
 
