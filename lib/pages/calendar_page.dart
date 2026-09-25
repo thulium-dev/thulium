@@ -12,6 +12,7 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
 import '../widgets/calendar_course_block.dart';
+import '../widgets/calendar_week_pager.dart';
 
 /// Displays one Monday-to-Sunday week of the student's fetched courses.
 final class AcademicCalendarPage extends StatefulWidget {
@@ -40,6 +41,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   bool _isLoading = true;
   bool _showingStaleCache = false;
   int? _selectedWeek;
+  final _weekPagerKey = GlobalKey<CalendarWeekPagerState>();
 
   @override
   void initState() {
@@ -160,14 +162,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   }
 
   void _changeWeek(int delta) {
-    final schedule = _schedule;
-    if (schedule == null) return;
-    setState(() {
-      _selectedWeek = (_selectedWeek! + delta).clamp(
-        1,
-        schedule.term.weekCount,
-      );
-    });
+    _weekPagerKey.currentState?.animateBy(delta);
   }
 
   @override
@@ -219,7 +214,16 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
             ),
           )
         else if (schedule != null)
-          Expanded(child: _buildWeekGrid(context, l10n, schedule)),
+          Expanded(
+            child: CalendarWeekPager(
+              key: _weekPagerKey,
+              weekCount: schedule.term.weekCount,
+              initialWeek: _selectedWeek!,
+              onWeekChanged: (week) => setState(() => _selectedWeek = week),
+              itemBuilder: (context, week) =>
+                  _buildWeekGrid(context, l10n, schedule, week),
+            ),
+          ),
       ],
     );
   }
@@ -319,8 +323,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
     BuildContext context,
     AppLocalizations l10n,
     CourseSchedule schedule,
+    int week,
   ) {
-    final week = _selectedWeek!;
     final weekStart = schedule.term.firstMonday.add(
       Duration(days: (week - 1) * 7),
     );
