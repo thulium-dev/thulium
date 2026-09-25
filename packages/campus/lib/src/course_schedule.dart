@@ -54,6 +54,14 @@ final class AcademicTerm {
   int weekFor(DateTime date) => date.difference(firstMonday).inDays ~/ 7 + 1;
 }
 
+/// Stable category identifiers for plans supplied by Thulium.
+///
+/// Category identifiers remain strings so future user-created plans can
+/// introduce their own categories without changing this shared data model.
+abstract final class PlanCategories {
+  static const LESSON = 'lesson';
+}
+
 /// One dated occurrence of a course, rather than an unexpanded weekly rule.
 final class CourseOccurrence {
   const CourseOccurrence({
@@ -61,20 +69,75 @@ final class CourseOccurrence {
     required this.location,
     required this.startsAt,
     required this.endsAt,
+    required this.category,
   });
 
   final String name;
   final String location;
   final DateTime startsAt;
   final DateTime endsAt;
+  final String category;
 }
 
 /// A term and its combined actual-date course occurrences.
 final class CourseSchedule {
-  const CourseSchedule({required this.term, required this.occurrences});
+  CourseSchedule({
+    required this.term,
+    required List<CourseOccurrence> occurrences,
+  }) : occurrences = List.unmodifiable(_mergeAdjacentLessons(occurrences));
 
   final AcademicTerm term;
   final List<CourseOccurrence> occurrences;
+
+  /// Normalizes dated lesson blocks before any UI or cache consumer sees them.
+  ///
+  /// Grouping by exact name, location, category, and civil date allows rows
+  /// from separate API sources to merge even when they arrive out of order.
+  /// Custom plan categories are intentionally left untouched.
+  static List<CourseOccurrence> _mergeAdjacentLessons(
+    List<CourseOccurrence> occurrences,
+  ) {
+    final groups =
+        <(String, String, String, int, int, int), List<CourseOccurrence>>{};
+    for (final occurrence in occurrences) {
+      final date = occurrence.startsAt;
+      final key = (
+        occurrence.category,
+        occurrence.name,
+        occurrence.location,
+        date.year,
+        date.month,
+        date.day,
+      );
+      groups.putIfAbsent(key, () => []).add(occurrence);
+    }
+
+    final merged = <CourseOccurrence>[];
+    for (final group in groups.values) {
+      group.sort((a, b) => a.startsAt.compareTo(b.startsAt));
+      var current = group.first;
+      for (final next in group.skip(1)) {
+        final gap = next.startsAt.difference(current.endsAt);
+        if (current.category == PlanCategories.LESSON &&
+            !gap.isNegative &&
+            gap <= const Duration(minutes: 15)) {
+          current = CourseOccurrence(
+            name: current.name,
+            location: current.location,
+            startsAt: current.startsAt,
+            endsAt: next.endsAt,
+            category: current.category,
+          );
+        } else {
+          merged.add(current);
+          current = next;
+        }
+      }
+      merged.add(current);
+    }
+    merged.sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    return merged;
+  }
 }
 
 /// Thrown when portal access is still valid but schedule data cannot be read.
@@ -230,6 +293,7 @@ final class CourseScheduleService {
         final key = [
           occurrence.name,
           occurrence.location,
+          occurrence.category,
           occurrence.startsAt.toIso8601String(),
           occurrence.endsAt.toIso8601String(),
         ].join('|');
@@ -397,6 +461,7 @@ final class CourseScheduleService {
           return CourseOccurrence(
             name: row['nr'] as String,
             location: (row['dd'] as String?) ?? '',
+            category: PlanCategories.LESSON,
             startsAt: DateTime(
               date.year,
               date.month,
@@ -458,6 +523,7 @@ final class CourseScheduleService {
           CourseOccurrence(
             name: name,
             location: location,
+            category: PlanCategories.LESSON,
             startsAt: DateTime(
               date.year,
               date.month,

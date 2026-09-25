@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
@@ -137,6 +138,64 @@ void main() {
     expect(
       transport.requestedUris.any((uri) => uri.path.endsWith('portal3rd.do')),
       isTrue,
+    );
+  });
+
+  test('combines consecutive API lesson rows in the Dart schedule', () async {
+    final transport = _ScheduleHttpClient(
+      isGraduate: true,
+      consecutivePrimary: true,
+    );
+    final store = MemoryAuthSessionStore();
+    await store.write(_testSession(isGraduate: true));
+
+    final schedule = await CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+    ).loadCurrentTerm();
+
+    expect(schedule.occurrences, hasLength(1));
+    expect(schedule.occurrences.single.startsAt, DateTime(2026, 9, 7, 8));
+    expect(schedule.occurrences.single.endsAt, DateTime(2026, 9, 7, 11, 35));
+    expect(schedule.occurrences.single.category, PlanCategories.LESSON);
+  });
+
+  test('merges only same-day lessons with exact names and locations', () {
+    final schedule = CourseSchedule(
+      term: _cachedSchedule().term,
+      occurrences: [
+        _occurrence('Course A', 'Room 101', 10, 50, 11, 35),
+        _occurrence('Course A', 'Room 101', 8, 0, 9, 35),
+        _occurrence('Course A', 'Room 101', 9, 50, 10, 35),
+        // A 16-minute gap must remain separate from the preceding block.
+        _occurrence('Course A', 'Room 101', 11, 51, 12, 30),
+        _occurrence('Course A', 'Room 102', 9, 50, 10, 35),
+        _occurrence('course A', 'Room 101', 9, 50, 10, 35),
+        _occurrence('Course A', 'Room 101', 9, 50, 10, 35, day: 8),
+        _occurrence(
+          'Course A',
+          'Room 101',
+          9,
+          50,
+          10,
+          35,
+          category: 'personal',
+        ),
+      ],
+    );
+
+    expect(schedule.occurrences, hasLength(6));
+    final merged = schedule.occurrences.singleWhere(
+      (entry) =>
+          entry.name == 'Course A' &&
+          entry.location == 'Room 101' &&
+          entry.category == PlanCategories.LESSON &&
+          entry.startsAt.day == 7 &&
+          entry.startsAt.hour == 8,
+    );
+    expect(merged.endsAt, DateTime(2026, 9, 7, 11, 35));
+    expect(
+      schedule.occurrences.where((entry) => entry.category == 'personal'),
+      hasLength(1),
     );
   });
 
@@ -291,6 +350,66 @@ void main() {
     expect(await CourseScheduleCache(store).readFor('2024222050'), isNull);
   });
 
+  test('reads version-one caches as lessons and merges their rows', () async {
+    final data = {
+      'version': 1,
+      'userId': '2024222050',
+      'fetchedAt': '2026-09-25T10:00:00.000Z',
+      'term': {
+        'id': '2026-2027-1',
+        'name': 'Autumn term',
+        'firstMonday': '2026-09-07T00:00:00.000',
+        'weekCount': 16,
+      },
+      'occurrences': [
+        {
+          'name': 'Course A',
+          'location': 'Room 101',
+          'startsAt': '2026-09-07T08:00:00.000',
+          'endsAt': '2026-09-07T09:35:00.000',
+        },
+        {
+          'name': 'Course A',
+          'location': 'Room 101',
+          'startsAt': '2026-09-07T09:50:00.000',
+          'endsAt': '2026-09-07T10:35:00.000',
+        },
+      ],
+    };
+    final store = _MemoryCacheStore()
+      ..value = base64Encode(gzip.encode(utf8.encode(jsonEncode(data))));
+
+    final cached = await CourseScheduleCache(store).readFor('2024222050');
+
+    expect(cached!.schedule.occurrences, hasLength(1));
+    expect(cached.schedule.occurrences.single.category, PlanCategories.LESSON);
+    expect(
+      cached.schedule.occurrences.single.endsAt,
+      DateTime(2026, 9, 7, 10, 35),
+    );
+  });
+
+  test('round-trips a custom category without merging its plans', () async {
+    final store = _MemoryCacheStore();
+    final cache = CourseScheduleCache(store);
+    final schedule = CourseSchedule(
+      term: _cachedSchedule().term,
+      occurrences: [
+        _occurrence('Workout', 'Gym', 8, 0, 9, 0, category: 'fitness'),
+        _occurrence('Workout', 'Gym', 9, 10, 10, 0, category: 'fitness'),
+      ],
+    );
+
+    await cache.writeFor('2024222050', schedule, DateTime.utc(2026, 9, 25));
+    final restored = await cache.readFor('2024222050');
+
+    expect(restored!.schedule.occurrences, hasLength(2));
+    expect(
+      restored.schedule.occurrences.map((entry) => entry.category),
+      everyElement('fitness'),
+    );
+  });
+
   test('does not use a cache from an ended academic term', () async {
     final store = MemoryAuthSessionStore();
     final session = _testSession(isGraduate: true);
@@ -325,10 +444,28 @@ CourseSchedule _cachedSchedule() => CourseSchedule(
     CourseOccurrence(
       name: 'Cached Course',
       location: 'Room 101',
+      category: PlanCategories.LESSON,
       startsAt: DateTime(2026, 9, 7, 8),
       endsAt: DateTime(2026, 9, 7, 9, 35),
     ),
   ],
+);
+
+CourseOccurrence _occurrence(
+  String name,
+  String location,
+  int startHour,
+  int startMinute,
+  int endHour,
+  int endMinute, {
+  int day = 7,
+  String category = PlanCategories.LESSON,
+}) => CourseOccurrence(
+  name: name,
+  location: location,
+  category: category,
+  startsAt: DateTime(2026, 9, day, startHour, startMinute),
+  endsAt: DateTime(2026, 9, day, endHour, endMinute),
 );
 
 final class _MemoryCacheStore implements CourseScheduleCacheStore {
@@ -379,12 +516,14 @@ AuthCookie scheduleCookie(
 final class _ScheduleHttpClient extends http.BaseClient {
   _ScheduleHttpClient({
     required this.isGraduate,
+    this.consecutivePrimary = false,
     this.malformedPrimary = false,
     this.invalidUserData = false,
     this.emptyCookieBody = false,
   });
 
   final bool isGraduate;
+  final bool consecutivePrimary;
   final bool malformedPrimary;
   final bool invalidUserData;
   final bool emptyCookieBody;
@@ -421,8 +560,15 @@ final class _ScheduleHttpClient extends http.BaseClient {
         malformedPrimary
             ? 'invalid JSONP response'
             : uri.queryParameters['p_start_date'] == '20260907'
-            ? 'm([{"nq":"2026-09-07","kssj":"08:00",'
-                  '"jssj":"09:35","nr":"Course A","dd":"Room 101"}])'
+            ? consecutivePrimary
+                  ? 'm([{"nq":"2026-09-07","kssj":"08:00",'
+                        '"jssj":"09:35","nr":"Course A","dd":"Room 101"},'
+                        '{"nq":"2026-09-07","kssj":"09:50",'
+                        '"jssj":"10:35","nr":"Course A","dd":"Room 101"},'
+                        '{"nq":"2026-09-07","kssj":"10:50",'
+                        '"jssj":"11:35","nr":"Course A","dd":"Room 101"}])'
+                  : 'm([{"nq":"2026-09-07","kssj":"08:00",'
+                        '"jssj":"09:35","nr":"Course A","dd":"Room 101"}])'
             : 'm([])',
       _ when invalidUserData && uri.path.contains('grjbxx') =>
         '{"result":"failure"}',

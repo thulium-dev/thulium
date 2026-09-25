@@ -123,6 +123,7 @@ void main() {
 final _course = CourseOccurrence(
   name: 'Course A',
   location: 'Room 101',
+  category: PlanCategories.LESSON,
   startsAt: DateTime(2026, 9, 7, 8),
   endsAt: DateTime(2026, 9, 7, 9, 35),
 );
