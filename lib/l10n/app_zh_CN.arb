@@ -58,6 +58,7 @@
   "calendarRefresh": "刷新日历",
   "calendarLoading": "正在加载日历…",
   "calendarLoadError": "无法加载教学日历。",
+  "calendarStaleCache": "更新失败，当前显示已保存的日历。",
   "calendarRetry": "重试",
   "calendarNoCourses": "本周没有课程。",
   "studyTitle": "学习",

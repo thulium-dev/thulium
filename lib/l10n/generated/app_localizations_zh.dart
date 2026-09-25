@@ -164,6 +164,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarLoadError => '无法加载教学日历。';
 
   @override
+  String get calendarStaleCache => '更新失败，当前显示已保存的日历。';
+
+  @override
   String get calendarRetry => '重试';
 
   @override
@@ -342,6 +345,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarLoadError => '无法加载教学日历。';
 
   @override
+  String get calendarStaleCache => '更新失败，当前显示已保存的日历。';
+
+  @override
   String get calendarRetry => '重试';
 
   @override
@@ -518,6 +524,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get calendarLoadError => '無法載入教學日曆。';
+
+  @override
+  String get calendarStaleCache => '更新失敗，目前顯示已儲存的日曆。';
 
   @override
   String get calendarRetry => '重試';

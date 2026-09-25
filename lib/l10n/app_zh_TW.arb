@@ -58,6 +58,7 @@
   "calendarRefresh": "重新整理日曆",
   "calendarLoading": "正在載入日曆…",
   "calendarLoadError": "無法載入教學日曆。",
+  "calendarStaleCache": "更新失敗，目前顯示已儲存的日曆。",
   "calendarRetry": "重試",
   "calendarNoCourses": "本週沒有課程。",
   "studyTitle": "學習",

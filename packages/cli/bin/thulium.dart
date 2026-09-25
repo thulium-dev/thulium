@@ -6,6 +6,7 @@ import 'package:args/args.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_cli/cli_auth_session_store.dart';
+import 'package:thulium_cli/cli_course_schedule_cache_store.dart';
 
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
@@ -55,7 +56,12 @@ ArgParser _buildParser() {
   );
   parser.addCommand(
     'schedule',
-    ArgParser()..addFlag('verbose', help: 'Print safe request diagnostics.'),
+    ArgParser()
+      ..addFlag('verbose', help: 'Print safe request diagnostics.')
+      ..addFlag(
+        'refresh',
+        help: 'Fetch the latest calendar instead of using the cache.',
+      ),
   );
   return parser;
 }
@@ -68,6 +74,7 @@ Future<void> _runCommand(ArgResults command) async {
   }
 
   final store = CliAuthSessionStore();
+  final calendarCache = CourseScheduleCache(CliCourseScheduleCacheStore());
   final client = TsinghuaAuthClient(
     sessionStore: store,
     credentialStore: store,
@@ -86,7 +93,11 @@ Future<void> _runCommand(ArgResults command) async {
       // Each CLI invocation starts with an empty in-memory cookie jar. Restore
       // the persisted session so the logout request can invalidate it remotely.
       await client.restore();
-      await client.logout();
+      try {
+        await client.logout();
+      } finally {
+        await calendarCache.clear();
+      }
       stdout.writeln('Logged out.');
     case 'status':
       final session = await client.restore();
@@ -102,8 +113,14 @@ Future<void> _runCommand(ArgResults command) async {
       if (session == null) {
         throw StateError('Not logged in. Run `thulium login` first.');
       }
-      stdout.writeln('Fetching the current academic calendar...');
-      final schedule = await _loadScheduleWithReconnect(client, store, session);
+      stdout.writeln('Loading the current academic calendar...');
+      final schedule = await _loadScheduleWithReconnect(
+        client,
+        store,
+        session,
+        cache: calendarCache,
+        forceRefresh: command.command!['refresh'] as bool,
+      );
       _printSchedule(schedule);
   }
 }
@@ -111,11 +128,27 @@ Future<void> _runCommand(ArgResults command) async {
 Future<CourseSchedule> _loadScheduleWithReconnect(
   TsinghuaAuthClient client,
   AuthCredentialStore credentialStore,
-  AuthSession savedSession,
-) async {
-  final service = CourseScheduleService(client);
+  AuthSession savedSession, {
+  required CourseScheduleCache cache,
+  required bool forceRefresh,
+}) async {
+  final service = CourseScheduleService(
+    client,
+    cache: cache,
+    trace: (message) {
+      if (client.trace != null) stderr.writeln('[calendar] $message');
+    },
+  );
   try {
-    return await service.loadCurrentTerm();
+    final schedule = await service.loadCurrentTerm(forceRefresh: forceRefresh);
+    if (service.lastSource == CourseScheduleSource.freshCache) {
+      stdout.writeln('Using the saved academic calendar.');
+    } else if (service.lastSource == CourseScheduleSource.staleCache) {
+      stdout.writeln(
+        'The update failed; showing an older saved academic calendar.',
+      );
+    }
+    return schedule;
   } on CourseScheduleException catch (error) {
     if (error.cause is! PortalCsrfUnavailable) rethrow;
     return _reconnectAndRetrySchedule(
@@ -123,6 +156,7 @@ Future<CourseSchedule> _loadScheduleWithReconnect(
       credentialStore,
       savedSession,
       error,
+      cache,
     );
   } on CourseScheduleSessionExpired catch (error) {
     return _reconnectAndRetrySchedule(
@@ -130,6 +164,7 @@ Future<CourseSchedule> _loadScheduleWithReconnect(
       credentialStore,
       savedSession,
       error,
+      cache,
     );
   }
 }
@@ -139,6 +174,7 @@ Future<CourseSchedule> _reconnectAndRetrySchedule(
   AuthCredentialStore credentialStore,
   AuthSession savedSession,
   Object originalError,
+  CourseScheduleCache cache,
 ) async {
   final credentials = await credentialStore.readCredentials();
   if (credentials != null && credentials.userId == savedSession.userId) {
@@ -157,7 +193,10 @@ Future<CourseSchedule> _reconnectAndRetrySchedule(
     }
     if (reconnectError == null) {
       stdout.writeln('Reconnected. Retrying the academic calendar once...');
-      return CourseScheduleService(client).loadCurrentTerm();
+      return CourseScheduleService(
+        client,
+        cache: cache,
+      ).loadCurrentTerm(forceRefresh: true);
     }
     stderr.writeln('Automatic reconnection failed: $reconnectError');
   }
@@ -190,7 +229,10 @@ Future<CourseSchedule> _reconnectAndRetrySchedule(
     fingerprint: savedSession.fingerprint,
   );
   stdout.writeln('Reconnected. Retrying the academic calendar once...');
-  return CourseScheduleService(client).loadCurrentTerm();
+  return CourseScheduleService(
+    client,
+    cache: cache,
+  ).loadCurrentTerm(forceRefresh: true);
 }
 
 Future<void> _runSessionCommand(

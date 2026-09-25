@@ -10,6 +10,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../auth/secure_auth_session_store.dart';
+import '../auth/secure_course_schedule_cache_store.dart';
 
 /// Displays one Monday-to-Sunday week of the student's fetched courses.
 final class AcademicCalendarPage extends StatefulWidget {
@@ -36,6 +37,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   CourseSchedule? _schedule;
   Object? _loadError;
   bool _isLoading = true;
+  bool _showingStaleCache = false;
   int? _selectedWeek;
 
   @override
@@ -44,7 +46,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
     _loadSchedule();
   }
 
-  Future<void> _loadSchedule() async {
+  Future<void> _loadSchedule({bool forceRefresh = false}) async {
     debugPrint('[calendar] loading started');
     setState(() {
       _isLoading = true;
@@ -63,13 +65,19 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       );
       final savedSession = await client.restore();
       if (savedSession == null) throw const CourseScheduleSessionExpired();
+      final cache = widget.sessionStore == null
+          ? CourseScheduleCache(SecureCourseScheduleCacheStore())
+          : null;
       final service = CourseScheduleService(
         client,
+        cache: cache,
         trace: (message) => debugPrint('[calendar] $message'),
       );
       CourseSchedule schedule;
       try {
-        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+        schedule = await service
+            .loadCurrentTerm(forceRefresh: forceRefresh)
+            .timeout(_LOAD_TIMEOUT);
       } on CourseScheduleException catch (error) {
         if (error.cause is! PortalCsrfUnavailable) rethrow;
         // An empty WebVPN cookie response alone does not prove logout. Only
@@ -77,11 +85,15 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
         // password-based login, then repeat the calendar request once.
         if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
         debugPrint('[calendar] reconnect succeeded; retrying once');
-        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+        schedule = await service
+            .loadCurrentTerm(forceRefresh: true)
+            .timeout(_LOAD_TIMEOUT);
       } on CourseScheduleSessionExpired {
         if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
         debugPrint('[calendar] reconnect succeeded; retrying once');
-        schedule = await service.loadCurrentTerm().timeout(_LOAD_TIMEOUT);
+        schedule = await service
+            .loadCurrentTerm(forceRefresh: true)
+            .timeout(_LOAD_TIMEOUT);
       }
       if (!mounted) return;
       debugPrint(
@@ -90,6 +102,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       final todayWeek = schedule.term.weekFor(DateTime.now());
       setState(() {
         _schedule = schedule;
+        _showingStaleCache =
+            service.lastSource == CourseScheduleSource.staleCache;
         _selectedWeek = (_selectedWeek ?? todayWeek).clamp(
           1,
           schedule.term.weekCount,
@@ -108,6 +122,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       setState(() {
         _loadError = error;
         _isLoading = false;
+        _showingStaleCache = false;
       });
     }
   }
@@ -162,6 +177,14 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       children: [
         _buildWeekControls(context, l10n, schedule),
         const SizedBox(height: 8),
+        if (_showingStaleCache && !_isLoading && _loadError == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text(
+              l10n.calendarStaleCache,
+              style: context.theme.typography.sm,
+            ),
+          ),
         if (_isLoading)
           Expanded(
             child: Center(
@@ -187,7 +210,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
                   const SizedBox(height: 12),
                   FButton(
                     variant: FButtonVariant.outline,
-                    onPress: _loadSchedule,
+                    onPress: () => _loadSchedule(forceRefresh: true),
                     child: Text(l10n.calendarRetry),
                   ),
                 ],
@@ -258,7 +281,9 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
             variant: FButtonVariant.ghost,
             size: FButtonSizeVariant.sm,
             mainAxisSize: MainAxisSize.min,
-            onPress: _isLoading ? null : _loadSchedule,
+            onPress: _isLoading
+                ? null
+                : () => _loadSchedule(forceRefresh: true),
             child: const Icon(Icons.refresh),
           ),
         ),

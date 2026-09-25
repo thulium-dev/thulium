@@ -58,6 +58,7 @@
   "calendarRefresh": "Refresh calendar",
   "calendarLoading": "Loading calendar…",
   "calendarLoadError": "Could not load the academic calendar.",
+  "calendarStaleCache": "Showing a saved calendar because the latest update failed.",
   "calendarRetry": "Retry",
   "calendarNoCourses": "No courses scheduled for this week.",
   "studyTitle": "Study",

@@ -30,8 +30,9 @@ other locale files. Do not put localized text directly in Dart source files.
 
 Authentication logic is shared by the Flutter application and the future CLI
 through `packages/auth`. The Flutter application uses `SecureAuthSessionStore`,
-which persists only the authenticated session in platform secure storage.
-Passwords are never persisted by the shared session model.
+which persists the authenticated session and reusable credentials under separate
+keys in platform secure storage. Passwords are never included in the shared
+session model or calendar cache.
 
 ## CLI authentication
 
@@ -43,6 +44,8 @@ cd packages/cli
 dart run bin/thulium.dart login
 dart run bin/thulium.dart login --verbose
 dart run bin/thulium.dart status
+dart run bin/thulium.dart schedule
+dart run bin/thulium.dart schedule --refresh
 dart run bin/thulium.dart logout
 ```
 
@@ -52,6 +55,12 @@ values. The CLI never accepts the password as a command-line argument and never 
 it to a project file. Linux uses Secret Service and macOS uses Keychain. Other
 platforms will report that a secure session backend is not available until one
 is added.
+
+The application and CLI cache the current academic calendar per account in
+platform secure storage. A successful fetch is reused for 24 hours; an older
+copy can be shown if the portal is temporarily unavailable. Manual refresh and
+`schedule --refresh` request a new copy instead of silently using stale data.
+Logging out removes the saved calendar.
 
 Interactive login attempts can be retried after credential, verification-code,
 or network errors. Each retry starts a fresh authentication flow.

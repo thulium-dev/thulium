@@ -400,6 +400,12 @@ abstract class AppLocalizations {
   /// **'Could not load the academic calendar.'**
   String get calendarLoadError;
 
+  /// No description provided for @calendarStaleCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing a saved calendar because the latest update failed.'**
+  String get calendarStaleCache;
+
   /// No description provided for @calendarRetry.
   ///
   /// In en, this message translates to:

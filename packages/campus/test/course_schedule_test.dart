@@ -212,6 +212,136 @@ void main() {
       expect(await store.read(), isNotNull);
     },
   );
+
+  test('a fresh account-scoped cache avoids schedule requests', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(isGraduate: true);
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final fetchedAt = DateTime.utc(2026, 9, 25, 10);
+    final original = _cachedSchedule();
+    await cache.writeFor(session.userId, original, fetchedAt);
+
+    expect((await cache.readFor('another-account')), isNull);
+    final service = CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      now: () => fetchedAt.add(const Duration(hours: 1)),
+    );
+    final schedule = await service.loadCurrentTerm();
+
+    expect(schedule.occurrences.single.name, 'Cached Course');
+    expect(service.lastSource, CourseScheduleSource.freshCache);
+    expect(transport.requestedUris, isEmpty);
+  });
+
+  test('refresh bypasses the cache and replaces it', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(isGraduate: true);
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final fetchedAt = DateTime.utc(2026, 9, 25, 10);
+    await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
+
+    final schedule = await CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      now: () => fetchedAt.add(const Duration(hours: 1)),
+    ).loadCurrentTerm(forceRefresh: true);
+
+    expect(schedule.occurrences.single.name, 'Course A');
+    expect(transport.requestedUris, isNotEmpty);
+    expect(
+      (await cache.readFor(session.userId))!.schedule.occurrences.single.name,
+      'Course A',
+    );
+  });
+
+  test('uses an expired cache when the portal is unavailable', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(
+      isGraduate: true,
+      emptyCookieBody: true,
+    );
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final fetchedAt = DateTime.utc(2026, 9, 25, 10);
+    await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
+    final traces = <String>[];
+
+    final service = CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      trace: traces.add,
+      now: () => fetchedAt.add(const Duration(days: 2)),
+    );
+    final schedule = await service.loadCurrentTerm();
+
+    expect(schedule.occurrences.single.name, 'Cached Course');
+    expect(service.lastSource, CourseScheduleSource.staleCache);
+    expect(traces, contains(startsWith('Calendar using stale cache')));
+    expect(transport.requestedUris, isNotEmpty);
+  });
+
+  test('ignores corrupt schedule cache data', () async {
+    final store = _MemoryCacheStore()..value = 'not-base64';
+    expect(await CourseScheduleCache(store).readFor('2024222050'), isNull);
+  });
+
+  test('does not use a cache from an ended academic term', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(isGraduate: true);
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    await cache.writeFor(
+      session.userId,
+      _cachedSchedule(),
+      DateTime.utc(2027, 2, 1),
+    );
+
+    final schedule = await CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      now: () => DateTime.utc(2027, 2, 1, 1),
+    ).loadCurrentTerm();
+
+    expect(schedule.occurrences.single.name, 'Course A');
+    expect(transport.requestedUris, isNotEmpty);
+  });
+}
+
+CourseSchedule _cachedSchedule() => CourseSchedule(
+  term: AcademicTerm(
+    id: '2026-2027-1',
+    name: 'Autumn term',
+    firstMonday: DateTime(2026, 9, 7),
+    weekCount: 16,
+  ),
+  occurrences: [
+    CourseOccurrence(
+      name: 'Cached Course',
+      location: 'Room 101',
+      startsAt: DateTime(2026, 9, 7, 8),
+      endsAt: DateTime(2026, 9, 7, 9, 35),
+    ),
+  ],
+);
+
+final class _MemoryCacheStore implements CourseScheduleCacheStore {
+  String? value;
+
+  @override
+  Future<String?> read() async => value;
+
+  @override
+  Future<void> write(String encoded) async => value = encoded;
+
+  @override
+  Future<void> clear() async => value = null;
 }
 
 AuthSession _testSession({required bool isGraduate}) => AuthSession(

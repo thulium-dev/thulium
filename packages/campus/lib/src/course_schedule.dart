@@ -17,6 +17,7 @@ const _SECONDARY_SCHEDULE_URL =
     '${TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_BASE_URL}'
     '/portal3rd.do?m=bks_ejkbSearch';
 const _REQUEST_GROUP_WEEKS = 3;
+const _SCHEDULE_CACHE_MAX_AGE = Duration(hours: 24);
 const _BEGIN_TIMES = <String>[
   '',
   '08:00',
@@ -92,25 +93,78 @@ final class CourseScheduleSessionExpired implements Exception {
   const CourseScheduleSessionExpired();
 }
 
+/// Indicates whether the last calendar result came from the server or cache.
+enum CourseScheduleSource { network, freshCache, staleCache }
+
 /// Loads the academic term plus primary and secondary course occurrences.
 ///
 /// The service deliberately uses the shared auth client's cookie jar and
 /// roaming implementation. Primary-calendar rows are already date-specific;
 /// secondary-course week rules are expanded into dated occurrences here.
 final class CourseScheduleService {
-  const CourseScheduleService(this._authClient, {this.trace});
+  CourseScheduleService(this._authClient, {this.cache, this.trace, this.now});
 
   final TsinghuaAuthClient _authClient;
+
+  /// Optional persistent snapshot. Cache reads and writes never contain auth.
+  final CourseScheduleCache? cache;
 
   /// Optional stage diagnostics. No account, cookie, or response body is sent.
   final void Function(String message)? trace;
 
+  /// Injectable clock keeps cache expiry deterministic in tests.
+  final DateTime Function()? now;
+
+  /// Identifies whether the most recent result was fetched or cached.
+  CourseScheduleSource? lastSource;
+
   /// Fetches current-term metadata and combines all available course sources.
-  Future<CourseSchedule> loadCurrentTerm() async {
+  Future<CourseSchedule> loadCurrentTerm({bool forceRefresh = false}) async {
+    lastSource = null;
     if (_authClient.session == null && await _authClient.restore() == null) {
       throw const CourseScheduleSessionExpired();
     }
 
+    final userId = _authClient.session!.userId;
+    final currentTime = (now ?? DateTime.now)();
+    CachedCourseSchedule? cached;
+    try {
+      cached = await cache?.readFor(userId);
+    } on Exception catch (error) {
+      trace?.call('Calendar cache read failed type=${error.runtimeType}');
+    }
+    if (cached != null && !cached.isRelevant(currentTime)) {
+      trace?.call('Calendar cache belongs to an ended term');
+      cached = null;
+    }
+    if (!forceRefresh &&
+        cached != null &&
+        cached.isFresh(currentTime, _SCHEDULE_CACHE_MAX_AGE)) {
+      trace?.call(
+        'Calendar cache hit ageHours=${currentTime.difference(cached.fetchedAt).inHours}',
+      );
+      lastSource = CourseScheduleSource.freshCache;
+      return cached.schedule;
+    }
+
+    try {
+      final schedule = await _fetchCurrentTerm();
+      try {
+        await cache?.writeFor(userId, schedule, (now ?? DateTime.now)());
+      } on Exception catch (error) {
+        trace?.call('Calendar cache write failed type=${error.runtimeType}');
+      }
+      lastSource = CourseScheduleSource.network;
+      return schedule;
+    } on Exception catch (error) {
+      if (cached == null || forceRefresh) rethrow;
+      trace?.call('Calendar using stale cache after ${error.runtimeType}');
+      lastSource = CourseScheduleSource.staleCache;
+      return cached.schedule;
+    }
+  }
+
+  Future<CourseSchedule> _fetchCurrentTerm() async {
     var stage = 'roaming to the learning platform';
     try {
       trace?.call('Calendar stage=$stage');

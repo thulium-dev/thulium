@@ -170,6 +170,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarLoadError => 'Could not load the academic calendar.';
 
   @override
+  String get calendarStaleCache =>
+      'Showing a saved calendar because the latest update failed.';
+
+  @override
   String get calendarRetry => 'Retry';
 
   @override
