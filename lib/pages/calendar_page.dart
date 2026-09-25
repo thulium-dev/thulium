@@ -11,6 +11,7 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
+import '../widgets/calendar_course_block.dart';
 
 /// Displays one Monday-to-Sunday week of the student's fetched courses.
 final class AcademicCalendarPage extends StatefulWidget {
@@ -452,58 +453,20 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
       30.0,
       (clippedEnd - clippedStart) / 60 * _HOUR_HEIGHT - 2,
     );
-    final colors = context.theme.colors;
     return Positioned(
+      key: ValueKey(
+        '${course.name}|${course.location}|'
+        '${course.startsAt.toIso8601String()}|${course.endsAt.toIso8601String()}',
+      ),
       top: top,
       left: 1,
       right: 1,
       height: height,
-      child: Semantics(
-        label: '${course.name}, ${course.location}',
-        child: LayoutBuilder(
-          builder: (context, constraints) => Container(
-            clipBehavior: Clip.hardEdge,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.2),
-              border: Border.all(color: colors.primary, width: 0.8),
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: RotatedBox(
-              quarterTurns: 1,
-              child: SizedBox(
-                width: constraints.maxHeight,
-                height: constraints.maxWidth,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        course.name,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.theme.typography.xs.copyWith(
-                          color: colors.foreground,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        course.location,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.theme.typography.xs.copyWith(
-                          color: colors.mutedForeground,
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => CalendarCourseBlock(
+          course: course,
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
         ),
       ),
     );
