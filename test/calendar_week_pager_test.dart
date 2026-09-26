@@ -113,4 +113,40 @@ void main() {
       greaterThan(0),
     );
   });
+
+  testWidgets('pinching disables week swipes until the gesture ends', (
+    tester,
+  ) async {
+    var selectedWeek = 1;
+    var scrollEnabled = false;
+    Future<void> showPager() => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: SizedBox(
+            width: 320,
+            height: 300,
+            child: CalendarWeekPager(
+              weekCount: 2,
+              initialWeek: 1,
+              scrollEnabled: scrollEnabled,
+              onWeekChanged: (week) => selectedWeek = week,
+              itemBuilder: (context, week) => Center(child: Text('Week $week')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await showPager();
+    await tester.drag(find.byType(CalendarWeekPager), const Offset(-260, 0));
+    await tester.pumpAndSettle();
+    expect(selectedWeek, 1);
+
+    scrollEnabled = true;
+    await showPager();
+    await tester.drag(find.byType(CalendarWeekPager), const Offset(-260, 0));
+    await tester.pumpAndSettle();
+    expect(selectedWeek, 2);
+  });
 }

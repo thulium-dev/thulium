@@ -49,6 +49,19 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
+            if (constraints.maxHeight < 18) {
+              // At a full-day zoom, short events must keep their true time
+              // height instead of expanding over neighboring events.
+              return ExcludeSemantics(
+                child: DecoratedBox(
+                  key: const ValueKey('calendar-course-compact'),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              );
+            }
             if (width < _MIN_NAME_WIDTH) {
               return ExcludeSemantics(
                 child: Center(

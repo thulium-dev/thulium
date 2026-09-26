@@ -13,6 +13,17 @@ final class CalendarWeekScrollSync {
   final _controllers = <int, ScrollController>{};
   double _offset;
 
+  double get offset => _offset;
+
+  /// Positions attached weeks before the resized grid is laid out and painted.
+  /// The following layout reconciles any new scroll extents at the same time.
+  void setOffsetForLayout(double offset) {
+    _offset = offset;
+    for (final controller in _controllers.values) {
+      if (controller.hasClients) controller.position.correctPixels(offset);
+    }
+  }
+
   ScrollController controllerForWeek(int week) =>
       _controllers.putIfAbsent(week, () {
         late final ScrollController controller;

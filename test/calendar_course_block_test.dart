@@ -5,6 +5,28 @@ import 'package:thulium/widgets/calendar_course_block.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
+  testWidgets('very short plans show a compact marker without text overflow', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FTheme(
+          data: FThemes.neutral.light.touch,
+          child: Scaffold(
+            body: CalendarCourseBlock(course: _course, width: 60, height: 12),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('calendar-course-compact')),
+      findsOneWidget,
+    );
+    expect(find.text('Course A'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('separates content thresholds from rotation threshold', (
     tester,
   ) async {

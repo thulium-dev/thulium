@@ -9,6 +9,7 @@ final class CalendarWeekPager extends StatefulWidget {
     required this.initialWeek,
     required this.onWeekChanged,
     required this.itemBuilder,
+    this.scrollEnabled = true,
     super.key,
   });
 
@@ -16,6 +17,7 @@ final class CalendarWeekPager extends StatefulWidget {
   final int initialWeek;
   final ValueChanged<int> onWeekChanged;
   final Widget Function(BuildContext context, int week) itemBuilder;
+  final bool scrollEnabled;
 
   @override
   State<CalendarWeekPager> createState() => CalendarWeekPagerState();
@@ -58,6 +60,7 @@ final class CalendarWeekPagerState extends State<CalendarWeekPager> {
   @override
   Widget build(BuildContext context) => PageView.builder(
     controller: _controller,
+    physics: widget.scrollEnabled ? null : const NeverScrollableScrollPhysics(),
     itemCount: widget.weekCount,
     onPageChanged: (index) => widget.onWeekChanged(index + 1),
     itemBuilder: (context, index) => widget.itemBuilder(context, index + 1),

@@ -75,4 +75,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     sync.dispose();
   });
+
+  testWidgets('a zoomed week keeps its offset on the next week', (
+    tester,
+  ) async {
+    final sync = CalendarWeekScrollSync(initialOffset: 480);
+    Future<void> showWeek(int week, double hourHeight) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 300,
+            child: SingleChildScrollView(
+              controller: sync.controllerForWeek(week),
+              child: SizedBox(height: hourHeight * 24),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await showWeek(1, 60);
+    sync.setOffsetForLayout(1200);
+    await showWeek(1, 120);
+    expect(sync.controllerForWeek(1).offset, 1200);
+    await showWeek(2, 120);
+    expect(sync.controllerForWeek(2).offset, 1200);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    sync.dispose();
+  });
 }

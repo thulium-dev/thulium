@@ -21,6 +21,7 @@ import '../widgets/calendar_overlap_dialog.dart';
 import '../widgets/calendar_plan_details_dialog.dart';
 import '../widgets/calendar_week_pager.dart';
 import '../widgets/calendar_week_scroll_sync.dart';
+import '../widgets/calendar_vertical_pinch.dart';
 
 /// Displays fetched lessons and locally stored plans in a Monday-to-Sunday week.
 final class AcademicCalendarPage extends StatefulWidget {
@@ -39,7 +40,7 @@ final class AcademicCalendarPage extends StatefulWidget {
 
 final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     with WidgetsBindingObserver {
-  static const _HOUR_HEIGHT = 60.0;
+  static const _INITIAL_HOUR_HEIGHT = 60.0;
   static const _FIRST_HOUR = 0;
   static const _LAST_HOUR = 24;
   static const _INITIAL_SCROLL_HOUR = 8;
@@ -54,8 +55,10 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   bool _isLoading = true;
   bool _showingStaleCache = false;
   int? _selectedWeek;
+  double _hourHeight = _INITIAL_HOUR_HEIGHT;
+  bool _pinching = false;
   late final _weekScrollSync = CalendarWeekScrollSync(
-    initialOffset: _INITIAL_SCROLL_HOUR * _HOUR_HEIGHT,
+    initialOffset: _INITIAL_SCROLL_HOUR * _INITIAL_HOUR_HEIGHT,
   );
   final _weekPagerKey = GlobalKey<CalendarWeekPagerState>();
   final _now = ValueNotifier<DateTime>(DateTime.now());
@@ -206,6 +209,15 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
 
   void _changeWeek(int delta) {
     _weekPagerKey.currentState?.animateBy(delta);
+  }
+
+  void _zoomCalendar(double hourHeight, double offset) {
+    _weekScrollSync.setOffsetForLayout(offset);
+    setState(() => _hourHeight = hourHeight);
+  }
+
+  void _setPinching(bool pinching) {
+    if (_pinching != pinching) setState(() => _pinching = pinching);
   }
 
   Future<void> _addPlan() async {
@@ -437,6 +449,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
           Expanded(
             child: CalendarWeekPager(
               key: _weekPagerKey,
+              scrollEnabled: !_pinching,
               weekCount: schedule.term.weekCount,
               initialWeek: _selectedWeek!,
               onWeekChanged: _handleWeekChanged,
@@ -649,50 +662,75 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
               ],
             ),
             Expanded(
-              child: SingleChildScrollView(
-                controller: scrollController,
-                child: SizedBox(
-                  height: (_LAST_HOUR - _FIRST_HOUR) * _HOUR_HEIGHT,
-                  child: Stack(
-                    children: [
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: _TIME_AXIS_WIDTH,
-                            child: _buildTimeAxis(context),
-                          ),
-                          for (var day = 0; day < DateTime.daysPerWeek; day++)
-                            SizedBox(
-                              width: dayWidth,
-                              child: _buildDayColumn(
-                                context,
-                                weekStart.add(Duration(days: day)),
-                                weekCourses,
-                                entryByCourse,
+              child: LayoutBuilder(
+                builder: (context, viewport) {
+                  final hourHeight = math.max(
+                    _hourHeight,
+                    CalendarZoomGeometry.minimumHourHeight(viewport.maxHeight),
+                  );
+                  return CalendarVerticalPinchRegion(
+                    hourHeight: hourHeight,
+                    scrollOffset: _weekScrollSync.offset,
+                    viewportHeight: viewport.maxHeight,
+                    onPinchChanged: _zoomCalendar,
+                    onPinchingChanged: _setPinching,
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      physics: _pinching
+                          ? const NeverScrollableScrollPhysics()
+                          : null,
+                      child: SizedBox(
+                        height: (_LAST_HOUR - _FIRST_HOUR) * hourHeight,
+                        child: Stack(
+                          children: [
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: _TIME_AXIS_WIDTH,
+                                  child: _buildTimeAxis(context, hourHeight),
+                                ),
+                                for (
+                                  var day = 0;
+                                  day < DateTime.daysPerWeek;
+                                  day++
+                                )
+                                  SizedBox(
+                                    width: dayWidth,
+                                    child: _buildDayColumn(
+                                      context,
+                                      weekStart.add(Duration(days: day)),
+                                      weekCourses,
+                                      entryByCourse,
+                                      hourHeight,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (weekCourses.isEmpty)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: Center(
+                                    child: Text(l10n.calendarNoCourses),
+                                  ),
+                                ),
+                              ),
+                            ValueListenableBuilder<DateTime>(
+                              valueListenable: _now,
+                              builder: (context, now, child) => CalendarNowLine(
+                                now: now,
+                                weekStart: weekStart,
+                                firstHour: _FIRST_HOUR,
+                                lastHour: _LAST_HOUR,
+                                hourHeight: hourHeight,
+                                timeAxisWidth: _TIME_AXIS_WIDTH,
                               ),
                             ),
-                        ],
-                      ),
-                      if (weekCourses.isEmpty)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Center(child: Text(l10n.calendarNoCourses)),
-                          ),
-                        ),
-                      ValueListenableBuilder<DateTime>(
-                        valueListenable: _now,
-                        builder: (context, now, child) => CalendarNowLine(
-                          now: now,
-                          weekStart: weekStart,
-                          firstHour: _FIRST_HOUR,
-                          lastHour: _LAST_HOUR,
-                          hourHeight: _HOUR_HEIGHT,
-                          timeAxisWidth: _TIME_AXIS_WIDTH,
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -701,11 +739,11 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     );
   }
 
-  Widget _buildTimeAxis(BuildContext context) => Stack(
+  Widget _buildTimeAxis(BuildContext context, double hourHeight) => Stack(
     children: [
       for (var hour = _FIRST_HOUR; hour <= _LAST_HOUR; hour++)
         Positioned(
-          top: (hour - _FIRST_HOUR) * _HOUR_HEIGHT - 7,
+          top: (hour - _FIRST_HOUR) * hourHeight - 7,
           left: 0,
           right: 4,
           child: Text(
@@ -725,6 +763,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     DateTime date,
     List<CourseOccurrence> weekCourses,
     Map<CourseOccurrence, CalendarPlanEntry> entryByCourse,
+    double hourHeight,
   ) {
     final dailyCourses = weekCourses
         .where(
@@ -742,11 +781,11 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         children: [
           for (var hour = 0; hour <= _LAST_HOUR - _FIRST_HOUR; hour++)
             Positioned(
-              top: hour * _HOUR_HEIGHT,
+              top: hour * hourHeight,
               left: 0,
               right: 0,
               child: Container(
-                height: _HOUR_HEIGHT,
+                height: hourHeight,
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(color: colors.border, width: 0.5),
@@ -762,13 +801,14 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
                 placement,
                 constraints.maxWidth,
                 entryByCourse[placement.course]!,
+                hourHeight,
               ),
           // Tap targets span each maximal continuous overlap region, not just
           // the narrow visible cards. Vertical scroll and week swipes still
           // win the gesture arena when the user drags instead of tapping.
           for (final group in groups)
             if (group.hasOverlap)
-              _buildOverlapTarget(context, group, entryByCourse),
+              _buildOverlapTarget(context, group, entryByCourse, hourHeight),
         ],
       ),
     );
@@ -778,6 +818,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     BuildContext context,
     CalendarCourseGroup group,
     Map<CourseOccurrence, CalendarPlanEntry> entryByCourse,
+    double hourHeight,
   ) {
     final dayStart = DateTime(
       group.startsAt.year,
@@ -792,10 +833,10 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     final clippedStart = startMinutes.clamp(0, totalMinutes);
     final clippedEnd = endMinutes.clamp(clippedStart, totalMinutes);
     return Positioned(
-      top: clippedStart / 60 * _HOUR_HEIGHT,
+      top: clippedStart / 60 * hourHeight,
       left: 0,
       right: 0,
-      height: math.max(1, (clippedEnd - clippedStart) / 60 * _HOUR_HEIGHT),
+      height: math.max(1, (clippedEnd - clippedStart) / 60 * hourHeight),
       child: Semantics(
         button: true,
         label: AppLocalizations.of(context)!.calendarOverlappingPlans,
@@ -821,6 +862,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     CalendarCoursePlacement placement,
     double dayWidth,
     CalendarPlanEntry entry,
+    double hourHeight,
   ) {
     final course = placement.course;
     final startMinutes =
@@ -832,10 +874,10 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
       clippedStart,
       totalMinutes,
     );
-    final top = clippedStart / 60 * _HOUR_HEIGHT;
+    final top = clippedStart / 60 * hourHeight;
     final height = math.max(
-      30.0,
-      (clippedEnd - clippedStart) / 60 * _HOUR_HEIGHT - 2,
+      1.0,
+      (clippedEnd - clippedStart) / 60 * hourHeight - 2,
     );
     final laneWidth = dayWidth / placement.laneCount;
     return Positioned(
