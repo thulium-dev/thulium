@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
 import '../widgets/calendar_course_block.dart';
 import '../widgets/calendar_course_layout.dart';
+import '../widgets/calendar_now_line.dart';
 import '../widgets/calendar_overlap_dialog.dart';
 import '../widgets/calendar_week_pager.dart';
 
@@ -31,7 +33,8 @@ final class AcademicCalendarPage extends StatefulWidget {
   State<AcademicCalendarPage> createState() => _AcademicCalendarPageState();
 }
 
-final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
+final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
+    with WidgetsBindingObserver {
   static const _HOUR_HEIGHT = 60.0;
   static const _FIRST_HOUR = 8;
   static const _LAST_HOUR = 22;
@@ -44,11 +47,33 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
   bool _showingStaleCache = false;
   int? _selectedWeek;
   final _weekPagerKey = GlobalKey<CalendarWeekPagerState>();
+  final _now = ValueNotifier<DateTime>(DateTime.now());
+  Timer? _nowTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Read the clock again on every tick instead of advancing a stored time;
+    // this also corrects drift after the app has been suspended.
+    _nowTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _now.value = DateTime.now(),
+    );
     _loadSchedule();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _now.value = DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _nowTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _now.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSchedule({bool forceRefresh = false}) async {
@@ -339,10 +364,6 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
         )
         .toList(growable: false);
 
-    if (weekCourses.isEmpty) {
-      return Center(child: Text(l10n.calendarNoCourses));
-    }
-
     final locale = l10n.localeName;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -409,21 +430,42 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
               child: SingleChildScrollView(
                 child: SizedBox(
                   height: (_LAST_HOUR - _FIRST_HOUR) * _HOUR_HEIGHT,
-                  child: Row(
+                  child: Stack(
                     children: [
-                      SizedBox(
-                        width: _TIME_AXIS_WIDTH,
-                        child: _buildTimeAxis(context),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: _TIME_AXIS_WIDTH,
+                            child: _buildTimeAxis(context),
+                          ),
+                          for (var day = 0; day < DateTime.daysPerWeek; day++)
+                            SizedBox(
+                              width: dayWidth,
+                              child: _buildDayColumn(
+                                context,
+                                weekStart.add(Duration(days: day)),
+                                weekCourses,
+                              ),
+                            ),
+                        ],
                       ),
-                      for (var day = 0; day < DateTime.daysPerWeek; day++)
-                        SizedBox(
-                          width: dayWidth,
-                          child: _buildDayColumn(
-                            context,
-                            weekStart.add(Duration(days: day)),
-                            weekCourses,
+                      if (weekCourses.isEmpty)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Center(child: Text(l10n.calendarNoCourses)),
                           ),
                         ),
+                      ValueListenableBuilder<DateTime>(
+                        valueListenable: _now,
+                        builder: (context, now, child) => CalendarNowLine(
+                          now: now,
+                          weekStart: weekStart,
+                          firstHour: _FIRST_HOUR,
+                          lastHour: _LAST_HOUR,
+                          hourHeight: _HOUR_HEIGHT,
+                          timeAxisWidth: _TIME_AXIS_WIDTH,
+                        ),
+                      ),
                     ],
                   ),
                 ),
