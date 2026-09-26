@@ -250,10 +250,10 @@ final class CustomPlanCollection {
   final bool skipDeleteConfirmation;
   final bool skipCancelConfirmation;
 
-  /// Applies single-occurrence overrides after expanding rules for one week.
+  /// Applies single-occurrence overrides after expanding rules for a date range.
   /// Moved replacements are included even if their original date was outside
-  /// this week, avoiding an invisible event after a date change.
-  List<CalendarPlanEntry> entriesForWeek(
+  /// this range, avoiding an invisible event after a date change.
+  List<CalendarPlanEntry> entriesBetween(
     List<CourseOccurrence> fetchedLessons,
     DateTime start,
     DateTime end,
@@ -322,6 +322,12 @@ final class CustomPlanCollection {
     );
     return entries;
   }
+
+  List<CalendarPlanEntry> entriesForWeek(
+    List<CourseOccurrence> fetchedLessons,
+    DateTime start,
+    DateTime end,
+  ) => entriesBetween(fetchedLessons, start, end);
 
   CustomPlanCollection copyWith({
     List<CustomPlanCategory>? categories,

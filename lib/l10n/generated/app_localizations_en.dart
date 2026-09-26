@@ -164,7 +164,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarRefresh => 'Refresh calendar';
 
   @override
-  String get calendarExport => 'Export calendar (coming soon)';
+  String get calendarExport => 'Export calendar';
+
+  @override
+  String get calendarExportDialogTitle => 'Export calendar';
+
+  @override
+  String get calendarExportRange => 'Date range';
+
+  @override
+  String get calendarExportCurrentWeek => 'Current week';
+
+  @override
+  String get calendarExportEntireTerm => 'Entire term';
+
+  @override
+  String get calendarExportSchoolCourses => 'School courses';
+
+  @override
+  String get calendarExportPersonalPlans => 'Personal plans';
+
+  @override
+  String get calendarExportAction => 'Export';
+
+  @override
+  String get calendarExportNoEvents =>
+      'No events are available for the selected options.';
+
+  @override
+  String get calendarExportFailed =>
+      'Could not export the calendar. Please try again.';
+
+  @override
+  String get calendarExportSaved => 'Calendar file saved.';
 
   @override
   String get calendarLoading => 'Loading calendar…';

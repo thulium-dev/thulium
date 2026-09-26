@@ -391,8 +391,68 @@ abstract class AppLocalizations {
   /// No description provided for @calendarExport.
   ///
   /// In en, this message translates to:
-  /// **'Export calendar (coming soon)'**
+  /// **'Export calendar'**
   String get calendarExport;
+
+  /// No description provided for @calendarExportDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export calendar'**
+  String get calendarExportDialogTitle;
+
+  /// No description provided for @calendarExportRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Date range'**
+  String get calendarExportRange;
+
+  /// No description provided for @calendarExportCurrentWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Current week'**
+  String get calendarExportCurrentWeek;
+
+  /// No description provided for @calendarExportEntireTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Entire term'**
+  String get calendarExportEntireTerm;
+
+  /// No description provided for @calendarExportSchoolCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'School courses'**
+  String get calendarExportSchoolCourses;
+
+  /// No description provided for @calendarExportPersonalPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal plans'**
+  String get calendarExportPersonalPlans;
+
+  /// No description provided for @calendarExportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get calendarExportAction;
+
+  /// No description provided for @calendarExportNoEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No events are available for the selected options.'**
+  String get calendarExportNoEvents;
+
+  /// No description provided for @calendarExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export the calendar. Please try again.'**
+  String get calendarExportFailed;
+
+  /// No description provided for @calendarExportSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar file saved.'**
+  String get calendarExportSaved;
 
   /// No description provided for @calendarLoading.
   ///

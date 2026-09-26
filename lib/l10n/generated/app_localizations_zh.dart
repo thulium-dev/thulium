@@ -158,7 +158,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarRefresh => '刷新日历';
 
   @override
-  String get calendarExport => '导出日历（即将推出）';
+  String get calendarExport => '导出日历';
+
+  @override
+  String get calendarExportDialogTitle => '导出日历';
+
+  @override
+  String get calendarExportRange => '日期范围';
+
+  @override
+  String get calendarExportCurrentWeek => '当前周';
+
+  @override
+  String get calendarExportEntireTerm => '整个学期';
+
+  @override
+  String get calendarExportSchoolCourses => '学校课程';
+
+  @override
+  String get calendarExportPersonalPlans => '个人计划';
+
+  @override
+  String get calendarExportAction => '导出';
+
+  @override
+  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程。';
+
+  @override
+  String get calendarExportFailed => '无法导出日历，请重试。';
+
+  @override
+  String get calendarExportSaved => '日历文件已保存。';
 
   @override
   String get calendarLoading => '正在加载日历…';
@@ -473,7 +503,37 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarRefresh => '刷新日历';
 
   @override
-  String get calendarExport => '导出日历（即将推出）';
+  String get calendarExport => '导出日历';
+
+  @override
+  String get calendarExportDialogTitle => '导出日历';
+
+  @override
+  String get calendarExportRange => '日期范围';
+
+  @override
+  String get calendarExportCurrentWeek => '当前周';
+
+  @override
+  String get calendarExportEntireTerm => '整个学期';
+
+  @override
+  String get calendarExportSchoolCourses => '学校课程';
+
+  @override
+  String get calendarExportPersonalPlans => '个人计划';
+
+  @override
+  String get calendarExportAction => '导出';
+
+  @override
+  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程。';
+
+  @override
+  String get calendarExportFailed => '无法导出日历，请重试。';
+
+  @override
+  String get calendarExportSaved => '日历文件已保存。';
 
   @override
   String get calendarLoading => '正在加载日历…';
@@ -788,7 +848,37 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get calendarRefresh => '重新整理日曆';
 
   @override
-  String get calendarExport => '匯出日曆（即將推出）';
+  String get calendarExport => '匯出日曆';
+
+  @override
+  String get calendarExportDialogTitle => '匯出日曆';
+
+  @override
+  String get calendarExportRange => '日期範圍';
+
+  @override
+  String get calendarExportCurrentWeek => '目前週';
+
+  @override
+  String get calendarExportEntireTerm => '整個學期';
+
+  @override
+  String get calendarExportSchoolCourses => '學校課程';
+
+  @override
+  String get calendarExportPersonalPlans => '個人計畫';
+
+  @override
+  String get calendarExportAction => '匯出';
+
+  @override
+  String get calendarExportNoEvents => '所選範圍和內容沒有可匯出的行程。';
+
+  @override
+  String get calendarExportFailed => '無法匯出日曆，請重試。';
+
+  @override
+  String get calendarExportSaved => '日曆檔案已儲存。';
 
   @override
   String get calendarLoading => '正在載入日曆…';

@@ -1,11 +1,17 @@
 // ignore_for_file: constant_identifier_names
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
@@ -13,9 +19,11 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
 import '../auth/secure_custom_plan_store.dart';
+import '../calendar/calendar_ics_export.dart';
 import 'add_plan_page.dart';
 import '../widgets/calendar_course_block.dart';
 import '../widgets/calendar_course_layout.dart';
+import '../widgets/calendar_export_dialog.dart';
 import '../widgets/calendar_now_line.dart';
 import '../widgets/calendar_overlap_dialog.dart';
 import '../widgets/calendar_plan_details_dialog.dart';
@@ -57,10 +65,12 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   int? _selectedWeek;
   double _hourHeight = _INITIAL_HOUR_HEIGHT;
   bool _pinching = false;
+  bool _isExporting = false;
   late final _weekScrollSync = CalendarWeekScrollSync(
     initialOffset: _INITIAL_SCROLL_HOUR * _INITIAL_HOUR_HEIGHT,
   );
   final _weekPagerKey = GlobalKey<CalendarWeekPagerState>();
+  final _exportButtonKey = GlobalKey();
   final _now = ValueNotifier<DateTime>(DateTime.now());
   Timer? _nowTimer;
 
@@ -247,6 +257,123 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
             );
           },
         ),
+      ),
+    );
+  }
+
+  Future<void> _exportCalendar() async {
+    final schedule = _schedule;
+    if (schedule == null || _isExporting) return;
+    setState(() => _isExporting = true);
+    try {
+      final selection = await showCalendarExportDialog(context);
+      if (selection == null || !mounted) return;
+
+      final termStart = DateTime(
+        schedule.term.firstMonday.year,
+        schedule.term.firstMonday.month,
+        schedule.term.firstMonday.day,
+      );
+      final rangeStart = selection.range == CalendarExportRange.currentWeek
+          ? termStart.add(Duration(days: ((_selectedWeek ?? 1) - 1) * 7))
+          : termStart;
+      final rangeEnd = selection.range == CalendarExportRange.currentWeek
+          ? rangeStart.add(const Duration(days: DateTime.daysPerWeek))
+          : termStart.add(Duration(days: schedule.term.weekCount * 7));
+      final entries = _customPlans
+          .entriesBetween(schedule.occurrences, rangeStart, rangeEnd)
+          .where(
+            (entry) => entry.fetchedLesson
+                ? selection.includeSchoolCourses
+                : selection.includePersonalPlans,
+          )
+          .toList(growable: false);
+      if (entries.isEmpty) {
+        await _showExportNotice(
+          AppLocalizations.of(context)!.calendarExportNoEvents,
+        );
+        return;
+      }
+
+      final contents = buildCalendarIcs(
+        entries,
+        categoryName: (category) =>
+            _categoryName(AppLocalizations.of(context)!, category),
+      );
+      final termId = schedule.term.id.replaceAll(
+        RegExp(r'[^A-Za-z0-9_-]'),
+        '-',
+      );
+      final fileName = selection.range == CalendarExportRange.currentWeek
+          ? 'thulium-$termId-week-${(_selectedWeek ?? 1).toString().padLeft(2, '0')}.ics'
+          : 'thulium-$termId.ics';
+      final file = fs.XFile.fromData(
+        Uint8List.fromList(utf8.encode(contents)),
+        name: fileName,
+        mimeType: 'text/calendar',
+      );
+
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+        final location = await fs.getSaveLocation(
+          suggestedName: fileName,
+          acceptedTypeGroups: const [
+            fs.XTypeGroup(label: 'iCalendar files', extensions: ['ics']),
+          ],
+        );
+        if (location == null || !mounted) return;
+        final path = location.path.toLowerCase().endsWith('.ics')
+            ? location.path
+            : '${location.path}.ics';
+        await file.saveTo(path);
+        if (mounted) {
+          await _showExportNotice(
+            AppLocalizations.of(context)!.calendarExportSaved,
+          );
+        }
+      } else {
+        final renderObject = _exportButtonKey.currentContext
+            ?.findRenderObject();
+        final sharePositionOrigin =
+            renderObject is RenderBox && renderObject.hasSize
+            ? renderObject.localToGlobal(Offset.zero) & renderObject.size
+            : null;
+        await SharePlus.instance.share(
+          ShareParams(
+            title: AppLocalizations.of(context)!.calendarExportDialogTitle,
+            files: [file],
+            fileNameOverrides: [fileName],
+            sharePositionOrigin: sharePositionOrigin,
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('[calendar] export failed type=${error.runtimeType}');
+      if (mounted) {
+        await _showExportNotice(
+          AppLocalizations.of(context)!.calendarExportFailed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _showExportNotice(String message) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await showFDialog<void>(
+      context: context,
+      useSafeArea: true,
+      routeStyle: FDialogRouteStyle.inherit(colors: context.theme.colors),
+      builder: (context, style, animation) => FDialog.adaptive(
+        animation: animation,
+        title: Text(message),
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(context).pop(),
+            child: Text(l10n.confirmAction),
+          ),
+        ],
       ),
     );
   }
@@ -495,6 +622,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
                     ),
                   ),
                   const SizedBox(width: 4),
+                  const SizedBox.square(dimension: 40),
+                  const SizedBox(width: 4),
                   Tooltip(
                     message: l10n.calendarPreviousWeek,
                     child: FButton(
@@ -562,10 +691,13 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
                   Tooltip(
                     message: l10n.calendarExport,
                     child: FButton(
+                      key: _exportButtonKey,
                       variant: FButtonVariant.ghost,
                       size: FButtonSizeVariant.sm,
                       mainAxisSize: MainAxisSize.min,
-                      onPress: null,
+                      onPress: schedule == null || _isExporting
+                          ? null
+                          : _exportCalendar,
                       child: const Icon(Icons.ios_share_outlined),
                     ),
                   ),
@@ -589,7 +721,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
       Duration(days: (week - 1) * 7),
     );
     final weekEnd = weekStart.add(const Duration(days: 7));
-    final weekEntries = _customPlans.entriesForWeek(
+    final weekEntries = _customPlans.entriesBetween(
       schedule.occurrences,
       weekStart,
       weekEnd,
