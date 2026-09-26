@@ -354,30 +354,54 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage> {
               children: [
                 const SizedBox(width: _TIME_AXIS_WIDTH),
                 for (var day = 0; day < DateTime.daysPerWeek; day++)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Column(
-                        children: [
-                          Text(
-                            DateFormat.E(
-                              locale,
-                            ).format(weekStart.add(Duration(days: day))),
-                            maxLines: 1,
-                            style: context.theme.typography.xs,
-                          ),
-                          Text(
-                            DateFormat.Md(
-                              locale,
-                            ).format(weekStart.add(Duration(days: day))),
-                            maxLines: 1,
-                            style: context.theme.typography.xs.copyWith(
-                              color: context.theme.colors.mutedForeground,
+                  Builder(
+                    builder: (context) {
+                      final date = weekStart.add(Duration(days: day));
+                      final isToday = DateUtils.isSameDay(date, DateTime.now());
+                      final colors = context.theme.colors;
+                      final markerSize = math.min(dayWidth, 42.0);
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: SizedBox.square(
+                            dimension: markerSize,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isToday
+                                    ? colors.foreground
+                                    : Colors.transparent,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    DateFormat.E(locale).format(date),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip,
+                                    style: context.theme.typography.xs.copyWith(
+                                      color: isToday
+                                          ? colors.background
+                                          : colors.foreground,
+                                    ),
+                                  ),
+                                  Text(
+                                    DateFormat.Md(locale).format(date),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip,
+                                    style: context.theme.typography.xs.copyWith(
+                                      color: isToday
+                                          ? colors.background
+                                          : colors.mutedForeground,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
               ],
             ),
