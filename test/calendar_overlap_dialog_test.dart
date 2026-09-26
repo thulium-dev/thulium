@@ -10,6 +10,7 @@ void main() {
   testWidgets('shows every overlapping course and dismisses outside', (
     tester,
   ) async {
+    CourseOccurrence? selected;
     final groups = layoutCalendarCourseGroups([
       CourseOccurrence(
         name: 'Physics',
@@ -40,8 +41,10 @@ void main() {
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
-              onPressed: () =>
-                  showCalendarOverlapDialog(context, groups.single),
+              onPressed: () async => selected = await showCalendarOverlapDialog(
+                context,
+                groups.single,
+              ),
               child: const Text('Open overlap'),
             ),
           ),
@@ -58,11 +61,21 @@ void main() {
     expect(find.text('Chemistry'), findsOneWidget);
     expect(find.text('Room 202'), findsOneWidget);
     final route = ModalRoute.of(tester.element(find.byType(FDialog)));
-    expect(route, isA<FDialogRoute<void>>());
-    expect((route! as FDialogRoute<void>).style.barrierFilter, isNotNull);
+    expect(route, isA<FDialogRoute<CourseOccurrence>>());
+    expect(
+      (route! as FDialogRoute<CourseOccurrence>).style.barrierFilter,
+      isNotNull,
+    );
 
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
+    expect(find.text('Overlapping plans'), findsNothing);
+
+    await tester.tap(find.text('Open overlap'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Physics'));
+    await tester.pumpAndSettle();
+    expect(selected?.name, 'Physics');
     expect(find.text('Overlapping plans'), findsNothing);
   });
 }

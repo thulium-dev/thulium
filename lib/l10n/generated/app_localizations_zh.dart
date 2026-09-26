@@ -173,10 +173,138 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarRetry => '重试';
 
   @override
-  String get calendarNoCourses => '本周没有课程。';
+  String get calendarNoCourses => '本周没有计划。';
 
   @override
   String get calendarOverlappingPlans => '重叠的计划';
+
+  @override
+  String get planAddTitle => '添加计划';
+
+  @override
+  String get planName => '名称';
+
+  @override
+  String get planLocation => '地点';
+
+  @override
+  String get planDate => '日期';
+
+  @override
+  String get planStartTime => '开始时间';
+
+  @override
+  String get planEndTime => '结束时间';
+
+  @override
+  String get planCategory => '分类';
+
+  @override
+  String get planLessonCategory => '课程';
+
+  @override
+  String get planNewCategory => '新建分类';
+
+  @override
+  String get planCategoryName => '分类名称';
+
+  @override
+  String get planCategoryColor => '分类颜色';
+
+  @override
+  String get planCategoryDuplicate => '已有同名分类。';
+
+  @override
+  String get planRepeat => '重复方式';
+
+  @override
+  String get planRepeatNone => '不重复';
+
+  @override
+  String get planRepeatDaily => '每天';
+
+  @override
+  String get planRepeatWeekly => '每周';
+
+  @override
+  String get planRepeatInterval => '每隔几天';
+
+  @override
+  String planRepeatEveryDays(int days) {
+    return '每隔 $days 天';
+  }
+
+  @override
+  String get planIntervalDays => '间隔天数';
+
+  @override
+  String get planIntervalInvalid => '请输入大于零的天数。';
+
+  @override
+  String get planTimeRequired => '请选择日期、开始时间和结束时间。';
+
+  @override
+  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间。';
+
+  @override
+  String get planSave => '保存计划';
+
+  @override
+  String get planSaveError => '无法保存计划，请重试。';
+
+  @override
+  String get planEditTitle => '编辑计划';
+
+  @override
+  String get planSaveChanges => '保存修改';
+
+  @override
+  String get planDetailsTitle => '计划详情';
+
+  @override
+  String get planTimeRange => '时间';
+
+  @override
+  String get planEditOccurrence => '编辑本次计划';
+
+  @override
+  String get planEditSeries => '编辑整个重复计划';
+
+  @override
+  String get planEditSeriesUnavailable => '此计划不重复';
+
+  @override
+  String get planDeleteSeries => '删除整个重复计划';
+
+  @override
+  String get planDeleteOccurrence => '删除计划';
+
+  @override
+  String get planCancelOccurrence => '临时取消本次计划';
+
+  @override
+  String get planConfirmDeleteTitle => '确认删除计划？';
+
+  @override
+  String get planConfirmCancelTitle => '确认取消本次计划？';
+
+  @override
+  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据。';
+
+  @override
+  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改。';
+
+  @override
+  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留。';
+
+  @override
+  String get planDontAskAgain => '此操作下次不再提醒';
+
+  @override
+  String get planDeleteAction => '删除';
+
+  @override
+  String get planCancelAction => '取消本次';
 
   @override
   String get studyTitle => '学习';
@@ -360,10 +488,138 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarRetry => '重试';
 
   @override
-  String get calendarNoCourses => '本周没有课程。';
+  String get calendarNoCourses => '本周没有计划。';
 
   @override
   String get calendarOverlappingPlans => '重叠的计划';
+
+  @override
+  String get planAddTitle => '添加计划';
+
+  @override
+  String get planName => '名称';
+
+  @override
+  String get planLocation => '地点';
+
+  @override
+  String get planDate => '日期';
+
+  @override
+  String get planStartTime => '开始时间';
+
+  @override
+  String get planEndTime => '结束时间';
+
+  @override
+  String get planCategory => '分类';
+
+  @override
+  String get planLessonCategory => '课程';
+
+  @override
+  String get planNewCategory => '新建分类';
+
+  @override
+  String get planCategoryName => '分类名称';
+
+  @override
+  String get planCategoryColor => '分类颜色';
+
+  @override
+  String get planCategoryDuplicate => '已有同名分类。';
+
+  @override
+  String get planRepeat => '重复方式';
+
+  @override
+  String get planRepeatNone => '不重复';
+
+  @override
+  String get planRepeatDaily => '每天';
+
+  @override
+  String get planRepeatWeekly => '每周';
+
+  @override
+  String get planRepeatInterval => '每隔几天';
+
+  @override
+  String planRepeatEveryDays(int days) {
+    return '每隔 $days 天';
+  }
+
+  @override
+  String get planIntervalDays => '间隔天数';
+
+  @override
+  String get planIntervalInvalid => '请输入大于零的天数。';
+
+  @override
+  String get planTimeRequired => '请选择日期、开始时间和结束时间。';
+
+  @override
+  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间。';
+
+  @override
+  String get planSave => '保存计划';
+
+  @override
+  String get planSaveError => '无法保存计划，请重试。';
+
+  @override
+  String get planEditTitle => '编辑计划';
+
+  @override
+  String get planSaveChanges => '保存修改';
+
+  @override
+  String get planDetailsTitle => '计划详情';
+
+  @override
+  String get planTimeRange => '时间';
+
+  @override
+  String get planEditOccurrence => '编辑本次计划';
+
+  @override
+  String get planEditSeries => '编辑整个重复计划';
+
+  @override
+  String get planEditSeriesUnavailable => '此计划不重复';
+
+  @override
+  String get planDeleteSeries => '删除整个重复计划';
+
+  @override
+  String get planDeleteOccurrence => '删除计划';
+
+  @override
+  String get planCancelOccurrence => '临时取消本次计划';
+
+  @override
+  String get planConfirmDeleteTitle => '确认删除计划？';
+
+  @override
+  String get planConfirmCancelTitle => '确认取消本次计划？';
+
+  @override
+  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据。';
+
+  @override
+  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改。';
+
+  @override
+  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留。';
+
+  @override
+  String get planDontAskAgain => '此操作下次不再提醒';
+
+  @override
+  String get planDeleteAction => '删除';
+
+  @override
+  String get planCancelAction => '取消本次';
 
   @override
   String get studyTitle => '学习';
@@ -547,10 +803,138 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get calendarRetry => '重試';
 
   @override
-  String get calendarNoCourses => '本週沒有課程。';
+  String get calendarNoCourses => '本週沒有計畫。';
 
   @override
   String get calendarOverlappingPlans => '重疊的計劃';
+
+  @override
+  String get planAddTitle => '新增計畫';
+
+  @override
+  String get planName => '名稱';
+
+  @override
+  String get planLocation => '地點';
+
+  @override
+  String get planDate => '日期';
+
+  @override
+  String get planStartTime => '開始時間';
+
+  @override
+  String get planEndTime => '結束時間';
+
+  @override
+  String get planCategory => '分類';
+
+  @override
+  String get planLessonCategory => '課程';
+
+  @override
+  String get planNewCategory => '新增分類';
+
+  @override
+  String get planCategoryName => '分類名稱';
+
+  @override
+  String get planCategoryColor => '分類顏色';
+
+  @override
+  String get planCategoryDuplicate => '已有同名分類。';
+
+  @override
+  String get planRepeat => '重複方式';
+
+  @override
+  String get planRepeatNone => '不重複';
+
+  @override
+  String get planRepeatDaily => '每天';
+
+  @override
+  String get planRepeatWeekly => '每週';
+
+  @override
+  String get planRepeatInterval => '每隔幾天';
+
+  @override
+  String planRepeatEveryDays(int days) {
+    return '每隔 $days 天';
+  }
+
+  @override
+  String get planIntervalDays => '間隔天數';
+
+  @override
+  String get planIntervalInvalid => '請輸入大於零的天數。';
+
+  @override
+  String get planTimeRequired => '請選擇日期、開始時間和結束時間。';
+
+  @override
+  String get planEndAfterStart => '結束時間必須晚於同一天的開始時間。';
+
+  @override
+  String get planSave => '儲存計畫';
+
+  @override
+  String get planSaveError => '無法儲存計畫，請重試。';
+
+  @override
+  String get planEditTitle => '編輯計畫';
+
+  @override
+  String get planSaveChanges => '儲存修改';
+
+  @override
+  String get planDetailsTitle => '計畫詳情';
+
+  @override
+  String get planTimeRange => '時間';
+
+  @override
+  String get planEditOccurrence => '編輯本次計畫';
+
+  @override
+  String get planEditSeries => '編輯整個重複計畫';
+
+  @override
+  String get planEditSeriesUnavailable => '此計畫不重複';
+
+  @override
+  String get planDeleteSeries => '刪除整個重複計畫';
+
+  @override
+  String get planDeleteOccurrence => '刪除計畫';
+
+  @override
+  String get planCancelOccurrence => '暫時取消本次計畫';
+
+  @override
+  String get planConfirmDeleteTitle => '確認刪除計畫？';
+
+  @override
+  String get planConfirmCancelTitle => '確認取消本次計畫？';
+
+  @override
+  String get planConfirmFetchedLesson => '這堂課只會在 Thulium 中隱藏，不會修改學校教學日曆的資料。';
+
+  @override
+  String get planConfirmDeleteSeries => '將刪除此重複計畫的所有次數，包括單次修改。';
+
+  @override
+  String get planConfirmOneOccurrence => '只移除本次計畫，其他次數仍會保留。';
+
+  @override
+  String get planDontAskAgain => '此操作下次不再提醒';
+
+  @override
+  String get planDeleteAction => '刪除';
+
+  @override
+  String get planCancelAction => '取消本次';
 
   @override
   String get studyTitle => '學習';

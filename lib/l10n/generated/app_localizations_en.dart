@@ -180,10 +180,143 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarRetry => 'Retry';
 
   @override
-  String get calendarNoCourses => 'No courses scheduled for this week.';
+  String get calendarNoCourses => 'No plans scheduled for this week.';
 
   @override
   String get calendarOverlappingPlans => 'Overlapping plans';
+
+  @override
+  String get planAddTitle => 'Add plan';
+
+  @override
+  String get planName => 'Name';
+
+  @override
+  String get planLocation => 'Location';
+
+  @override
+  String get planDate => 'Date';
+
+  @override
+  String get planStartTime => 'Start time';
+
+  @override
+  String get planEndTime => 'End time';
+
+  @override
+  String get planCategory => 'Category';
+
+  @override
+  String get planLessonCategory => 'Lesson';
+
+  @override
+  String get planNewCategory => 'New category';
+
+  @override
+  String get planCategoryName => 'Category name';
+
+  @override
+  String get planCategoryColor => 'Category color';
+
+  @override
+  String get planCategoryDuplicate =>
+      'A category with this name already exists.';
+
+  @override
+  String get planRepeat => 'Repeat';
+
+  @override
+  String get planRepeatNone => 'Never';
+
+  @override
+  String get planRepeatDaily => 'Daily';
+
+  @override
+  String get planRepeatWeekly => 'Weekly';
+
+  @override
+  String get planRepeatInterval => 'Every N days';
+
+  @override
+  String planRepeatEveryDays(int days) {
+    return 'Every $days days';
+  }
+
+  @override
+  String get planIntervalDays => 'Interval in days';
+
+  @override
+  String get planIntervalInvalid => 'Enter a positive number of days.';
+
+  @override
+  String get planTimeRequired => 'Choose a date, start time, and end time.';
+
+  @override
+  String get planEndAfterStart =>
+      'End time must be later than start time on the same day.';
+
+  @override
+  String get planSave => 'Save plan';
+
+  @override
+  String get planSaveError => 'Could not save this plan. Please try again.';
+
+  @override
+  String get planEditTitle => 'Edit plan';
+
+  @override
+  String get planSaveChanges => 'Save changes';
+
+  @override
+  String get planDetailsTitle => 'Plan details';
+
+  @override
+  String get planTimeRange => 'Time';
+
+  @override
+  String get planEditOccurrence => 'Edit this occurrence';
+
+  @override
+  String get planEditSeries => 'Edit entire series';
+
+  @override
+  String get planEditSeriesUnavailable => 'This plan does not repeat';
+
+  @override
+  String get planDeleteSeries => 'Delete entire series';
+
+  @override
+  String get planDeleteOccurrence => 'Delete plan';
+
+  @override
+  String get planCancelOccurrence => 'Cancel this occurrence';
+
+  @override
+  String get planConfirmDeleteTitle => 'Delete plan?';
+
+  @override
+  String get planConfirmCancelTitle => 'Cancel occurrence?';
+
+  @override
+  String get planConfirmFetchedLesson =>
+      'This lesson will be hidden in Thulium only. School calendar data will not be changed.';
+
+  @override
+  String get planConfirmDeleteSeries =>
+      'Every occurrence of this repeating plan will be deleted, including individual edits.';
+
+  @override
+  String get planConfirmOneOccurrence =>
+      'Only this occurrence will be removed. Other occurrences will remain.';
+
+  @override
+  String get planDontAskAgain => 'Don\'t ask again for this action';
+
+  @override
+  String get planDeleteAction => 'Delete';
+
+  @override
+  String get planCancelAction => 'Cancel once';
 
   @override
   String get studyTitle => 'Study';

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
+import 'package:thulium_campus/thulium_campus.dart';
 
 import 'calendar_course_block.dart';
 import 'calendar_course_layout.dart';
@@ -10,13 +11,14 @@ import 'calendar_course_layout.dart';
 ///
 /// The Forui route supplies an animated blurred barrier. Its dismissible
 /// barrier closes the popup when the user taps outside the dialog.
-Future<void> showCalendarOverlapDialog(
+Future<CourseOccurrence?> showCalendarOverlapDialog(
   BuildContext context,
-  CalendarCourseGroup group,
-) {
+  CalendarCourseGroup group, {
+  Color? Function(String category)? categoryColor,
+}) {
   final l10n = AppLocalizations.of(context)!;
   final timeFormat = DateFormat.Hm(l10n.localeName);
-  return showFDialog<void>(
+  return showFDialog<CourseOccurrence>(
     context: context,
     useSafeArea: true,
     barrierDismissible: true,
@@ -56,15 +58,22 @@ Future<void> showCalendarOverlapDialog(
                         style: context.theme.typography.xs,
                       ),
                       const SizedBox(height: 4),
-                      SizedBox(
-                        height: 72,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) =>
-                              CalendarCourseBlock(
-                                course: course,
-                                width: constraints.maxWidth,
-                                height: constraints.maxHeight,
-                              ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Navigator.of(context).pop(course),
+                        child: SizedBox(
+                          height: 72,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) =>
+                                CalendarCourseBlock(
+                                  course: course,
+                                  categoryColor: categoryColor?.call(
+                                    course.category,
+                                  ),
+                                  width: constraints.maxWidth,
+                                  height: constraints.maxHeight,
+                                ),
+                          ),
                         ),
                       ),
                     ],

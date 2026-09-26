@@ -39,6 +39,7 @@ void main() {
     final refresh = tester.getCenter(find.byIcon(Icons.refresh)).dx;
     final previous = tester.getCenter(find.byIcon(Icons.chevron_left)).dx;
     final next = tester.getCenter(find.byIcon(Icons.chevron_right)).dx;
+    final add = tester.getCenter(find.byIcon(Icons.add)).dx;
     final export = tester.getCenter(find.byIcon(Icons.ios_share_outlined)).dx;
     final barCenter = tester.getCenter(find.byType(AcademicCalendarPage)).dx;
 
@@ -46,8 +47,12 @@ void main() {
     expect(previous, lessThan(barCenter));
     expect(barCenter, lessThan(next));
     expect(next, lessThan(export));
-    expect(barCenter - refresh, closeTo(export - barCenter, 1));
-    expect(barCenter - previous, closeTo(next - barCenter, 1));
+    expect(next, lessThan(add));
+    expect(add, lessThan(export));
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('calendar-week-label'))).dx,
+      closeTo(barCenter, 1),
+    );
     expect(tester.takeException(), isNull);
 
     final exportButton = tester.widget<FButton>(

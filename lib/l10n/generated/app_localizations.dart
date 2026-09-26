@@ -421,7 +421,7 @@ abstract class AppLocalizations {
   /// No description provided for @calendarNoCourses.
   ///
   /// In en, this message translates to:
-  /// **'No courses scheduled for this week.'**
+  /// **'No plans scheduled for this week.'**
   String get calendarNoCourses;
 
   /// No description provided for @calendarOverlappingPlans.
@@ -429,6 +429,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overlapping plans'**
   String get calendarOverlappingPlans;
+
+  /// No description provided for @planAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add plan'**
+  String get planAddTitle;
+
+  /// No description provided for @planName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get planName;
+
+  /// No description provided for @planLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get planLocation;
+
+  /// No description provided for @planDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get planDate;
+
+  /// No description provided for @planStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get planStartTime;
+
+  /// No description provided for @planEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get planEndTime;
+
+  /// No description provided for @planCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get planCategory;
+
+  /// No description provided for @planLessonCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson'**
+  String get planLessonCategory;
+
+  /// No description provided for @planNewCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'New category'**
+  String get planNewCategory;
+
+  /// No description provided for @planCategoryName.
+  ///
+  /// In en, this message translates to:
+  /// **'Category name'**
+  String get planCategoryName;
+
+  /// No description provided for @planCategoryColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Category color'**
+  String get planCategoryColor;
+
+  /// No description provided for @planCategoryDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'A category with this name already exists.'**
+  String get planCategoryDuplicate;
+
+  /// No description provided for @planRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get planRepeat;
+
+  /// No description provided for @planRepeatNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get planRepeatNone;
+
+  /// No description provided for @planRepeatDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get planRepeatDaily;
+
+  /// No description provided for @planRepeatWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get planRepeatWeekly;
+
+  /// No description provided for @planRepeatInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Every N days'**
+  String get planRepeatInterval;
+
+  /// No description provided for @planRepeatEveryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {days} days'**
+  String planRepeatEveryDays(int days);
+
+  /// No description provided for @planIntervalDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Interval in days'**
+  String get planIntervalDays;
+
+  /// No description provided for @planIntervalInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive number of days.'**
+  String get planIntervalInvalid;
+
+  /// No description provided for @planTimeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a date, start time, and end time.'**
+  String get planTimeRequired;
+
+  /// No description provided for @planEndAfterStart.
+  ///
+  /// In en, this message translates to:
+  /// **'End time must be later than start time on the same day.'**
+  String get planEndAfterStart;
+
+  /// No description provided for @planSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save plan'**
+  String get planSave;
+
+  /// No description provided for @planSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save this plan. Please try again.'**
+  String get planSaveError;
+
+  /// No description provided for @planEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit plan'**
+  String get planEditTitle;
+
+  /// No description provided for @planSaveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get planSaveChanges;
+
+  /// No description provided for @planDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan details'**
+  String get planDetailsTitle;
+
+  /// No description provided for @planTimeRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get planTimeRange;
+
+  /// No description provided for @planEditOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit this occurrence'**
+  String get planEditOccurrence;
+
+  /// No description provided for @planEditSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit entire series'**
+  String get planEditSeries;
+
+  /// No description provided for @planEditSeriesUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This plan does not repeat'**
+  String get planEditSeriesUnavailable;
+
+  /// No description provided for @planDeleteSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entire series'**
+  String get planDeleteSeries;
+
+  /// No description provided for @planDeleteOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete plan'**
+  String get planDeleteOccurrence;
+
+  /// No description provided for @planCancelOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this occurrence'**
+  String get planCancelOccurrence;
+
+  /// No description provided for @planConfirmDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete plan?'**
+  String get planConfirmDeleteTitle;
+
+  /// No description provided for @planConfirmCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel occurrence?'**
+  String get planConfirmCancelTitle;
+
+  /// No description provided for @planConfirmFetchedLesson.
+  ///
+  /// In en, this message translates to:
+  /// **'This lesson will be hidden in Thulium only. School calendar data will not be changed.'**
+  String get planConfirmFetchedLesson;
+
+  /// No description provided for @planConfirmDeleteSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Every occurrence of this repeating plan will be deleted, including individual edits.'**
+  String get planConfirmDeleteSeries;
+
+  /// No description provided for @planConfirmOneOccurrence.
+  ///
+  /// In en, this message translates to:
+  /// **'Only this occurrence will be removed. Other occurrences will remain.'**
+  String get planConfirmOneOccurrence;
+
+  /// No description provided for @planDontAskAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t ask again for this action'**
+  String get planDontAskAgain;
+
+  /// No description provided for @planDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get planDeleteAction;
+
+  /// No description provided for @planCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel once'**
+  String get planCancelAction;
 
   /// No description provided for @studyTitle.
   ///

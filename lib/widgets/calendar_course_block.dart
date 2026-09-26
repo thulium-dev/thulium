@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
-/// Displays a lesson using the text that its allocated lane can actually fit.
+/// Displays a plan using the text that its allocated lane can actually fit.
 ///
 /// A very narrow lane keeps its full hit/semantics area but paints only a
 /// centered vertical stroke. Wider lanes add the name, then the location,
@@ -15,12 +15,14 @@ final class CalendarCourseBlock extends StatefulWidget {
     required this.course,
     required this.width,
     required this.height,
+    this.categoryColor,
     super.key,
   });
 
   final CourseOccurrence course;
   final double width;
   final double height;
+  final Color? categoryColor;
 
   @override
   State<CalendarCourseBlock> createState() => _CalendarCourseBlockState();
@@ -35,6 +37,7 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
+    final surfaceColor = widget.categoryColor ?? colors.primary;
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
 
     return Semantics(
@@ -57,7 +60,7 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
                       double.infinity,
                     ),
                     decoration: BoxDecoration(
-                      color: colors.primary,
+                      color: surfaceColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -72,8 +75,8 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
             return Container(
               clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.2),
-                border: Border.all(color: colors.primary, width: 0.8),
+                color: surfaceColor.withValues(alpha: 0.2),
+                border: Border.all(color: surfaceColor, width: 0.8),
                 borderRadius: BorderRadius.circular(5),
               ),
               child: ExcludeSemantics(

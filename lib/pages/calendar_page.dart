@@ -12,14 +12,17 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
+import '../auth/secure_custom_plan_store.dart';
+import 'add_plan_page.dart';
 import '../widgets/calendar_course_block.dart';
 import '../widgets/calendar_course_layout.dart';
 import '../widgets/calendar_now_line.dart';
 import '../widgets/calendar_overlap_dialog.dart';
+import '../widgets/calendar_plan_details_dialog.dart';
 import '../widgets/calendar_week_pager.dart';
 import '../widgets/calendar_week_scroll_sync.dart';
 
-/// Displays one Monday-to-Sunday week of the student's fetched courses.
+/// Displays fetched lessons and locally stored plans in a Monday-to-Sunday week.
 final class AcademicCalendarPage extends StatefulWidget {
   const AcademicCalendarPage({
     required this.onSessionExpired,
@@ -44,6 +47,9 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
   CourseSchedule? _schedule;
+  CustomPlanCollection _customPlans = CustomPlanCollection.empty();
+  String? _userId;
+  final _customPlanStore = SecureCustomPlanStore();
   Object? _loadError;
   bool _isLoading = true;
   bool _showingStaleCache = false;
@@ -132,12 +138,16 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
             .timeout(_LOAD_TIMEOUT);
       }
       if (!mounted) return;
+      final customPlans = await _customPlanStore.readFor(savedSession.userId);
+      if (!mounted) return;
       debugPrint(
         '[calendar] loading completed occurrences=${schedule.occurrences.length}',
       );
       final todayWeek = schedule.term.weekFor(DateTime.now());
       setState(() {
         _schedule = schedule;
+        _customPlans = customPlans;
+        _userId = savedSession.userId;
         _showingStaleCache =
             service.lastSource == CourseScheduleSource.staleCache;
         _selectedWeek = (_selectedWeek ?? todayWeek).clamp(
@@ -196,6 +206,179 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
 
   void _changeWeek(int delta) {
     _weekPagerKey.currentState?.animateBy(delta);
+  }
+
+  Future<void> _addPlan() async {
+    final schedule = _schedule;
+    if (schedule == null || _userId == null) return;
+    final week = _selectedWeek ?? 1;
+    final monday = schedule.term.firstMonday.add(
+      Duration(days: (week - 1) * 7),
+    );
+    final today = DateTime.now();
+    final date =
+        !today.isBefore(monday) &&
+            today.isBefore(monday.add(const Duration(days: 7)))
+        ? today
+        : monday;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => AddPlanPage(
+          initialDate: date,
+          categories: _customPlans.categories,
+          onSave: (plan, category) async {
+            await _persistCustomPlans(
+              _customPlans.copyWith(
+                categories: [..._customPlans.categories, ?category],
+                plans: [..._customPlans.plans, plan],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _persistCustomPlans(CustomPlanCollection next) async {
+    final userId = _userId;
+    if (userId == null) throw StateError('No student account is available.');
+    await _customPlanStore.writeFor(userId, next);
+    if (mounted) setState(() => _customPlans = next);
+  }
+
+  String _categoryName(AppLocalizations l10n, String category) {
+    if (category == PlanCategories.LESSON) return l10n.planLessonCategory;
+    for (final custom in _customPlans.categories) {
+      if (custom.id == category) return custom.name;
+    }
+    return category;
+  }
+
+  String _repeatName(AppLocalizations l10n, CalendarPlanEntry entry) {
+    final rule = entry.rule;
+    if (rule == null) return l10n.planRepeatNone;
+    return switch (rule.repeat) {
+      PlanRepeat.none => l10n.planRepeatNone,
+      PlanRepeat.daily => l10n.planRepeatDaily,
+      PlanRepeat.weekly => l10n.planRepeatWeekly,
+      PlanRepeat.intervalDays => l10n.planRepeatEveryDays(rule.intervalDays),
+    };
+  }
+
+  Future<void> _showPlanDetails(
+    BuildContext context,
+    CalendarPlanEntry entry,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showCalendarPlanDetailsDialog(
+      context,
+      entry,
+      categoryName: _categoryName(l10n, entry.occurrence.category),
+      repeatLabel: _repeatName(l10n, entry),
+    );
+    if (!mounted || !context.mounted || action == null) return;
+    switch (action) {
+      case CalendarPlanAction.editOne:
+      case CalendarPlanAction.editSeries:
+        await _editPlan(
+          context,
+          entry,
+          editSeries: action == CalendarPlanAction.editSeries,
+        );
+        return;
+      case CalendarPlanAction.cancelOne:
+      case CalendarPlanAction.deleteSeries:
+        await _removePlanOccurrence(
+          context,
+          entry,
+          deleteSeries: action == CalendarPlanAction.deleteSeries,
+        );
+        return;
+    }
+  }
+
+  Future<void> _editPlan(
+    BuildContext context,
+    CalendarPlanEntry entry, {
+    required bool editSeries,
+  }) async {
+    final initialRule = editSeries ? entry.rule! : null;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => AddPlanPage(
+          initialDate: editSeries
+              ? initialRule!.startsAt
+              : entry.occurrence.startsAt,
+          initialPlan: initialRule,
+          initialOccurrence: editSeries ? null : entry.occurrence,
+          singleOccurrence: !editSeries,
+          categories: _customPlans.categories,
+          onSave: (edited, category) async {
+            final categories = [..._customPlans.categories, ?category];
+            final next = editSeries
+                ? _customPlans.replaceSeries(edited)
+                : _customPlans.replaceOccurrence(
+                    entry,
+                    CourseOccurrence(
+                      name: edited.name,
+                      location: edited.location,
+                      startsAt: edited.startsAt,
+                      endsAt: edited.endsAt,
+                      category: edited.category,
+                    ),
+                  );
+            await _persistCustomPlans(next.copyWith(categories: categories));
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _removePlanOccurrence(
+    BuildContext context,
+    CalendarPlanEntry entry, {
+    required bool deleteSeries,
+  }) async {
+    final skipWarning = deleteSeries
+        ? _customPlans.skipDeleteConfirmation
+        : _customPlans.skipCancelConfirmation;
+    PlanConfirmationDecision? decision;
+    if (!skipWarning) {
+      decision = await showPlanActionConfirmation(
+        context,
+        deleteSeries: deleteSeries,
+        repeating: entry.repeats,
+        fetchedLesson: entry.fetchedLesson,
+      );
+      if (decision == null || !mounted || !context.mounted) return;
+    }
+    var next = deleteSeries
+        ? _customPlans.deleteSeries(entry)
+        : _customPlans.replaceOccurrence(entry, null);
+    if (decision?.skipNextTime == true) {
+      next = deleteSeries
+          ? next.copyWith(skipDeleteConfirmation: true)
+          : next.copyWith(skipCancelConfirmation: true);
+    }
+    try {
+      await _persistCustomPlans(next);
+    } catch (_) {
+      if (!context.mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      await showFDialog<void>(
+        context: context,
+        builder: (context, style, animation) => FDialog.adaptive(
+          animation: animation,
+          title: Text(l10n.planSaveError),
+          actions: [
+            FButton(
+              onPress: () => Navigator.of(context).pop(),
+              child: Text(l10n.confirmAction),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _handleWeekChanged(int week) {
@@ -276,88 +459,109 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     CourseSchedule? schedule,
   ) {
     final week = _selectedWeek;
-    return Row(
-      children: [
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Tooltip(
-                message: l10n.calendarRefresh,
-                child: FButton(
-                  variant: FButtonVariant.ghost,
-                  size: FButtonSizeVariant.sm,
-                  mainAxisSize: MainAxisSize.min,
-                  onPress: _isLoading
-                      ? null
-                      : () => _loadSchedule(forceRefresh: true),
-                  child: const Icon(Icons.refresh),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Tooltip(
-                message: l10n.calendarPreviousWeek,
-                child: FButton(
-                  variant: FButtonVariant.ghost,
-                  size: FButtonSizeVariant.sm,
-                  mainAxisSize: MainAxisSize.min,
-                  onPress: schedule == null || week == null || week <= 1
-                      ? null
-                      : () => _changeWeek(-1),
-                  child: const Icon(Icons.chevron_left),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Text(
-              week == null
-                  ? schedule?.term.name ?? ''
-                  : l10n.calendarWeek(week),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.theme.typography.md.copyWith(
-                fontWeight: FontWeight.w600,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sideWidth = math.min(128.0, constraints.maxWidth * 0.4);
+        return Row(
+          children: [
+            SizedBox(
+              width: sideWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Tooltip(
+                    message: l10n.calendarRefresh,
+                    child: FButton(
+                      variant: FButtonVariant.ghost,
+                      size: FButtonSizeVariant.sm,
+                      mainAxisSize: MainAxisSize.min,
+                      onPress: _isLoading
+                          ? null
+                          : () => _loadSchedule(forceRefresh: true),
+                      child: const Icon(Icons.refresh),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: l10n.calendarPreviousWeek,
+                    child: FButton(
+                      variant: FButtonVariant.ghost,
+                      size: FButtonSizeVariant.sm,
+                      mainAxisSize: MainAxisSize.min,
+                      onPress: schedule == null || week == null || week <= 1
+                          ? null
+                          : () => _changeWeek(-1),
+                      child: const Icon(Icons.chevron_left),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Tooltip(
-                message: l10n.calendarNextWeek,
-                child: FButton(
-                  variant: FButtonVariant.ghost,
-                  size: FButtonSizeVariant.sm,
-                  mainAxisSize: MainAxisSize.min,
-                  onPress:
-                      schedule == null ||
-                          week == null ||
-                          week >= schedule.term.weekCount
-                      ? null
-                      : () => _changeWeek(1),
-                  child: const Icon(Icons.chevron_right),
+            Expanded(
+              child: Center(
+                child: Text(
+                  key: const ValueKey('calendar-week-label'),
+                  week == null
+                      ? schedule?.term.name ?? ''
+                      : l10n.calendarWeek(week),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.theme.typography.md.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
-              Tooltip(
-                message: l10n.calendarExport,
-                child: FButton(
-                  variant: FButtonVariant.ghost,
-                  size: FButtonSizeVariant.sm,
-                  mainAxisSize: MainAxisSize.min,
-                  onPress: null,
-                  child: const Icon(Icons.ios_share_outlined),
-                ),
+            ),
+            SizedBox(
+              width: sideWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Tooltip(
+                    message: l10n.calendarNextWeek,
+                    child: FButton(
+                      variant: FButtonVariant.ghost,
+                      size: FButtonSizeVariant.sm,
+                      mainAxisSize: MainAxisSize.min,
+                      onPress:
+                          schedule == null ||
+                              week == null ||
+                              week >= schedule.term.weekCount
+                          ? null
+                          : () => _changeWeek(1),
+                      child: const Icon(Icons.chevron_right),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: l10n.planAddTitle,
+                    child: FButton(
+                      variant: FButtonVariant.ghost,
+                      size: FButtonSizeVariant.sm,
+                      mainAxisSize: MainAxisSize.min,
+                      onPress: schedule == null || _userId == null
+                          ? null
+                          : _addPlan,
+                      child: const Icon(Icons.add),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: l10n.calendarExport,
+                    child: FButton(
+                      variant: FButtonVariant.ghost,
+                      size: FButtonSizeVariant.sm,
+                      mainAxisSize: MainAxisSize.min,
+                      onPress: null,
+                      child: const Icon(Icons.ios_share_outlined),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -372,13 +576,15 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
       Duration(days: (week - 1) * 7),
     );
     final weekEnd = weekStart.add(const Duration(days: 7));
-    final weekCourses = schedule.occurrences
-        .where(
-          (course) =>
-              !course.startsAt.isBefore(weekStart) &&
-              course.startsAt.isBefore(weekEnd),
-        )
-        .toList(growable: false);
+    final weekEntries = _customPlans.entriesForWeek(
+      schedule.occurrences,
+      weekStart,
+      weekEnd,
+    );
+    final weekCourses = [for (final entry in weekEntries) entry.occurrence];
+    final entryByCourse = {
+      for (final entry in weekEntries) entry.occurrence: entry,
+    };
 
     final locale = l10n.localeName;
     return LayoutBuilder(
@@ -462,6 +668,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
                                 context,
                                 weekStart.add(Duration(days: day)),
                                 weekCourses,
+                                entryByCourse,
                               ),
                             ),
                         ],
@@ -517,6 +724,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     BuildContext context,
     DateTime date,
     List<CourseOccurrence> weekCourses,
+    Map<CourseOccurrence, CalendarPlanEntry> entryByCourse,
   ) {
     final dailyCourses = weekCourses
         .where(
@@ -549,18 +757,28 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
             ),
           for (final group in groups)
             for (final placement in group.placements)
-              _buildCourseBlock(context, placement, constraints.maxWidth),
+              _buildCourseBlock(
+                context,
+                placement,
+                constraints.maxWidth,
+                entryByCourse[placement.course]!,
+              ),
           // Tap targets span each maximal continuous overlap region, not just
           // the narrow visible cards. Vertical scroll and week swipes still
           // win the gesture arena when the user drags instead of tapping.
           for (final group in groups)
-            if (group.hasOverlap) _buildOverlapTarget(context, group),
+            if (group.hasOverlap)
+              _buildOverlapTarget(context, group, entryByCourse),
         ],
       ),
     );
   }
 
-  Widget _buildOverlapTarget(BuildContext context, CalendarCourseGroup group) {
+  Widget _buildOverlapTarget(
+    BuildContext context,
+    CalendarCourseGroup group,
+    Map<CourseOccurrence, CalendarPlanEntry> entryByCourse,
+  ) {
     final dayStart = DateTime(
       group.startsAt.year,
       group.startsAt.month,
@@ -583,7 +801,16 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         label: AppLocalizations.of(context)!.calendarOverlappingPlans,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => showCalendarOverlapDialog(context, group),
+          onTap: () async {
+            final selected = await showCalendarOverlapDialog(
+              context,
+              group,
+              categoryColor: _colorForCategory,
+            );
+            if (selected != null && context.mounted) {
+              await _showPlanDetails(context, entryByCourse[selected]!);
+            }
+          },
         ),
       ),
     );
@@ -593,6 +820,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     BuildContext context,
     CalendarCoursePlacement placement,
     double dayWidth,
+    CalendarPlanEntry entry,
   ) {
     final course = placement.course;
     final startMinutes =
@@ -619,18 +847,30 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
       left: placement.lane * laneWidth,
       width: laneWidth,
       height: height,
-      child: Padding(
-        // Keep even exceptionally narrow lanes visible without borrowing
-        // pixels from their neighbors.
-        padding: EdgeInsets.symmetric(horizontal: math.min(1, laneWidth / 8)),
-        child: LayoutBuilder(
-          builder: (context, constraints) => CalendarCourseBlock(
-            course: course,
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _showPlanDetails(context, entry),
+        child: Padding(
+          // Keep even exceptionally narrow lanes visible without borrowing
+          // pixels from their neighbors.
+          padding: EdgeInsets.symmetric(horizontal: math.min(1, laneWidth / 8)),
+          child: LayoutBuilder(
+            builder: (context, constraints) => CalendarCourseBlock(
+              course: course,
+              categoryColor: _colorForCategory(course.category),
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Color? _colorForCategory(String category) {
+    for (final custom in _customPlans.categories) {
+      if (custom.id == category) return Color(custom.colorValue);
+    }
+    return null;
   }
 }
