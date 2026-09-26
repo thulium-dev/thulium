@@ -143,9 +143,9 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: horizontal
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.center,
+        // For rotated labels, the text control's left edge maps to the top
+        // edge of the course block. Keep every plan's text origin aligned.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             widget.course.name,
