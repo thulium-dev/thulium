@@ -17,6 +17,7 @@ import '../widgets/calendar_course_layout.dart';
 import '../widgets/calendar_now_line.dart';
 import '../widgets/calendar_overlap_dialog.dart';
 import '../widgets/calendar_week_pager.dart';
+import '../widgets/calendar_week_scroll_sync.dart';
 
 /// Displays one Monday-to-Sunday week of the student's fetched courses.
 final class AcademicCalendarPage extends StatefulWidget {
@@ -36,8 +37,9 @@ final class AcademicCalendarPage extends StatefulWidget {
 final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     with WidgetsBindingObserver {
   static const _HOUR_HEIGHT = 60.0;
-  static const _FIRST_HOUR = 8;
-  static const _LAST_HOUR = 22;
+  static const _FIRST_HOUR = 0;
+  static const _LAST_HOUR = 24;
+  static const _INITIAL_SCROLL_HOUR = 8;
   static const _TIME_AXIS_WIDTH = 32.0;
   static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
@@ -46,6 +48,9 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   bool _isLoading = true;
   bool _showingStaleCache = false;
   int? _selectedWeek;
+  late final _weekScrollSync = CalendarWeekScrollSync(
+    initialOffset: _INITIAL_SCROLL_HOUR * _HOUR_HEIGHT,
+  );
   final _weekPagerKey = GlobalKey<CalendarWeekPagerState>();
   final _now = ValueNotifier<DateTime>(DateTime.now());
   Timer? _nowTimer;
@@ -72,6 +77,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   void dispose() {
     _nowTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _weekScrollSync.dispose();
     _now.dispose();
     super.dispose();
   }
@@ -192,6 +198,10 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     _weekPagerKey.currentState?.animateBy(delta);
   }
 
+  void _handleWeekChanged(int week) {
+    setState(() => _selectedWeek = week);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -246,9 +256,14 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
               key: _weekPagerKey,
               weekCount: schedule.term.weekCount,
               initialWeek: _selectedWeek!,
-              onWeekChanged: (week) => setState(() => _selectedWeek = week),
-              itemBuilder: (context, week) =>
-                  _buildWeekGrid(context, l10n, schedule, week),
+              onWeekChanged: _handleWeekChanged,
+              itemBuilder: (context, week) => _buildWeekGrid(
+                context,
+                l10n,
+                schedule,
+                week,
+                _weekScrollSync.controllerForWeek(week),
+              ),
             ),
           ),
       ],
@@ -351,6 +366,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     AppLocalizations l10n,
     CourseSchedule schedule,
     int week,
+    ScrollController scrollController,
   ) {
     final weekStart = schedule.term.firstMonday.add(
       Duration(days: (week - 1) * 7),
@@ -428,6 +444,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
             ),
             Expanded(
               child: SingleChildScrollView(
+                controller: scrollController,
                 child: SizedBox(
                   height: (_LAST_HOUR - _FIRST_HOUR) * _HOUR_HEIGHT,
                   child: Stack(
@@ -544,10 +561,15 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   }
 
   Widget _buildOverlapTarget(BuildContext context, CalendarCourseGroup group) {
+    final dayStart = DateTime(
+      group.startsAt.year,
+      group.startsAt.month,
+      group.startsAt.day,
+    );
     final startMinutes =
-        (group.startsAt.hour - _FIRST_HOUR) * 60 + group.startsAt.minute;
+        group.startsAt.difference(dayStart).inMinutes - _FIRST_HOUR * 60;
     final endMinutes =
-        (group.endsAt.hour - _FIRST_HOUR) * 60 + group.endsAt.minute;
+        group.endsAt.difference(dayStart).inMinutes - _FIRST_HOUR * 60;
     final totalMinutes = (_LAST_HOUR - _FIRST_HOUR) * 60;
     final clippedStart = startMinutes.clamp(0, totalMinutes);
     final clippedEnd = endMinutes.clamp(clippedStart, totalMinutes);
