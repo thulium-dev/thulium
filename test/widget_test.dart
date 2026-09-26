@@ -6,6 +6,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 import 'package:thulium/app.dart';
 import 'package:thulium/pages/settings_page.dart';
+import 'package:thulium/widgets/language_button.dart';
 
 void main() {
   testWidgets('shows the Thulium welcome page', (tester) async {
@@ -40,6 +41,24 @@ void main() {
 
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
+  });
+
+  testWidgets('uses a compact authenticated header without shrinking menus', (
+    tester,
+  ) async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+
+    await tester.pumpWidget(ThuliumApp(sessionStore: store));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byType(LanguageButton)), const Size(40, 40));
+    expect(tester.getSize(find.byTooltip('Theme')), const Size(40, 40));
+    expect(tester.getSize(find.byTooltip('Settings')), const Size(40, 40));
+
+    await tester.tap(find.byType(LanguageButton));
+    await tester.pumpAndSettle();
+    expect(find.text('English'), findsOneWidget);
   });
 
   testWidgets('returns to the welcome route after logout succeeds', (

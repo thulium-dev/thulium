@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
@@ -29,6 +31,10 @@ final class HomePage extends StatefulWidget {
 }
 
 final class _HomePageState extends State<HomePage> {
+  static const _HEADER_ICON_SIZE = 40.0;
+  static const _HEADER_TOP = 4.0;
+  static const _CALENDAR_TOP = _HEADER_TOP + _HEADER_ICON_SIZE + 4.0;
+
   int _selectedIndex = 0;
   bool _hasOpenedPlans = false;
 
@@ -98,7 +104,7 @@ final class _HomePageState extends State<HomePage> {
               ),
             if (_hasOpenedPlans)
               Positioned.fill(
-                top: 64,
+                top: _CALENDAR_TOP,
                 child: Offstage(
                   offstage: _selectedIndex != 1,
                   child: Padding(
@@ -111,33 +117,46 @@ final class _HomePageState extends State<HomePage> {
                 ),
               ),
             Positioned(
-              top: 8,
+              top: _HEADER_TOP,
               left: 8,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LanguageButton(onSelected: widget.onLocaleSelected),
-                  IconButton(
-                    tooltip: l10n.theme,
-                    icon: Icon(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? Icons.light_mode_outlined
-                          : Icons.dark_mode_outlined,
+                  LanguageButton(
+                    onSelected: widget.onLocaleSelected,
+                    buttonSize: _HEADER_ICON_SIZE,
+                  ),
+                  SizedBox.square(
+                    dimension: _HEADER_ICON_SIZE,
+                    child: IconButton(
+                      tooltip: l10n.theme,
+                      padding: EdgeInsets.zero,
+                      iconSize: 20,
+                      icon: Icon(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Icons.light_mode_outlined
+                            : Icons.dark_mode_outlined,
+                      ),
+                      onPressed: widget.onThemeToggle,
                     ),
-                    onPressed: widget.onThemeToggle,
                   ),
                 ],
               ),
             ),
             Positioned(
-              top: 8,
+              top: _HEADER_TOP,
               right: 8,
-              child: IconButton(
-                tooltip: l10n.settingsTitle,
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SettingsPage(onLogout: widget.onLogout),
+              child: SizedBox.square(
+                dimension: _HEADER_ICON_SIZE,
+                child: IconButton(
+                  tooltip: l10n.settingsTitle,
+                  padding: EdgeInsets.zero,
+                  iconSize: 20,
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => SettingsPage(onLogout: widget.onLogout),
+                    ),
                   ),
                 ),
               ),
