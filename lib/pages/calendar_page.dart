@@ -20,6 +20,9 @@ import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
 import '../auth/secure_custom_plan_store.dart';
 import '../calendar/calendar_ics_export.dart';
+import '../calendar/calendar_export_labels.dart';
+import '../calendar/calendar_visual_export.dart';
+import '../calendar/calendar_xlsx_export.dart';
 import 'add_plan_page.dart';
 import '../widgets/calendar_course_block.dart';
 import '../widgets/calendar_course_layout.dart';
@@ -295,35 +298,77 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         return;
       }
 
-      final contents = buildCalendarIcs(
-        entries,
-        categoryName: (category) =>
-            _categoryName(AppLocalizations.of(context)!, category),
+      final l10n = AppLocalizations.of(context)!;
+      final labels = CalendarExportLabels(
+        title: l10n.calendarExportDialogTitle,
+        date: l10n.calendarExportDateColumn,
+        start: l10n.calendarExportStartColumn,
+        end: l10n.calendarExportEndColumn,
+        name: l10n.calendarExportNameColumn,
+        location: l10n.calendarExportLocationColumn,
+        category: l10n.calendarExportCategoryColumn,
+        eventsSheet: l10n.calendarExportEventsSheet,
       );
+      String categoryName(String category) => _categoryName(l10n, category);
+      final dateFormat = DateFormat('yyyy-MM-dd');
+      final subtitle =
+          '${selection.range == CalendarExportRange.currentWeek ? l10n.calendarExportCurrentWeek : l10n.calendarExportEntireTerm} '
+          '${dateFormat.format(rangeStart)} – '
+          '${dateFormat.format(rangeEnd.subtract(const Duration(days: 1)))}';
+      final bytes = switch (selection.format) {
+        CalendarExportFormat.ics => Uint8List.fromList(
+          utf8.encode(buildCalendarIcs(entries, categoryName: categoryName)),
+        ),
+        CalendarExportFormat.pdf => await buildCalendarPdf(
+          entries,
+          labels: labels,
+          subtitle: subtitle,
+          categoryName: categoryName,
+        ),
+        CalendarExportFormat.xlsx => buildCalendarXlsx(
+          entries,
+          labels: labels,
+          categoryName: categoryName,
+        ),
+        CalendarExportFormat.png => await buildCalendarPng(
+          entries,
+          labels: labels,
+          subtitle: subtitle,
+          categoryName: categoryName,
+        ),
+      };
+      if (!mounted) return;
       final termId = schedule.term.id.replaceAll(
         RegExp(r'[^A-Za-z0-9_-]'),
         '-',
       );
+      final extension = selection.format.name;
       final fileName = selection.range == CalendarExportRange.currentWeek
-          ? 'thulium-$termId-week-${(_selectedWeek ?? 1).toString().padLeft(2, '0')}.ics'
-          : 'thulium-$termId.ics';
-      final file = fs.XFile.fromData(
-        Uint8List.fromList(utf8.encode(contents)),
-        name: fileName,
-        mimeType: 'text/calendar',
-      );
+          ? 'thulium-$termId-week-${(_selectedWeek ?? 1).toString().padLeft(2, '0')}.$extension'
+          : 'thulium-$termId.$extension';
+      final mimeType = switch (selection.format) {
+        CalendarExportFormat.ics => 'text/calendar',
+        CalendarExportFormat.pdf => 'application/pdf',
+        CalendarExportFormat.xlsx =>
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        CalendarExportFormat.png => 'image/png',
+      };
+      final file = fs.XFile.fromData(bytes, name: fileName, mimeType: mimeType);
 
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
         final location = await fs.getSaveLocation(
           suggestedName: fileName,
-          acceptedTypeGroups: const [
-            fs.XTypeGroup(label: 'iCalendar files', extensions: ['ics']),
+          acceptedTypeGroups: [
+            fs.XTypeGroup(
+              label: l10n.calendarExportFormat,
+              extensions: [extension],
+            ),
           ],
         );
         if (location == null || !mounted) return;
-        final path = location.path.toLowerCase().endsWith('.ics')
+        final path = location.path.toLowerCase().endsWith('.$extension')
             ? location.path
-            : '${location.path}.ics';
+            : '${location.path}.$extension';
         await file.saveTo(path);
         if (mounted) {
           await _showExportNotice(

@@ -170,6 +170,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarExportDialogTitle => 'Export calendar';
 
   @override
+  String get calendarExportFormat => 'File format';
+
+  @override
+  String get calendarExportFormatIcs => 'iCalendar (.ics)';
+
+  @override
+  String get calendarExportFormatPdf => 'PDF (.pdf)';
+
+  @override
+  String get calendarExportFormatXlsx => 'Excel (.xlsx)';
+
+  @override
+  String get calendarExportFormatPng => 'Image (.png)';
+
+  @override
+  String get calendarExportPngCurrentWeekOnly =>
+      'PNG exports the current week only.';
+
+  @override
+  String get calendarExportDateColumn => 'Date';
+
+  @override
+  String get calendarExportStartColumn => 'Start';
+
+  @override
+  String get calendarExportEndColumn => 'End';
+
+  @override
+  String get calendarExportNameColumn => 'Name';
+
+  @override
+  String get calendarExportLocationColumn => 'Location';
+
+  @override
+  String get calendarExportCategoryColumn => 'Category';
+
+  @override
+  String get calendarExportEventsSheet => 'Events';
+
+  @override
   String get calendarExportRange => 'Date range';
 
   @override

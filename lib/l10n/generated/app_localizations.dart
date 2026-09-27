@@ -400,6 +400,84 @@ abstract class AppLocalizations {
   /// **'Export calendar'**
   String get calendarExportDialogTitle;
 
+  /// No description provided for @calendarExportFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'File format'**
+  String get calendarExportFormat;
+
+  /// No description provided for @calendarExportFormatIcs.
+  ///
+  /// In en, this message translates to:
+  /// **'iCalendar (.ics)'**
+  String get calendarExportFormatIcs;
+
+  /// No description provided for @calendarExportFormatPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF (.pdf)'**
+  String get calendarExportFormatPdf;
+
+  /// No description provided for @calendarExportFormatXlsx.
+  ///
+  /// In en, this message translates to:
+  /// **'Excel (.xlsx)'**
+  String get calendarExportFormatXlsx;
+
+  /// No description provided for @calendarExportFormatPng.
+  ///
+  /// In en, this message translates to:
+  /// **'Image (.png)'**
+  String get calendarExportFormatPng;
+
+  /// No description provided for @calendarExportPngCurrentWeekOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'PNG exports the current week only.'**
+  String get calendarExportPngCurrentWeekOnly;
+
+  /// No description provided for @calendarExportDateColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get calendarExportDateColumn;
+
+  /// No description provided for @calendarExportStartColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get calendarExportStartColumn;
+
+  /// No description provided for @calendarExportEndColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get calendarExportEndColumn;
+
+  /// No description provided for @calendarExportNameColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get calendarExportNameColumn;
+
+  /// No description provided for @calendarExportLocationColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get calendarExportLocationColumn;
+
+  /// No description provided for @calendarExportCategoryColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get calendarExportCategoryColumn;
+
+  /// No description provided for @calendarExportEventsSheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get calendarExportEventsSheet;
+
   /// No description provided for @calendarExportRange.
   ///
   /// In en, this message translates to:

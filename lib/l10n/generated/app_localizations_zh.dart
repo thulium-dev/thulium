@@ -164,6 +164,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarExportDialogTitle => '导出日历';
 
   @override
+  String get calendarExportFormat => '文件格式';
+
+  @override
+  String get calendarExportFormatIcs => '日历 (.ics)';
+
+  @override
+  String get calendarExportFormatPdf => 'PDF (.pdf)';
+
+  @override
+  String get calendarExportFormatXlsx => 'Excel (.xlsx)';
+
+  @override
+  String get calendarExportFormatPng => '图片 (.png)';
+
+  @override
+  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周。';
+
+  @override
+  String get calendarExportDateColumn => '日期';
+
+  @override
+  String get calendarExportStartColumn => '开始';
+
+  @override
+  String get calendarExportEndColumn => '结束';
+
+  @override
+  String get calendarExportNameColumn => '名称';
+
+  @override
+  String get calendarExportLocationColumn => '地点';
+
+  @override
+  String get calendarExportCategoryColumn => '分类';
+
+  @override
+  String get calendarExportEventsSheet => '日程';
+
+  @override
   String get calendarExportRange => '日期范围';
 
   @override
@@ -509,6 +548,45 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarExportDialogTitle => '导出日历';
 
   @override
+  String get calendarExportFormat => '文件格式';
+
+  @override
+  String get calendarExportFormatIcs => '日历 (.ics)';
+
+  @override
+  String get calendarExportFormatPdf => 'PDF (.pdf)';
+
+  @override
+  String get calendarExportFormatXlsx => 'Excel (.xlsx)';
+
+  @override
+  String get calendarExportFormatPng => '图片 (.png)';
+
+  @override
+  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周。';
+
+  @override
+  String get calendarExportDateColumn => '日期';
+
+  @override
+  String get calendarExportStartColumn => '开始';
+
+  @override
+  String get calendarExportEndColumn => '结束';
+
+  @override
+  String get calendarExportNameColumn => '名称';
+
+  @override
+  String get calendarExportLocationColumn => '地点';
+
+  @override
+  String get calendarExportCategoryColumn => '分类';
+
+  @override
+  String get calendarExportEventsSheet => '日程';
+
+  @override
   String get calendarExportRange => '日期范围';
 
   @override
@@ -852,6 +930,45 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get calendarExportDialogTitle => '匯出日曆';
+
+  @override
+  String get calendarExportFormat => '檔案格式';
+
+  @override
+  String get calendarExportFormatIcs => '日曆 (.ics)';
+
+  @override
+  String get calendarExportFormatPdf => 'PDF (.pdf)';
+
+  @override
+  String get calendarExportFormatXlsx => 'Excel (.xlsx)';
+
+  @override
+  String get calendarExportFormatPng => '圖片 (.png)';
+
+  @override
+  String get calendarExportPngCurrentWeekOnly => 'PNG 僅匯出目前週。';
+
+  @override
+  String get calendarExportDateColumn => '日期';
+
+  @override
+  String get calendarExportStartColumn => '開始';
+
+  @override
+  String get calendarExportEndColumn => '結束';
+
+  @override
+  String get calendarExportNameColumn => '名稱';
+
+  @override
+  String get calendarExportLocationColumn => '地點';
+
+  @override
+  String get calendarExportCategoryColumn => '分類';
+
+  @override
+  String get calendarExportEventsSheet => '行程';
 
   @override
   String get calendarExportRange => '日期範圍';
