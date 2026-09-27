@@ -3,9 +3,10 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 
 /// Displays the supported locales using their native names.
 final class LanguageButton extends StatelessWidget {
-  const LanguageButton({required this.onSelected, super.key});
+  const LanguageButton({required this.onSelected, this.buttonSize, super.key});
 
   final ValueChanged<Locale> onSelected;
+  final double? buttonSize;
 
   @override
   Widget build(BuildContext context) {
@@ -13,9 +14,11 @@ final class LanguageButton extends StatelessWidget {
     // Language options use autonyms rather than translated names. This keeps
     // every language recognizable even when the current interface language is
     // unfamiliar to the user.
-    return PopupMenuButton<Locale>(
+    final button = PopupMenuButton<Locale>(
       tooltip: l10n.language,
       icon: const Icon(Icons.language_outlined),
+      iconSize: buttonSize == null ? null : 20,
+      padding: buttonSize == null ? const EdgeInsets.all(8) : EdgeInsets.zero,
       onSelected: onSelected,
       itemBuilder: (context) => [
         PopupMenuItem(
@@ -32,5 +35,8 @@ final class LanguageButton extends StatelessWidget {
         ),
       ],
     );
+    return buttonSize == null
+        ? button
+        : SizedBox.square(dimension: buttonSize, child: button);
   }
 }

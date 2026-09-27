@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:keybay/keybay.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 
@@ -6,14 +8,15 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 const _THULIUM_SECRET_STORE_ID = 'dev.thulium.cli';
 const _THULIUM_SESSION_KEY = 'auth-session';
+const _THULIUM_CREDENTIAL_KEY = 'auth-credentials';
 
 /// Adapts the Dart secret-storage backend to the shared authentication API.
 ///
 /// The CLI does not know how a platform stores secrets. `keybay` applies its
-/// documented platform policy, encrypts the session payload, and fails closed
-/// when no safe backend is available. The stored value is still only an
-/// [AuthSession]; the user's password is never persisted.
-final class CliAuthSessionStore implements AuthSessionStore {
+/// documented platform policy, encrypts stored payloads, and fails closed
+/// when no safe backend is available. Credentials use a separate secret key.
+final class CliAuthSessionStore
+    implements AuthSessionStore, AuthCredentialStore {
   CliAuthSessionStore({SecretStorage? storage})
     : _storage = storage ?? _createStorage();
 
@@ -34,6 +37,39 @@ final class CliAuthSessionStore implements AuthSessionStore {
 
   @override
   Future<void> clear() => _guard(() => _storage.delete(_THULIUM_SESSION_KEY));
+
+  @override
+  Future<AuthCredentials?> readCredentials() async {
+    final encoded = await _guard(
+      () => _storage.readString(_THULIUM_CREDENTIAL_KEY),
+    );
+    if (encoded == null) return null;
+    final value = jsonDecode(encoded);
+    if (value is! Map ||
+        value['userId'] is! String ||
+        value['password'] is! String) {
+      throw const FormatException('Invalid stored credentials.');
+    }
+    return AuthCredentials(
+      userId: value['userId'] as String,
+      password: value['password'] as String,
+    );
+  }
+
+  @override
+  Future<void> writeCredentials(AuthCredentials credentials) => _guard(
+    () => _storage.writeString(
+      _THULIUM_CREDENTIAL_KEY,
+      jsonEncode({
+        'userId': credentials.userId,
+        'password': credentials.password,
+      }),
+    ),
+  );
+
+  @override
+  Future<void> clearCredentials() =>
+      _guard(() => _storage.delete(_THULIUM_CREDENTIAL_KEY));
 
   static SecretStorage _createStorage() {
     try {

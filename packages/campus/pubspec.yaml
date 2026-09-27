@@ -1,0 +1,16 @@
+name: thulium_campus
+description: Shared Tsinghua campus data clients for Thulium.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  http: ^1.4.0
+  thulium_auth:
+    path: ../auth
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

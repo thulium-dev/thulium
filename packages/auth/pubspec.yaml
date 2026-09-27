@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   dart_sm: ^0.1.5
+  fast_gbk: ^1.0.0
   http: ^1.4.0
 
 dev_dependencies:

@@ -129,10 +129,13 @@ final class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _studentIdController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _sessionStore = SecureAuthSessionStore();
   late final TsinghuaAuthClient _authClient = TsinghuaAuthClient(
-    sessionStore: SecureAuthSessionStore(),
+    sessionStore: _sessionStore,
+    credentialStore: _sessionStore,
     twoFactorMethodHandler: _selectTwoFactorMethod,
     twoFactorCodeHandler: _readTwoFactorCode,
+    twoFactorTrustHandler: _askToTrustDevice,
     trace: (message) => debugPrint('[auth] $message'),
   );
 
@@ -158,7 +161,7 @@ final class _LoginPageState extends State<LoginPage> {
       await _authClient.login(
         userId: _studentIdController.text.trim(),
         password: _passwordController.text,
-        fingerprint: 'thulium-flutter',
+        fingerprint: await _sessionStore.getOrCreateFingerprint(),
       );
       if (mounted) widget.onLoginSuccess();
     } catch (error) {
@@ -245,6 +248,30 @@ final class _LoginPageState extends State<LoginPage> {
     if (verified != true) {
       throw StateError('Verification code entry canceled.');
     }
+  }
+
+  Future<bool> _askToTrustDevice() async {
+    final l10n = AppLocalizations.of(context)!;
+    return await showFDialog<bool>(
+          context: context,
+          builder: (context, _, animation) => FDialog.adaptive(
+            animation: animation,
+            title: Text(l10n.trustDeviceTitle),
+            body: Text(l10n.trustDeviceDescription),
+            actions: [
+              FButton(
+                variant: FButtonVariant.outline,
+                onPress: () => Navigator.of(context).pop(false),
+                child: Text(l10n.notNowAction),
+              ),
+              FButton(
+                onPress: () => Navigator.of(context).pop(true),
+                child: Text(l10n.trustDeviceAction),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 
 import 'auth/secure_auth_session_store.dart';
+import 'auth/secure_course_schedule_cache_store.dart';
 import 'pages/home_page.dart';
 import 'pages/welcome_page.dart';
 
@@ -54,7 +55,12 @@ final class _ThuliumAppState extends State<ThuliumApp> {
     try {
       // Restore the persisted cookies before calling logout so the identity
       // service can invalidate the active remote session as well.
-      final client = TsinghuaAuthClient(sessionStore: sessionStore);
+      final client = TsinghuaAuthClient(
+        sessionStore: sessionStore,
+        credentialStore: sessionStore is AuthCredentialStore
+            ? sessionStore as AuthCredentialStore
+            : null,
+      );
       await client.restore();
       await client.logout().timeout(const Duration(seconds: 8));
     } catch (error) {
@@ -62,10 +68,24 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       // clears local data, and this fallback covers failures during restore.
       debugPrint('Thulium remote logout failed: $error');
       try {
-        await sessionStore.clear();
+        try {
+          await sessionStore.clear();
+        } finally {
+          if (sessionStore is AuthCredentialStore) {
+            await (sessionStore as AuthCredentialStore).clearCredentials();
+          }
+        }
       } catch (storageError) {
         debugPrint('Thulium local session removal failed: $storageError');
         return false;
+      }
+    }
+
+    if (widget.sessionStore == null) {
+      try {
+        await SecureCourseScheduleCacheStore().clear();
+      } catch (error) {
+        debugPrint('Thulium calendar cache removal failed: $error');
       }
     }
 
@@ -120,6 +140,10 @@ final class _ThuliumAppState extends State<ThuliumApp> {
               onLocaleSelected: _setLocale,
               onThemeToggle: _toggleTheme,
               onLogout: _logout,
+              sessionStore: widget.sessionStore,
+              onSessionExpired: () {
+                if (mounted) setState(() => _hasSession = false);
+              },
             )
           : WelcomePage(
               onLocaleSelected: _setLocale,
