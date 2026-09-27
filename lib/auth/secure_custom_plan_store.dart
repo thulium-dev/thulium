@@ -1,7 +1,7 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
@@ -28,10 +28,26 @@ final class SecureCustomPlanStore {
       '$_CUSTOM_PLAN_KEY_PREFIX${Uri.encodeComponent(userId)}';
 
   Future<CustomPlanCollection> readFor(String userId) async {
-    final value = await _storage.read(key: _key(userId));
-    return value == null
-        ? CustomPlanCollection.empty()
-        : CustomPlanCollection.decode(value);
+    final key = _key(userId);
+    final value = await _storage.read(key: key);
+    if (value == null) return CustomPlanCollection.empty();
+
+    try {
+      return CustomPlanCollection.decode(value);
+    } on Object catch (error) {
+      debugPrint(
+        '[custom-plan-store] ignoring invalid data type=${error.runtimeType}',
+      );
+      try {
+        await _storage.delete(key: key);
+      } on Object catch (cleanupError) {
+        debugPrint(
+          '[custom-plan-store] could not remove invalid data '
+          'type=${cleanupError.runtimeType}',
+        );
+      }
+      return CustomPlanCollection.empty();
+    }
   }
 
   Future<void> writeFor(String userId, CustomPlanCollection collection) =>
