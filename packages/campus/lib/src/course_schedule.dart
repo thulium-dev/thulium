@@ -494,7 +494,7 @@ final class CourseScheduleService {
     );
     final detailPattern = RegExp(r'[^(]+?\(([^，]+?)，');
     final weekPattern = RegExp(
-      r'第([\d\-~,]+)周|Week([\d\-~,]+)',
+      r'第([\d\-~,～]+)周|Week([\d\-~,～]+)',
       caseSensitive: false,
     );
     final courses = <CourseOccurrence>[];
@@ -558,7 +558,10 @@ final class CourseScheduleService {
     }
     final match = pattern.firstMatch(detail);
     if (match == null) return const [];
-    final expression = match.group(1) ?? match.group(2)!;
+    final expression = (match.group(1) ?? match.group(2)!).replaceAll(
+      RegExp(r'[~～]'),
+      '-',
+    );
     final weeks = <int>{};
     for (final part in expression.split(',')) {
       final bounds = part.split('-');
