@@ -7,6 +7,7 @@ import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_cli/cli_auth_session_store.dart';
 import 'package:thulium_cli/cli_course_schedule_cache_store.dart';
+import 'package:thulium_cli/cli_session_reconnect.dart';
 import 'package:thulium_cli/learn_course_formatter.dart';
 
 // Uppercase snake case is the project convention for named constants.
@@ -98,6 +99,26 @@ Future<void> _runCommand(ArgResults command) async {
         ? (message) => stderr.writeln('[auth] $message')
         : null,
   );
+  final reconnect = CliSessionReconnect(
+    credentialStore: store,
+    signIn: ({required userId, required password, required fingerprint}) async {
+      await client.login(
+        userId: userId,
+        password: password,
+        fingerprint: fingerprint,
+      );
+    },
+    interactive: stdin.hasTerminal,
+    askToSignIn: (commandName) {
+      final answer = _readLine(
+        'Sign in again to retry $commandName? [Y/n]: ',
+      ).toLowerCase();
+      return answer.isEmpty || answer == 'y' || answer == 'yes';
+    },
+    readPassword: () => _readSecret('Password: '),
+    writeMessage: stdout.writeln,
+    writeError: stderr.writeln,
+  );
 
   switch (name) {
     case 'login':
@@ -129,7 +150,7 @@ Future<void> _runCommand(ArgResults command) async {
       stdout.writeln('Loading the current academic calendar...');
       final schedule = await _loadScheduleWithReconnect(
         client,
-        store,
+        reconnect,
         session,
         cache: calendarCache,
         forceRefresh: command.command!['refresh'] as bool,
@@ -146,119 +167,55 @@ Future<void> _runCommand(ArgResults command) async {
           'Provide --semester, for example 2026-2027-1.',
         );
       }
-      final response = await LearnCourseService(client).fetchSemester(semester);
+      final response = await reconnect.run(
+        commandName: 'learn-courses',
+        savedSession: session,
+        request: (_) => LearnCourseService(client).fetchSemester(semester),
+        shouldReconnect: (error) =>
+            error is PortalCsrfUnavailable || error is PortalSessionRejected,
+      );
       stdout.writeln(formatLearnCourses(response, semester: semester));
   }
 }
 
 Future<CourseSchedule> _loadScheduleWithReconnect(
   TsinghuaAuthClient client,
-  AuthCredentialStore credentialStore,
+  CliSessionReconnect reconnect,
   AuthSession savedSession, {
   required CourseScheduleCache cache,
   required bool forceRefresh,
 }) async {
-  final service = CourseScheduleService(
-    client,
-    cache: cache,
-    trace: (message) {
-      if (client.trace != null) stderr.writeln('[calendar] $message');
-    },
-  );
-  try {
-    final schedule = await service.loadCurrentTerm(forceRefresh: forceRefresh);
-    if (service.lastSource == CourseScheduleSource.freshCache) {
-      stdout.writeln('Using the saved academic calendar.');
-    } else if (service.lastSource == CourseScheduleSource.staleCache) {
-      stdout.writeln(
-        'The update failed; showing an older saved academic calendar.',
-      );
-    }
-    return schedule;
-  } on CourseScheduleException catch (error) {
-    if (error.cause is! PortalCsrfUnavailable) rethrow;
-    return _reconnectAndRetrySchedule(
-      client,
-      credentialStore,
-      savedSession,
-      error,
-      cache,
-    );
-  } on CourseScheduleSessionExpired catch (error) {
-    return _reconnectAndRetrySchedule(
-      client,
-      credentialStore,
-      savedSession,
-      error,
-      cache,
-    );
-  }
-}
-
-Future<CourseSchedule> _reconnectAndRetrySchedule(
-  TsinghuaAuthClient client,
-  AuthCredentialStore credentialStore,
-  AuthSession savedSession,
-  Object originalError,
-  CourseScheduleCache cache,
-) async {
-  final credentials = await credentialStore.readCredentials();
-  if (credentials != null && credentials.userId == savedSession.userId) {
-    stdout.writeln('Reconnecting with saved credentials...');
-    Object? reconnectError;
-    try {
-      await client.login(
-        userId: credentials.userId,
-        password: credentials.password,
-        fingerprint: savedSession.fingerprint,
-      );
-    } catch (error) {
-      // An expired password or a second-factor prompt can still require an
-      // interactive retry. Never print the saved password in diagnostics.
-      reconnectError = error;
-    }
-    if (reconnectError == null) {
-      stdout.writeln('Reconnected. Retrying the academic calendar once...');
-      return CourseScheduleService(
+  CourseScheduleSource? source;
+  final schedule = await reconnect.run(
+    commandName: 'schedule',
+    savedSession: savedSession,
+    request: (isRetry) async {
+      final service = CourseScheduleService(
         client,
         cache: cache,
-      ).loadCurrentTerm(forceRefresh: true);
-    }
-    stderr.writeln('Automatic reconnection failed: $reconnectError');
-  }
-
-  if (!stdin.hasTerminal) {
-    throw StateError(
-      'The saved session could not be reconnected automatically. '
-      'Run `thulium login --force` in an interactive terminal, then retry '
-      '`thulium schedule`. Original error: $originalError',
+        trace: (message) {
+          if (client.trace != null) stderr.writeln('[calendar] $message');
+        },
+      );
+      final result = await service.loadCurrentTerm(
+        forceRefresh: forceRefresh || isRetry,
+      );
+      source = service.lastSource;
+      return result;
+    },
+    shouldReconnect: (error) =>
+        error is CourseScheduleSessionExpired ||
+        (error is CourseScheduleException &&
+            error.cause is PortalCsrfUnavailable),
+  );
+  if (source == CourseScheduleSource.freshCache) {
+    stdout.writeln('Using the saved academic calendar.');
+  } else if (source == CourseScheduleSource.staleCache) {
+    stdout.writeln(
+      'The update failed; showing an older saved academic calendar.',
     );
   }
-
-  stdout.writeln('The saved session could not be reconnected silently.');
-  final answer = _readLine(
-    'Sign in again to retry the schedule? [Y/n]: ',
-  ).toLowerCase();
-  if (answer.isNotEmpty && answer != 'y' && answer != 'yes') {
-    throw originalError;
-  }
-  final password = _readSecret('Password: ');
-  if (password.isEmpty) {
-    throw StateError('A password is required to reconnect.');
-  }
-
-  // The account and fingerprint come from the saved session. A successful
-  // login replaces the separately stored credential with the new password.
-  await client.login(
-    userId: savedSession.userId,
-    password: password,
-    fingerprint: savedSession.fingerprint,
-  );
-  stdout.writeln('Reconnected. Retrying the academic calendar once...');
-  return CourseScheduleService(
-    client,
-    cache: cache,
-  ).loadCurrentTerm(forceRefresh: true);
+  return schedule;
 }
 
 Future<void> _runSessionCommand(

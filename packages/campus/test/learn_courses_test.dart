@@ -78,6 +78,19 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('reports an authentication response as a reconnectable error', () async {
+    final transport = _LearnHttpClient(courseStatusCode: 401);
+    final store = MemoryAuthSessionStore();
+    await store.write(_session);
+    final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+    await auth.restore();
+
+    await expectLater(
+      LearnCourseService(auth).fetchSemester('2026-2027-1'),
+      throwsA(isA<PortalSessionRejected>()),
+    );
+  });
 }
 
 const _session = AuthSession(
@@ -108,10 +121,12 @@ final class _LearnHttpClient extends http.BaseClient {
   _LearnHttpClient({
     this.omitPageCsrf = false,
     this.currentUser = '2024012050',
+    this.courseStatusCode = 200,
   });
 
   final bool omitPageCsrf;
   final String currentUser;
+  final int courseStatusCode;
   http.BaseRequest? courseRequest;
 
   @override
@@ -152,7 +167,9 @@ final class _LearnHttpClient extends http.BaseClient {
     }
     return http.StreamedResponse(
       Stream.value(utf8.encode(body)),
-      200,
+      path.endsWith('loadCourseBySemesterId/2026-2027-1/zh')
+          ? courseStatusCode
+          : 200,
       headers: headers,
       request: request,
     );

@@ -18,9 +18,11 @@ final class LearnPlatformSession {
   Future<String> open() async {
     final landing = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
     final body = landing.body;
-    if (landing.statusCode == 401 ||
-        landing.statusCode == 403 ||
-        body.toLowerCase().contains('sm2publickey')) {
+    if (_isLearnSignInResponse(
+      landing.statusCode,
+      landing.request?.url,
+      body,
+    )) {
       _authClient.traceUnexpectedResponse('learning-landing', landing);
       throw const PortalSessionRejected();
     }
@@ -87,6 +89,14 @@ final class LearnCourseService {
     final response = await _authClient.getAuthenticated(
       TsinghuaWebVpnRedirect.forTarget(target),
     );
+    if (_isLearnSignInResponse(
+      response.statusCode,
+      response.request?.url,
+      response.body,
+    )) {
+      _authClient.traceUnexpectedResponse('learning-courses', response);
+      throw const PortalSessionRejected();
+    }
     if (response.statusCode != 200) {
       _authClient.traceUnexpectedResponse('learning-courses', response);
       throw StateError(
@@ -117,4 +127,14 @@ final class LearnCourseService {
     }
     return decoded;
   }
+}
+
+bool _isLearnSignInResponse(int statusCode, Uri? uri, String body) {
+  return statusCode == 401 ||
+      statusCode == 403 ||
+      uri?.host == 'id.tsinghua.edu.cn' ||
+      (uri?.host == TsinghuaWebVpnRedirect.WEBVPN_HOST &&
+          uri?.path == '/login') ||
+      uri?.path.startsWith('/wengine-vpn/failed') == true ||
+      body.toLowerCase().contains('sm2publickey');
 }

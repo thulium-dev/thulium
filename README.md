@@ -68,6 +68,10 @@ semester and prints an English-keyed YAML view of the useful course fields.
 The output contains student-specific information, so avoid redirecting it to a
 shared log.
 
+When a protected CLI request reports an expired session, the CLI tries the
+saved credentials, then offers an interactive sign-in if needed. A successful
+reconnection retries the original request once.
+
 Interactive login attempts can be retried after credential, verification-code,
 or network errors. Each retry starts a fresh authentication flow.
 
