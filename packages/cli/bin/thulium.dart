@@ -7,6 +7,7 @@ import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_cli/cli_auth_session_store.dart';
 import 'package:thulium_cli/cli_course_schedule_cache_store.dart';
+import 'package:thulium_cli/learn_course_formatter.dart';
 
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
@@ -63,13 +64,25 @@ ArgParser _buildParser() {
         help: 'Fetch the latest calendar instead of using the cache.',
       ),
   );
+  parser.addCommand(
+    'learn-courses',
+    ArgParser()
+      ..addOption(
+        'semester',
+        abbr: 's',
+        help: 'Academic semester ID, for example 2026-2027-1.',
+      )
+      ..addFlag('verbose', help: 'Print safe request diagnostics.'),
+  );
   return parser;
 }
 
 Future<void> _runCommand(ArgResults command) async {
   final name = command.command?.name;
   if (name == null) {
-    stdout.writeln('Usage: thulium <login|logout|status|session|schedule>');
+    stdout.writeln(
+      'Usage: thulium <login|logout|status|session|schedule|learn-courses>',
+    );
     return;
   }
 
@@ -122,6 +135,19 @@ Future<void> _runCommand(ArgResults command) async {
         forceRefresh: command.command!['refresh'] as bool,
       );
       _printSchedule(schedule);
+    case 'learn-courses':
+      final session = await client.restore();
+      if (session == null) {
+        throw StateError('Not logged in. Run `thulium login` first.');
+      }
+      final semester = command.command!['semester'] as String?;
+      if (semester == null || semester.isEmpty) {
+        throw const FormatException(
+          'Provide --semester, for example 2026-2027-1.',
+        );
+      }
+      final response = await LearnCourseService(client).fetchSemester(semester);
+      stdout.writeln(formatLearnCourses(response, semester: semester));
   }
 }
 
@@ -325,7 +351,9 @@ Future<void> _revealSessionCookies(AuthSession session) async {
 }
 
 bool _verboseRequested(String commandName, ArgResults command) =>
-    (commandName == 'login' || commandName == 'schedule') &&
+    (commandName == 'login' ||
+        commandName == 'schedule' ||
+        commandName == 'learn-courses') &&
     command['verbose'] as bool;
 
 void _printSchedule(CourseSchedule schedule) {

@@ -1,6 +1,5 @@
 part of '../thulium_campus.dart';
 
-const _LEARN_ROAMING_ID = '3E401364BDD7AEA7EBF1EDE3F15ED4B7';
 const _UNDERGRADUATE_ACADEMIC_CALENDAR_ROAMING_ID =
     '287C0C6D90ABB364CD5FDF1495199962';
 const _GRADUATE_ACADEMIC_CALENDAR_ROAMING_ID =
@@ -231,15 +230,7 @@ final class CourseScheduleService {
     var stage = 'roaming to the learning platform';
     try {
       trace?.call('Calendar stage=$stage');
-      final landingPage = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
-      late final String csrf;
-      try {
-        _ensurePortalResponse(landingPage.body, landingPage.statusCode);
-        csrf = _readCsrf(landingPage.body);
-      } catch (_) {
-        _authClient.traceUnexpectedResponse('learning-landing', landingPage);
-        rethrow;
-      }
+      final csrf = await LearnPlatformSession(_authClient).open();
       stage = 'fetching the current academic term';
       trace?.call('Calendar stage=$stage');
       final semesterResponse = await _authClient.getAuthenticated(
@@ -602,20 +593,6 @@ final class CourseScheduleService {
         'The campus service returned HTTP $statusCode.',
       );
     }
-  }
-
-  String _readCsrf(String body) {
-    final match = RegExp(
-      r"""_csrf=([\w-]+)|name=["']_csrf["'][^>]*value=["']([\w-]+)""",
-      caseSensitive: false,
-    ).firstMatch(body);
-    final token = match?.group(1) ?? match?.group(2);
-    if (token == null || token.isEmpty) {
-      throw const FormatException(
-        'The campus service did not return a CSRF token.',
-      );
-    }
-    return token;
   }
 
   String _formatDate(DateTime date) =>

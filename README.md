@@ -46,6 +46,7 @@ dart run bin/thulium.dart login --verbose
 dart run bin/thulium.dart status
 dart run bin/thulium.dart schedule
 dart run bin/thulium.dart schedule --refresh
+dart run bin/thulium.dart learn-courses --semester 2026-2027-1
 dart run bin/thulium.dart logout
 ```
 
@@ -61,6 +62,11 @@ platform secure storage. A successful fetch is reused for 24 hours; an older
 copy can be shown if the portal is temporarily unavailable. Manual refresh and
 `schedule --refresh` request a new copy instead of silently using stale data.
 Logging out removes the saved calendar.
+
+`learn-courses` fetches the learning platform's course list for the requested
+semester and prints an English-keyed YAML view of the useful course fields.
+The output contains student-specific information, so avoid redirecting it to a
+shared log.
 
 Interactive login attempts can be retried after credential, verification-code,
 or network errors. Each retry starts a fresh authentication flow.

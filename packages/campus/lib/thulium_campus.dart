@@ -8,3 +8,4 @@ import 'package:thulium_auth/thulium_auth.dart';
 part 'src/course_schedule.dart';
 part 'src/course_schedule_cache.dart';
 part 'src/custom_plan.dart';
+part 'src/learn_courses.dart';
