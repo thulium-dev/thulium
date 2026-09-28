@@ -264,6 +264,27 @@ final class CustomPlanCollection {
     };
     final entries = <CalendarPlanEntry>[];
     final rulesById = {for (final rule in plans) rule.id: rule};
+    final fetchedByKey = {
+      for (final lesson in fetchedLessons)
+        (fetchedLessonSourceId(lesson), lesson.startsAt): lesson,
+    };
+
+    CourseOccurrence visibleReplacement(
+      CourseOccurrence replacement,
+      CourseOccurrence? original,
+    ) {
+      // A local edit of a fetched lesson should keep its translated title
+      // only while the Chinese title and lesson category remain unchanged.
+      // Resolve it from the current catalog-backed lesson, not the saved edit.
+      if (original == null ||
+          replacement.name != original.name ||
+          replacement.category != PlanCategories.LESSON) {
+        return replacement;
+      }
+      return replacement.copyWith(
+        coursesPlanEnglishName: original.coursesPlanEnglishName,
+      );
+    }
 
     void addOriginal(
       CourseOccurrence occurrence,
@@ -273,7 +294,11 @@ final class CustomPlanCollection {
     ) {
       final override = changes[(sourceId, occurrence.startsAt)];
       if (override != null && override.replacement == null) return;
-      final visible = override?.replacement ?? occurrence;
+      final visible = override?.replacement == null
+          ? occurrence
+          : fetchedLesson
+          ? visibleReplacement(override!.replacement!, occurrence)
+          : override!.replacement!;
       if (!visible.startsAt.isBefore(start) && visible.startsAt.isBefore(end)) {
         entries.add(
           CalendarPlanEntry(
@@ -309,7 +334,12 @@ final class CustomPlanCollection {
       final rule = rulesById[override.sourceId];
       entries.add(
         CalendarPlanEntry(
-          occurrence: replacement,
+          occurrence: rule == null
+              ? visibleReplacement(
+                  replacement,
+                  fetchedByKey[(override.sourceId, override.originalStartsAt)],
+                )
+              : replacement,
           sourceId: override.sourceId,
           originalStartsAt: override.originalStartsAt,
           fetchedLesson: rule == null,

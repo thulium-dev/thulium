@@ -5,6 +5,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 import 'auth/secure_auth_session_store.dart';
 import 'auth/secure_course_schedule_cache_store.dart';
+import 'auth/secure_learn_course_cache_store.dart';
 import 'pages/home_page.dart';
 import 'pages/welcome_page.dart';
 
@@ -86,6 +87,11 @@ final class _ThuliumAppState extends State<ThuliumApp> {
         await SecureCourseScheduleCacheStore().clear();
       } catch (error) {
         debugPrint('Thulium calendar cache removal failed: $error');
+      }
+      try {
+        await SecureLearnCourseCacheStore().clear();
+      } catch (error) {
+        debugPrint('Thulium course cache removal failed: $error');
       }
     }
 

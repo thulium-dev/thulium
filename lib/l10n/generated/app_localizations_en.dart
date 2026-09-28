@@ -398,6 +398,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Study tools and learning resources will appear here.';
 
   @override
+  String get studyToolsTitle => 'Study shortcuts';
+
+  @override
+  String get studyToolsPlaceholder => 'Study shortcuts will appear here.';
+
+  @override
+  String get studyCoursesTitle => 'My courses';
+
+  @override
+  String get studyRefresh => 'Refresh courses';
+
+  @override
+  String get studyLoadError => 'Could not load courses. Try refreshing.';
+
+  @override
+  String get studyStaleCourses =>
+      'Showing saved courses because the update failed.';
+
+  @override
+  String get studyNoCourses => 'No courses were found for this semester.';
+
+  @override
   String get lifeTitle => 'Life';
 
   @override

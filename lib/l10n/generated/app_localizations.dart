@@ -832,6 +832,48 @@ abstract class AppLocalizations {
   /// **'Study tools and learning resources will appear here.'**
   String get studyDescription;
 
+  /// No description provided for @studyToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Study shortcuts'**
+  String get studyToolsTitle;
+
+  /// No description provided for @studyToolsPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Study shortcuts will appear here.'**
+  String get studyToolsPlaceholder;
+
+  /// No description provided for @studyCoursesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My courses'**
+  String get studyCoursesTitle;
+
+  /// No description provided for @studyRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh courses'**
+  String get studyRefresh;
+
+  /// No description provided for @studyLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load courses. Try refreshing.'**
+  String get studyLoadError;
+
+  /// No description provided for @studyStaleCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing saved courses because the update failed.'**
+  String get studyStaleCourses;
+
+  /// No description provided for @studyNoCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'No courses were found for this semester.'**
+  String get studyNoCourses;
+
   /// No description provided for @lifeTitle.
   ///
   /// In en, this message translates to:

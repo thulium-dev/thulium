@@ -232,6 +232,69 @@ void main() {
     expect(hidden.plans, isEmpty);
   });
 
+  test(
+    'edited fetched lessons inherit English names only without renaming',
+    () {
+      final lesson = CourseOccurrence(
+        name: '大学物理',
+        location: 'Room 1',
+        startsAt: start,
+        endsAt: end,
+        category: PlanCategories.LESSON,
+        coursesPlanEnglishName: 'Physics',
+      );
+      final weekStart = DateTime(2026, 9, 21);
+      final weekEnd = DateTime(2026, 9, 28);
+      final entry = CustomPlanCollection.empty()
+          .entriesForWeek([lesson], weekStart, weekEnd)
+          .single;
+      final moved = CustomPlanCollection.empty().replaceOccurrence(
+        entry,
+        CourseOccurrence(
+          name: lesson.name,
+          location: 'Room 2',
+          startsAt: DateTime(2026, 9, 28, 9),
+          endsAt: DateTime(2026, 9, 28, 10),
+          category: PlanCategories.LESSON,
+        ),
+      );
+      final restored = CustomPlanCollection.decode(moved.encode());
+      final edited = restored.entriesForWeek(
+        [lesson],
+        DateTime(2026, 9, 28),
+        DateTime(2026, 10, 5),
+      );
+      expect(edited.single.occurrence.nameForLanguage('en'), 'Physics');
+      expect(edited.single.occurrence.location, 'Room 2');
+      final renamed = restored.replaceOccurrence(
+        edited.single,
+        CourseOccurrence(
+          name: 'My physics plan',
+          location: 'Room 2',
+          startsAt: edited.single.occurrence.startsAt,
+          endsAt: edited.single.occurrence.endsAt,
+          category: PlanCategories.LESSON,
+        ),
+      );
+      expect(
+        renamed
+            .entriesForWeek(
+              [lesson],
+              DateTime(2026, 9, 28),
+              DateTime(2026, 10, 5),
+            )
+            .single
+            .occurrence
+            .nameForLanguage('en'),
+        'My physics plan',
+      );
+      expect(
+        fetchedLessonSourceId(lesson),
+        fetchedLessonSourceId(lesson.copyWith(coursesPlanEnglishName: '')),
+      );
+    },
+  );
+
   test('version-one data migrates and warning preferences persist', () {
     final old = jsonEncode({
       'version': 1,

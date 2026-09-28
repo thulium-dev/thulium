@@ -91,6 +91,72 @@ void main() {
       throwsA(isA<PortalSessionRejected>()),
     );
   });
+
+  test(
+    'reuses fresh course names and serves stale data after a failure',
+    () async {
+      final transport = _LearnHttpClient();
+      final store = MemoryAuthSessionStore();
+      await store.write(_session);
+      final auth = TsinghuaAuthClient(
+        httpClient: transport,
+        sessionStore: store,
+      );
+      await auth.restore();
+      final courseCache = LearnCourseCache(_LearnCacheStore());
+      final firstTime = DateTime(2026, 9, 28, 8);
+      final first = LearnCourseCatalogService(
+        auth,
+        cache: courseCache,
+        now: () => firstTime,
+      );
+      expect(
+        (await first.loadSemester('2026-2027-1')).courses.single.name,
+        'Course A',
+      );
+      expect(first.lastSource, LearnCourseSource.network);
+      expect(transport.courseRequestCount, 1);
+      expect(await courseCache.readFor('2024012050', '2026-2027-1'), isNotNull);
+
+      final fresh = LearnCourseCatalogService(
+        auth,
+        cache: courseCache,
+        now: () => firstTime.add(const Duration(hours: 23)),
+      );
+      await fresh.loadSemester('2026-2027-1');
+      expect(fresh.lastSource, LearnCourseSource.freshCache);
+      expect(transport.courseRequestCount, 1);
+
+      transport.courseStatusCode = 503;
+      final stale = LearnCourseCatalogService(
+        auth,
+        cache: courseCache,
+        now: () => firstTime.add(const Duration(hours: 25)),
+      );
+      expect(
+        (await stale.loadSemester('2026-2027-1')).courses.single.name,
+        'Course A',
+      );
+      expect(stale.lastSource, LearnCourseSource.staleCache);
+      await expectLater(
+        stale.loadSemester('2026-2027-1', forceRefresh: true),
+        throwsStateError,
+      );
+    },
+  );
+}
+
+final class _LearnCacheStore implements LearnCourseCacheStore {
+  String? value;
+
+  @override
+  Future<String?> read() async => value;
+
+  @override
+  Future<void> write(String value) async => this.value = value;
+
+  @override
+  Future<void> clear() async => value = null;
 }
 
 const _session = AuthSession(
@@ -126,8 +192,9 @@ final class _LearnHttpClient extends http.BaseClient {
 
   final bool omitPageCsrf;
   final String currentUser;
-  final int courseStatusCode;
+  int courseStatusCode;
   http.BaseRequest? courseRequest;
+  int courseRequestCount = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -147,6 +214,7 @@ final class _LearnHttpClient extends http.BaseClient {
       });
     } else if (path.endsWith('loadCourseBySemesterId/2026-2027-1/zh')) {
       courseRequest = request;
+      courseRequestCount++;
       body = jsonEncode({
         'currentUser': currentUser,
         'message': 'success',

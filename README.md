@@ -46,7 +46,9 @@ dart run bin/thulium.dart login --verbose
 dart run bin/thulium.dart status
 dart run bin/thulium.dart schedule
 dart run bin/thulium.dart schedule --refresh
+dart run bin/thulium.dart learn-courses
 dart run bin/thulium.dart learn-courses --semester 2026-2027-1
+dart run bin/thulium.dart learn-courses --refresh
 dart run bin/thulium.dart logout
 ```
 
@@ -65,8 +67,15 @@ Logging out removes the saved calendar.
 
 `learn-courses` fetches the learning platform's course list for the requested
 semester and prints an English-keyed YAML view of the useful course fields.
-The output contains student-specific information, so avoid redirecting it to a
-shared log.
+Without `--semester`, it selects the semester from the local date: autumn
+starts September 15, spring starts February 15, and summer starts July 15.
+The app and CLI keep the selected account's current semester course list for
+24 hours, with an older copy available if an update fails. Switching semesters
+replaces this single snapshot. `--refresh` bypasses the
+fresh cache. Study shows these courses, and the teaching calendar uses their
+English titles for matching lessons when the app language is English. Custom
+plans keep their original names. The output contains student-specific
+information, so avoid redirecting it to a shared log.
 
 When a protected CLI request reports an expired session, the CLI tries the
 saved credentials, then offers an interactive sign-in if needed. A successful

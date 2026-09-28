@@ -131,6 +131,13 @@
   "planCancelAction": "Cancel once",
   "studyTitle": "Study",
   "studyDescription": "Study tools and learning resources will appear here.",
+  "studyToolsTitle": "Study shortcuts",
+  "studyToolsPlaceholder": "Study shortcuts will appear here.",
+  "studyCoursesTitle": "My courses",
+  "studyRefresh": "Refresh courses",
+  "studyLoadError": "Could not load courses. Try refreshing.",
+  "studyStaleCourses": "Showing saved courses because the update failed.",
+  "studyNoCourses": "No courses were found for this semester.",
   "lifeTitle": "Life",
   "lifeDescription": "Campus life services and everyday tools will appear here."
 }

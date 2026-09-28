@@ -410,6 +410,60 @@ void main() {
     );
   });
 
+  test('retains translated lesson names in a calendar snapshot', () async {
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final translated = CourseSchedule(
+      term: _cachedSchedule().term,
+      occurrences: [
+        _cachedSchedule().occurrences.single.copyWith(
+          coursesPlanEnglishName: 'English Course',
+        ),
+      ],
+    );
+    await cache.writeFor('2024222050', translated, DateTime.utc(2026, 9, 25));
+
+    final cached = await cache.readFor('2024222050');
+    expect(
+      cached?.schedule.occurrences.single.nameForLanguage('en'),
+      'English Course',
+    );
+  });
+
+  test('reads older snapshots without an English lesson title', () async {
+    final store = _MemoryCacheStore();
+    final current = _cachedSchedule();
+    final occurrence = current.occurrences.single;
+    store.value = base64Encode(
+      gzip.encode(
+        utf8.encode(
+          jsonEncode({
+            'version': 2,
+            'userId': '2024222050',
+            'fetchedAt': '2026-09-25T10:00:00.000Z',
+            'term': {
+              'id': current.term.id,
+              'name': current.term.name,
+              'firstMonday': current.term.firstMonday.toIso8601String(),
+              'weekCount': current.term.weekCount,
+            },
+            'occurrences': [
+              {
+                'name': occurrence.name,
+                'location': occurrence.location,
+                'category': occurrence.category,
+                'startsAt': occurrence.startsAt.toIso8601String(),
+                'endsAt': occurrence.endsAt.toIso8601String(),
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+
+    final cached = await CourseScheduleCache(store).readFor('2024222050');
+    expect(cached?.schedule.occurrences.single.coursesPlanEnglishName, isEmpty);
+  });
+
   test('does not use a cache from an ended academic term', () async {
     final store = MemoryAuthSessionStore();
     final session = _testSession(isGraduate: true);

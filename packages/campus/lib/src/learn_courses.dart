@@ -60,8 +60,8 @@ final class LearnPlatformSession {
 
 /// Fetches the learning platform's semester course-list response unchanged.
 ///
-/// This diagnostic API intentionally retains all response fields for CLI
-/// inspection. It does not persist the course list or any credential values.
+/// This low-level API retains all response fields for CLI inspection. The
+/// catalog service may cache its result separately from credential values.
 final class LearnCourseService {
   const LearnCourseService(this._authClient, {this.now});
 

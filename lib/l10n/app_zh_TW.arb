@@ -131,6 +131,13 @@
   "planCancelAction": "取消本次",
   "studyTitle": "學習",
   "studyDescription": "學習工具和學習資源將在這裡顯示。",
+  "studyToolsTitle": "學習快速入口",
+  "studyToolsPlaceholder": "這裡將顯示常用學習功能。",
+  "studyCoursesTitle": "我的課程",
+  "studyRefresh": "重新整理課程",
+  "studyLoadError": "無法載入課程，請嘗試重新整理。",
+  "studyStaleCourses": "更新失敗，正在顯示已儲存的課程。",
+  "studyNoCourses": "本學期暫無課程。",
   "lifeTitle": "生活",
   "lifeDescription": "校園生活服務和日常工具將在這裡顯示。"
 }

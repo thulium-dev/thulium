@@ -1,6 +1,6 @@
 part of '../thulium_campus.dart';
 
-const _SCHEDULE_CACHE_VERSION = 2;
+const _SCHEDULE_CACHE_VERSION = 3;
 const _MAX_CACHE_LENGTH = 1024 * 1024;
 
 /// A platform-specific store for one compressed, account-scoped timetable.
@@ -53,6 +53,7 @@ final class CourseScheduleCache {
       final data = jsonDecode(utf8.decode(bytes));
       if (data is! Map<String, dynamic> ||
           (data['version'] != 1 &&
+              data['version'] != 2 &&
               data['version'] != _SCHEDULE_CACHE_VERSION) ||
           data['userId'] != userId) {
         return null;
@@ -78,6 +79,8 @@ final class CourseScheduleCache {
               final row = entry as Map<String, dynamic>;
               return CourseOccurrence(
                 name: row['name'] as String,
+                coursesPlanEnglishName:
+                    row['coursesPlanEnglishName'] as String? ?? '',
                 location: row['location'] as String,
                 // Version 1 predates categories and only stored lessons.
                 category: data['version'] == 1
@@ -117,6 +120,7 @@ final class CourseScheduleCache {
         for (final row in schedule.occurrences)
           {
             'name': row.name,
+            'coursesPlanEnglishName': row.coursesPlanEnglishName,
             'location': row.location,
             'category': row.category,
             'startsAt': row.startsAt.toIso8601String(),

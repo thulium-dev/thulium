@@ -131,6 +131,13 @@
   "planCancelAction": "取消本次",
   "studyTitle": "学习",
   "studyDescription": "学习工具和学习资源将在这里显示。",
+  "studyToolsTitle": "学习快捷入口",
+  "studyToolsPlaceholder": "这里将显示常用学习功能。",
+  "studyCoursesTitle": "我的课程",
+  "studyRefresh": "刷新课程",
+  "studyLoadError": "无法加载课程，请尝试刷新。",
+  "studyStaleCourses": "更新失败，正在显示已保存的课程。",
+  "studyNoCourses": "本学期暂无课程。",
   "lifeTitle": "生活",
   "lifeDescription": "校园生活服务和日常工具将在这里显示。"
 }

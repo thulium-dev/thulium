@@ -7,6 +7,7 @@ import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_cli/cli_auth_session_store.dart';
 import 'package:thulium_cli/cli_course_schedule_cache_store.dart';
+import 'package:thulium_cli/cli_learn_course_cache_store.dart';
 import 'package:thulium_cli/cli_session_reconnect.dart';
 import 'package:thulium_cli/learn_course_formatter.dart';
 
@@ -71,9 +72,10 @@ ArgParser _buildParser() {
       ..addOption(
         'semester',
         abbr: 's',
-        help: 'Academic semester ID, for example 2026-2027-1.',
+        help: 'Academic semester ID (defaults to the current semester).',
       )
-      ..addFlag('verbose', help: 'Print safe request diagnostics.'),
+      ..addFlag('verbose', help: 'Print safe request diagnostics.')
+      ..addFlag('refresh', help: 'Fetch courses instead of using the cache.'),
   );
   return parser;
 }
@@ -89,6 +91,7 @@ Future<void> _runCommand(ArgResults command) async {
 
   final store = CliAuthSessionStore();
   final calendarCache = CourseScheduleCache(CliCourseScheduleCacheStore());
+  final learnCache = LearnCourseCache(CliLearnCourseCacheStore());
   final client = TsinghuaAuthClient(
     sessionStore: store,
     credentialStore: store,
@@ -131,6 +134,7 @@ Future<void> _runCommand(ArgResults command) async {
         await client.logout();
       } finally {
         await calendarCache.clear();
+        await learnCache.clear();
       }
       stdout.writeln('Logged out.');
     case 'status':
@@ -161,20 +165,45 @@ Future<void> _runCommand(ArgResults command) async {
       if (session == null) {
         throw StateError('Not logged in. Run `thulium login` first.');
       }
-      final semester = command.command!['semester'] as String?;
-      if (semester == null || semester.isEmpty) {
-        throw const FormatException(
-          'Provide --semester, for example 2026-2027-1.',
-        );
-      }
-      final response = await reconnect.run(
+      final semester =
+          (command.command!['semester'] as String?) ??
+          AcademicSemester.forDate(DateTime.now());
+      final catalogService = LearnCourseCatalogService(
+        client,
+        cache: learnCache,
+      );
+      final catalog = await reconnect.run(
         commandName: 'learn-courses',
         savedSession: session,
-        request: (_) => LearnCourseService(client).fetchSemester(semester),
+        request: (isRetry) => catalogService.loadSemester(
+          semester,
+          forceRefresh: isRetry || command.command!['refresh'] as bool,
+        ),
         shouldReconnect: (error) =>
             error is PortalCsrfUnavailable || error is PortalSessionRejected,
       );
-      stdout.writeln(formatLearnCourses(response, semester: semester));
+      if (catalogService.lastSource == LearnCourseSource.staleCache) {
+        stderr.writeln('Update failed; showing the saved course list.');
+      }
+      stdout.writeln(
+        formatLearnCourses(
+          catalog.rawResponse ??
+              {
+                'currentUser': catalog.userId,
+                'resultList': [
+                  for (final course in catalog.courses)
+                    {
+                      'wlkcid': course.id,
+                      'kcm': course.name,
+                      'ywkcm': course.englishName,
+                      'jsm': course.teacherName,
+                      'sjddb': course.schedule,
+                    },
+                ],
+              },
+          semester: semester,
+        ),
+      );
   }
 }
 

@@ -382,6 +382,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyDescription => '学习工具和学习资源将在这里显示。';
 
   @override
+  String get studyToolsTitle => '学习快捷入口';
+
+  @override
+  String get studyToolsPlaceholder => '这里将显示常用学习功能。';
+
+  @override
+  String get studyCoursesTitle => '我的课程';
+
+  @override
+  String get studyRefresh => '刷新课程';
+
+  @override
+  String get studyLoadError => '无法加载课程，请尝试刷新。';
+
+  @override
+  String get studyStaleCourses => '更新失败，正在显示已保存的课程。';
+
+  @override
+  String get studyNoCourses => '本学期暂无课程。';
+
+  @override
   String get lifeTitle => '生活';
 
   @override
@@ -766,6 +787,27 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get studyDescription => '学习工具和学习资源将在这里显示。';
 
   @override
+  String get studyToolsTitle => '学习快捷入口';
+
+  @override
+  String get studyToolsPlaceholder => '这里将显示常用学习功能。';
+
+  @override
+  String get studyCoursesTitle => '我的课程';
+
+  @override
+  String get studyRefresh => '刷新课程';
+
+  @override
+  String get studyLoadError => '无法加载课程，请尝试刷新。';
+
+  @override
+  String get studyStaleCourses => '更新失败，正在显示已保存的课程。';
+
+  @override
+  String get studyNoCourses => '本学期暂无课程。';
+
+  @override
   String get lifeTitle => '生活';
 
   @override
@@ -1148,6 +1190,27 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get studyDescription => '學習工具和學習資源將在這裡顯示。';
+
+  @override
+  String get studyToolsTitle => '學習快速入口';
+
+  @override
+  String get studyToolsPlaceholder => '這裡將顯示常用學習功能。';
+
+  @override
+  String get studyCoursesTitle => '我的課程';
+
+  @override
+  String get studyRefresh => '重新整理課程';
+
+  @override
+  String get studyLoadError => '無法載入課程，請嘗試重新整理。';
+
+  @override
+  String get studyStaleCourses => '更新失敗，正在顯示已儲存的課程。';
+
+  @override
+  String get studyNoCourses => '本學期暫無課程。';
 
   @override
   String get lifeTitle => '生活';

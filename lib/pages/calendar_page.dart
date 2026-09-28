@@ -39,11 +39,13 @@ final class AcademicCalendarPage extends StatefulWidget {
   const AcademicCalendarPage({
     required this.onSessionExpired,
     this.sessionStore,
+    this.courseCatalog,
     super.key,
   });
 
   final VoidCallback onSessionExpired;
   final AuthSessionStore? sessionStore;
+  final LearnCourseCatalog? courseCatalog;
 
   @override
   State<AcademicCalendarPage> createState() => _AcademicCalendarPageState();
@@ -93,6 +95,18 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _now.value = DateTime.now();
+  }
+
+  @override
+  void didUpdateWidget(covariant AcademicCalendarPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.courseCatalog == widget.courseCatalog || _schedule == null) {
+      return;
+    }
+    final catalog = widget.courseCatalog;
+    if (catalog != null && catalog.semester == _schedule!.term.id) {
+      setState(() => _schedule = catalog.applyEnglishNames(_schedule!));
+    }
   }
 
   @override
@@ -161,7 +175,10 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
       );
       final todayWeek = schedule.term.weekFor(DateTime.now());
       setState(() {
-        _schedule = schedule;
+        final catalog = widget.courseCatalog;
+        _schedule = catalog != null && catalog.semester == schedule.term.id
+            ? catalog.applyEnglishNames(schedule)
+            : schedule;
         _customPlans = customPlans;
         _userId = savedSession.userId;
         _showingStaleCache =

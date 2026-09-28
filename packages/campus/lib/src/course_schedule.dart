@@ -69,6 +69,7 @@ final class CourseOccurrence {
     required this.startsAt,
     required this.endsAt,
     required this.category,
+    this.coursesPlanEnglishName = '',
   });
 
   final String name;
@@ -76,6 +77,27 @@ final class CourseOccurrence {
   final DateTime startsAt;
   final DateTime endsAt;
   final String category;
+
+  /// An optional Learn title for fetched lessons; user plans leave it empty.
+  final String coursesPlanEnglishName;
+
+  String nameForLanguage(String languageCode) =>
+      category == PlanCategories.LESSON &&
+          languageCode == 'en' &&
+          coursesPlanEnglishName.isNotEmpty
+      ? coursesPlanEnglishName
+      : name;
+
+  CourseOccurrence copyWith({String? coursesPlanEnglishName}) =>
+      CourseOccurrence(
+        name: name,
+        location: location,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        category: category,
+        coursesPlanEnglishName:
+            coursesPlanEnglishName ?? this.coursesPlanEnglishName,
+      );
 }
 
 /// A term and its combined actual-date course occurrences.
@@ -126,6 +148,9 @@ final class CourseSchedule {
             startsAt: current.startsAt,
             endsAt: next.endsAt,
             category: current.category,
+            coursesPlanEnglishName: current.coursesPlanEnglishName.isNotEmpty
+                ? current.coursesPlanEnglishName
+                : next.coursesPlanEnglishName,
           );
         } else {
           merged.add(current);

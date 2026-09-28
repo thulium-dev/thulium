@@ -6,6 +6,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 import 'package:thulium/app.dart';
 import 'package:thulium/pages/settings_page.dart';
+import 'package:thulium/pages/study_page.dart';
 import 'package:thulium/widgets/language_button.dart';
 
 void main() {
@@ -17,7 +18,7 @@ void main() {
     expect(find.text('Explore'), findsOneWidget);
   });
 
-  testWidgets('restores the authenticated home without a startup probe', (
+  testWidgets('restores the home while courses load in the background', (
     tester,
   ) async {
     final store = MemoryAuthSessionStore();
@@ -28,6 +29,24 @@ void main() {
 
     expect(find.text('Student events'), findsOneWidget);
     expect(find.text('Welcome, THUer'), findsNothing);
+  });
+
+  testWidgets('opens the Study course list from the bottom navigation', (
+    tester,
+  ) async {
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+
+    await tester.pumpWidget(ThuliumApp(sessionStore: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.menu_book_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StudyPage), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('study-shortcut-reserved')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('opens settings from the authenticated home', (tester) async {
