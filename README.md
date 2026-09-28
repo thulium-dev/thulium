@@ -97,6 +97,10 @@ linux/ macos/ windows/  Desktop targets
 
 ## Checks
 
+Tests are grouped by scope: `test/unit/` covers logic and adapters, while
+`test/widget/` covers Flutter components and screen behavior. Device-level
+end-to-end tests belong in `integration_test/`.
+
 ```bash
 flutter analyze
 flutter test
