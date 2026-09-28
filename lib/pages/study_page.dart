@@ -27,6 +27,11 @@ final class StudyPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.theme.colors;
     final locale = Localizations.localeOf(context).languageCode;
+    final courseTitleStyle = context.theme.typography.md;
+    final courseMetadataStyle = context.theme.typography.sm.copyWith(
+      fontSize: 12,
+      color: colors.mutedForeground,
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
@@ -105,7 +110,9 @@ final class StudyPage extends StatelessWidget {
                       locale == 'en' && course.englishName.isNotEmpty
                           ? course.englishName
                           : course.name,
-                      style: context.theme.typography.md,
+                      style: courseTitleStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     if (course.teacherName.isNotEmpty ||
                         course.schedule.isNotEmpty) ...[
@@ -115,9 +122,7 @@ final class StudyPage extends StatelessWidget {
                           if (course.teacherName.isNotEmpty) course.teacherName,
                           if (course.schedule.isNotEmpty) course.schedule,
                         ].join(' · '),
-                        style: context.theme.typography.sm.copyWith(
-                          color: colors.mutedForeground,
-                        ),
+                        style: courseMetadataStyle,
                       ),
                     ],
                   ],
