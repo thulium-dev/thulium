@@ -10,6 +10,7 @@ import 'package:thulium_cli/cli_course_schedule_cache_store.dart';
 import 'package:thulium_cli/cli_learn_course_cache_store.dart';
 import 'package:thulium_cli/cli_session_reconnect.dart';
 import 'package:thulium_cli/learn_course_formatter.dart';
+import 'package:thulium_cli/learn_homework_formatter.dart';
 
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
@@ -77,6 +78,17 @@ ArgParser _buildParser() {
       ..addFlag('verbose', help: 'Print safe request diagnostics.')
       ..addFlag('refresh', help: 'Fetch courses instead of using the cache.'),
   );
+  parser.addCommand(
+    'learn-homework',
+    ArgParser()
+      ..addOption(
+        'semester',
+        abbr: 's',
+        help: 'Academic semester ID (defaults to the current semester).',
+      )
+      ..addFlag('verbose', help: 'Print safe request diagnostics.')
+      ..addFlag('refresh', help: 'Refresh the course list before counting.'),
+  );
   return parser;
 }
 
@@ -84,7 +96,7 @@ Future<void> _runCommand(ArgResults command) async {
   final name = command.command?.name;
   if (name == null) {
     stdout.writeln(
-      'Usage: thulium <login|logout|status|session|schedule|learn-courses>',
+      'Usage: thulium <login|logout|status|session|schedule|learn-courses|learn-homework>',
     );
     return;
   }
@@ -92,12 +104,15 @@ Future<void> _runCommand(ArgResults command) async {
   final store = CliAuthSessionStore();
   final calendarCache = CourseScheduleCache(CliCourseScheduleCacheStore());
   final learnCache = LearnCourseCache(CliLearnCourseCacheStore());
+  final promptOutput = name == 'learn-homework' ? stderr : stdout;
   final client = TsinghuaAuthClient(
     sessionStore: store,
     credentialStore: store,
-    twoFactorMethodHandler: _handleTwoFactorMethod,
-    twoFactorCodeHandler: _readTwoFactorCode,
-    twoFactorTrustHandler: _askToTrustDevice,
+    twoFactorMethodHandler: (options) =>
+        _handleTwoFactorMethod(options, output: promptOutput),
+    twoFactorCodeHandler: (verify) =>
+        _readTwoFactorCode(verify, output: promptOutput),
+    twoFactorTrustHandler: () => _askToTrustDevice(output: promptOutput),
     trace: _verboseRequested(name, command.command!)
         ? (message) => stderr.writeln('[auth] $message')
         : null,
@@ -115,11 +130,12 @@ Future<void> _runCommand(ArgResults command) async {
     askToSignIn: (commandName) {
       final answer = _readLine(
         'Sign in again to retry $commandName? [Y/n]: ',
+        output: promptOutput,
       ).toLowerCase();
       return answer.isEmpty || answer == 'y' || answer == 'yes';
     },
-    readPassword: () => _readSecret('Password: '),
-    writeMessage: stdout.writeln,
+    readPassword: () => _readSecret('Password: ', output: promptOutput),
+    writeMessage: promptOutput.writeln,
     writeError: stderr.writeln,
   );
 
@@ -201,6 +217,41 @@ Future<void> _runCommand(ArgResults command) async {
                     },
                 ],
               },
+          semester: semester,
+        ),
+      );
+    case 'learn-homework':
+      final session = await client.restore();
+      if (session == null) {
+        throw StateError('Not logged in. Run `thulium login` first.');
+      }
+      final semester =
+          (command.command!['semester'] as String?) ??
+          AcademicSemester.forDate(DateTime.now());
+      final catalogService = LearnCourseCatalogService(
+        client,
+        cache: learnCache,
+      );
+      final homework = await reconnect.run(
+        commandName: 'learn-homework',
+        savedSession: session,
+        request: (isRetry) async {
+          final catalog = await catalogService.loadSemester(
+            semester,
+            forceRefresh: isRetry || command.command!['refresh'] as bool,
+          );
+          if (catalogService.lastSource == LearnCourseSource.staleCache) {
+            stderr.writeln('Update failed; using the saved course list.');
+          }
+          return LearnHomeworkService(client).fetchCourses(catalog);
+        },
+        shouldReconnect: (error) =>
+            error is PortalCsrfUnavailable || error is PortalSessionRejected,
+      );
+      stdout.writeln(
+        formatLearnHomework(
+          homework,
+          studentId: session.userId,
           semester: semester,
         ),
       );
@@ -339,7 +390,8 @@ Future<void> _revealSessionCookies(AuthSession session) async {
 bool _verboseRequested(String commandName, ArgResults command) =>
     (commandName == 'login' ||
         commandName == 'schedule' ||
-        commandName == 'learn-courses') &&
+        commandName == 'learn-courses' ||
+        commandName == 'learn-homework') &&
     command['verbose'] as bool;
 
 void _printSchedule(CourseSchedule schedule) {
@@ -446,9 +498,13 @@ bool _askToRetry() {
   return answer.isEmpty || answer == 'y' || answer == 'yes';
 }
 
-Future<TwoFactorMethod> _handleTwoFactorMethod(TwoFactorOptions options) async {
-  stdout.writeln('Two-factor authentication is required.');
-  stdout.writeln('Available methods:');
+Future<TwoFactorMethod> _handleTwoFactorMethod(
+  TwoFactorOptions options, {
+  IOSink? output,
+}) async {
+  final sink = output ?? stdout;
+  sink.writeln('Two-factor authentication is required.');
+  sink.writeln('Available methods:');
   final methods = <({TwoFactorMethod method, String label})>[];
   if (options.hasWeChat) {
     methods.add((method: TwoFactorMethod.wechat, label: 'WeChat'));
@@ -463,36 +519,44 @@ Future<TwoFactorMethod> _handleTwoFactorMethod(TwoFactorOptions options) async {
     methods.add((method: TwoFactorMethod.totp, label: 'TOTP'));
   }
   for (var index = 0; index < methods.length; index++) {
-    stdout.writeln('  ${index + 1}. ${methods[index].label}');
+    sink.writeln('  ${index + 1}. ${methods[index].label}');
   }
   if (methods.isEmpty) {
     throw StateError('The account has no available two-factor methods.');
   }
 
-  final choice = int.tryParse(_readLine('Choose a method: '));
+  final choice = int.tryParse(_readLine('Choose a method: ', output: sink));
   if (choice == null || choice < 1 || choice > methods.length) {
     throw const FormatException('The selected method is unavailable.');
   }
   return methods[choice - 1].method;
 }
 
-Future<void> _readTwoFactorCode(TwoFactorCodeVerifier verifyCode) async {
+Future<void> _readTwoFactorCode(
+  TwoFactorCodeVerifier verifyCode, {
+  IOSink? output,
+}) async {
+  final sink = output ?? stdout;
   // This callback runs only after SEND_CODE succeeds, so the notification is
   // expected to be available before the user is asked for the code.
-  stdout.writeln('A verification code was sent.');
+  sink.writeln('A verification code was sent.');
   while (true) {
-    final code = _readLine('Verification code: ');
+    final code = _readLine('Verification code: ', output: sink);
     if (await verifyCode(code)) return;
-    stdout.writeln('The verification code was not accepted. Please try again.');
+    sink.writeln('The verification code was not accepted. Please try again.');
   }
 }
 
-Future<bool> _askToTrustDevice() async {
-  stdout.writeln(
+Future<bool> _askToTrustDevice({IOSink? output}) async {
+  final sink = output ?? stdout;
+  sink.writeln(
     'Trust this device to reduce future verification prompts? Only choose yes '
     'on a device you control.',
   );
-  final answer = _readLine('Trust this device? [y/N]: ').toLowerCase();
+  final answer = _readLine(
+    'Trust this device? [y/N]: ',
+    output: sink,
+  ).toLowerCase();
   return answer == 'y' || answer == 'yes';
 }
 
@@ -503,13 +567,14 @@ String _buildFingerprint() {
       '${Platform.localHostname}';
 }
 
-String _readLine(String prompt) {
-  stdout.write(prompt);
+String _readLine(String prompt, {IOSink? output}) {
+  (output ?? stdout).write(prompt);
   return stdin.readLineSync()?.trim() ?? '';
 }
 
-String _readSecret(String prompt) {
-  stdout.write(prompt);
+String _readSecret(String prompt, {IOSink? output}) {
+  final sink = output ?? stdout;
+  sink.write(prompt);
   if (!stdin.hasTerminal) {
     return stdin.readLineSync() ?? '';
   }
@@ -520,6 +585,6 @@ String _readSecret(String prompt) {
     return stdin.readLineSync() ?? '';
   } finally {
     stdin.echoMode = echoMode;
-    stdout.writeln();
+    sink.writeln();
   }
 }

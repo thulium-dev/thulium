@@ -49,6 +49,8 @@ dart run bin/thulium.dart schedule --refresh
 dart run bin/thulium.dart learn-courses
 dart run bin/thulium.dart learn-courses --semester 2026-2027-1
 dart run bin/thulium.dart learn-courses --refresh
+dart run bin/thulium.dart learn-homework
+dart run bin/thulium.dart learn-homework --semester 2026-2027-1 --refresh
 dart run bin/thulium.dart logout
 ```
 
@@ -76,6 +78,14 @@ fresh cache. Study shows these courses, and the teaching calendar uses their
 English titles for matching lessons when the app language is English. Custom
 plans keep their original names. The output contains student-specific
 information, so avoid redirecting it to a shared log.
+
+`learn-homework` reports current unsubmitted, submitted-but-ungraded, and graded
+homework counts for every course in the selected semester, with semester totals
+and per-course entries in YAML. It defaults to the current semester; `--refresh`
+refreshes the course list, while homework counts are always fetched live. Counts
+come from the server's total-record metadata, not the first five returned rows.
+Diagnostics and reconnection messages go to stderr, keeping stdout valid YAML.
+If any count cannot be fetched, the command fails instead of reporting it as zero.
 
 When a protected CLI request reports an expired session, the CLI tries the
 saved credentials, then offers an interactive sign-in if needed. A successful
