@@ -420,6 +420,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyNoCourses => 'No courses were found for this semester.';
 
   @override
+  String studyUnsubmittedHomework(int count) {
+    return 'Unsubmitted assignments: $count';
+  }
+
+  @override
+  String get studyHomeworkLoadError =>
+      'Could not load assignment counts. Try refreshing.';
+
+  @override
   String get lifeTitle => 'Life';
 
   @override

@@ -874,6 +874,18 @@ abstract class AppLocalizations {
   /// **'No courses were found for this semester.'**
   String get studyNoCourses;
 
+  /// No description provided for @studyUnsubmittedHomework.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsubmitted assignments: {count}'**
+  String studyUnsubmittedHomework(int count);
+
+  /// No description provided for @studyHomeworkLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load assignment counts. Try refreshing.'**
+  String get studyHomeworkLoadError;
+
   /// No description provided for @lifeTitle.
   ///
   /// In en, this message translates to:

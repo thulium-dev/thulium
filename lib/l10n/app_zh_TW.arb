@@ -138,6 +138,8 @@
   "studyLoadError": "無法載入課程，請嘗試重新整理。",
   "studyStaleCourses": "更新失敗，正在顯示已儲存的課程。",
   "studyNoCourses": "本學期暫無課程。",
+  "studyUnsubmittedHomework": "未交作業：{count} 份",
+  "studyHomeworkLoadError": "未交作業數量載入失敗，請重新整理。",
   "lifeTitle": "生活",
   "lifeDescription": "校園生活服務和日常工具將在這裡顯示。"
 }

@@ -7,6 +7,30 @@ import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
+  test('course reminders request only unsubmitted totals', () async {
+    final requests = <http.Request>[];
+    final auth = await _auth((request) {
+      requests.add(request);
+      expect(request.url.path, endsWith('/index/zyListWj'));
+      final count = request.url.queryParameters['wlkcid'] == 'course-id'
+          ? 9
+          : 0;
+      return http.Response(
+        jsonEncode({
+          'result': 'success',
+          'object': {'iTotalRecords': '$count', 'aaData': []},
+        }),
+        200,
+        request: request,
+      );
+    });
+    expect(await LearnHomeworkService(auth).fetchUnsubmittedCounts(_catalog), {
+      'course-id': 9,
+      'empty-course': 0,
+    });
+    expect(requests, hasLength(2));
+  });
+
   test(
     'counts all courses and statuses from totals rather than page rows',
     () async {

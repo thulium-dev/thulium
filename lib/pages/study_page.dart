@@ -12,6 +12,9 @@ final class StudyPage extends StatelessWidget {
     required this.isStale,
     required this.error,
     required this.onRefresh,
+    this.unsubmittedHomework = const {},
+    this.homeworkLoading = false,
+    this.homeworkFailed = false,
     super.key,
   });
 
@@ -21,6 +24,9 @@ final class StudyPage extends StatelessWidget {
   final bool isStale;
   final Object? error;
   final VoidCallback onRefresh;
+  final Map<String, int> unsubmittedHomework;
+  final bool homeworkLoading;
+  final bool homeworkFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -61,17 +67,26 @@ final class StudyPage extends StatelessWidget {
                 style: context.theme.typography.lg,
               ),
             ),
+            if (homeworkLoading) ...[
+              const FCircularProgress(size: FCircularProgressSizeVariant.xs),
+              const SizedBox(width: 8),
+            ],
             Tooltip(
               message: l10n.studyRefresh,
               child: FButton.icon(
                 variant: FButtonVariant.ghost,
-                onPress: isLoading ? null : onRefresh,
+                onPress: isLoading || homeworkLoading ? null : onRefresh,
                 child: const Icon(Icons.refresh),
               ),
             ),
           ],
         ),
         Text(semester, style: context.theme.typography.sm),
+        if (homeworkFailed)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(l10n.studyHomeworkLoadError),
+          ),
         if (isStale)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -106,13 +121,43 @@ final class StudyPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      locale == 'en' && course.englishName.isNotEmpty
-                          ? course.englishName
-                          : course.name,
-                      style: courseTitleStyle.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            locale == 'en' && course.englishName.isNotEmpty
+                                ? course.englishName
+                                : course.name,
+                            style: courseTitleStyle.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (!homeworkFailed &&
+                            (unsubmittedHomework[course.id] ?? 0) > 0) ...[
+                          const SizedBox(width: 8),
+                          Semantics(
+                            label: l10n.studyUnsubmittedHomework(
+                              unsubmittedHomework[course.id]!,
+                            ),
+                            excludeSemantics: true,
+                            child: Tooltip(
+                              message: l10n.studyUnsubmittedHomework(
+                                unsubmittedHomework[course.id]!,
+                              ),
+                              excludeFromSemantics: true,
+                              child: FBadge(
+                                key: ValueKey('homework-badge-${course.id}'),
+                                variant: FBadgeVariant.destructive,
+                                child: Text(
+                                  '${unsubmittedHomework[course.id]}',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (course.teacherName.isNotEmpty ||
                         course.schedule.isNotEmpty) ...[

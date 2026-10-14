@@ -138,6 +138,11 @@
   "studyLoadError": "Could not load courses. Try refreshing.",
   "studyStaleCourses": "Showing saved courses because the update failed.",
   "studyNoCourses": "No courses were found for this semester.",
+  "studyUnsubmittedHomework": "Unsubmitted assignments: {count}",
+  "@studyUnsubmittedHomework": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "studyHomeworkLoadError": "Could not load assignment counts. Try refreshing.",
   "lifeTitle": "Life",
   "lifeDescription": "Campus life services and everyday tools will appear here."
 }

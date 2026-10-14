@@ -30,17 +30,24 @@ final class LearnHomeworkService {
 
   final TsinghuaAuthClient _authClient;
 
+  /// Fetches only Wj totals for course reminders, without graded-list requests.
+  Future<Map<String, int>> fetchUnsubmittedCounts(
+    LearnCourseCatalog catalog,
+  ) async {
+    _validateCatalog(catalog);
+    if (catalog.courses.isEmpty) return const {};
+    final csrf = await LearnPlatformSession(_authClient).open();
+    final counts = <String, int>{};
+    for (final course in catalog.courses) {
+      counts[course.id] = await _fetchCount(course.id, 'zyListWj', csrf);
+    }
+    return Map.unmodifiable(counts);
+  }
+
   Future<List<LearnCourseHomework>> fetchCourses(
     LearnCourseCatalog catalog,
   ) async {
-    if (_authClient.session?.userId != catalog.userId) {
-      throw StateError('Restore the course catalog account first.');
-    }
-    for (final course in catalog.courses) {
-      if (course.id.isEmpty) {
-        throw const FormatException('A course has no learning platform ID.');
-      }
-    }
+    _validateCatalog(catalog);
     if (catalog.courses.isEmpty) return const [];
     final csrf = await LearnPlatformSession(_authClient).open();
     final result = <LearnCourseHomework>[];
@@ -62,6 +69,17 @@ final class LearnHomeworkService {
       );
     }
     return result;
+  }
+
+  void _validateCatalog(LearnCourseCatalog catalog) {
+    if (_authClient.session?.userId != catalog.userId) {
+      throw StateError('Restore the course catalog account first.');
+    }
+    for (final course in catalog.courses) {
+      if (course.id.isEmpty) {
+        throw const FormatException('A course has no learning platform ID.');
+      }
+    }
   }
 
   Future<int> _fetchCount(String courseId, String endpoint, String csrf) async {

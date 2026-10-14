@@ -138,6 +138,8 @@
   "studyLoadError": "无法加载课程，请尝试刷新。",
   "studyStaleCourses": "更新失败，正在显示已保存的课程。",
   "studyNoCourses": "本学期暂无课程。",
+  "studyUnsubmittedHomework": "未交作业：{count} 份",
+  "studyHomeworkLoadError": "未交作业数量加载失败，请刷新重试。",
   "lifeTitle": "生活",
   "lifeDescription": "校园生活服务和日常工具将在这里显示。"
 }

@@ -50,6 +50,9 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _coursesLoading = true;
   bool _coursesStale = false;
   int _courseRequestGeneration = 0;
+  Map<String, int> _unsubmittedHomework = const {};
+  bool _homeworkLoading = false;
+  bool _homeworkFailed = false;
 
   @override
   void initState() {
@@ -75,7 +78,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _loadCourses({bool forceRefresh = false}) async {
     final semester = AcademicSemester.forDate(DateTime.now());
     if (_courseRequestGeneration > 0 &&
-        _coursesLoading &&
+        (_coursesLoading || _homeworkLoading) &&
         !forceRefresh &&
         semester == _semester) {
       return;
@@ -86,6 +89,9 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _semester = semester;
       _coursesLoading = true;
       _courseError = null;
+      _unsubmittedHomework = const {};
+      _homeworkLoading = false;
+      _homeworkFailed = false;
     });
     try {
       final store = widget.sessionStore ?? SecureAuthSessionStore();
@@ -126,9 +132,13 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _courseCatalog = catalog;
         _coursesStale = service.lastSource == LearnCourseSource.staleCache;
         _coursesLoading = false;
+        _homeworkLoading = true;
       });
+      await _loadHomework(client, credentials, session, catalog, generation);
     } on TwoFactorInteractionRequired {
-      if (mounted) widget.onSessionExpired();
+      if (mounted && generation == _courseRequestGeneration) {
+        widget.onSessionExpired();
+      }
     } catch (error) {
       debugPrint('[study] course loading failed type=${error.runtimeType}');
       if (!mounted || generation != _courseRequestGeneration) return;
@@ -136,6 +146,51 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _courseError = error;
         _coursesStale = _courseCatalog?.semester == semester;
         _coursesLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadHomework(
+    TsinghuaAuthClient client,
+    AuthCredentialStore? credentials,
+    AuthSession session,
+    LearnCourseCatalog catalog,
+    int generation,
+  ) async {
+    try {
+      final service = LearnHomeworkService(client);
+      Map<String, int> counts;
+      try {
+        counts = await service
+            .fetchUnsubmittedCounts(catalog)
+            .timeout(_LOAD_TIMEOUT);
+      } on Object catch (error) {
+        if (error is! PortalCsrfUnavailable &&
+            error is! PortalSessionRejected) {
+          rethrow;
+        }
+        if (!mounted || generation != _courseRequestGeneration) return;
+        if (!await _reconnectCourses(client, credentials, session)) rethrow;
+        counts = await service
+            .fetchUnsubmittedCounts(catalog)
+            .timeout(_LOAD_TIMEOUT);
+      }
+      if (!mounted || generation != _courseRequestGeneration) return;
+      setState(() {
+        _unsubmittedHomework = counts;
+        _homeworkLoading = false;
+      });
+    } on TwoFactorInteractionRequired {
+      if (mounted && generation == _courseRequestGeneration) {
+        setState(() => _homeworkLoading = false);
+        widget.onSessionExpired();
+      }
+    } on Object catch (error) {
+      debugPrint('[study] homework loading failed type=${error.runtimeType}');
+      if (!mounted || generation != _courseRequestGeneration) return;
+      setState(() {
+        _homeworkLoading = false;
+        _homeworkFailed = true;
       });
     }
   }
@@ -249,6 +304,9 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   isLoading: _coursesLoading,
                   isStale: _coursesStale,
                   error: _courseError,
+                  unsubmittedHomework: _unsubmittedHomework,
+                  homeworkLoading: _homeworkLoading,
+                  homeworkFailed: _homeworkFailed,
                   onRefresh: () => unawaited(_loadCourses(forceRefresh: true)),
                 ),
               ),

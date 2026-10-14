@@ -403,6 +403,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyNoCourses => '本学期暂无课程。';
 
   @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作业：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试。';
+
+  @override
   String get lifeTitle => '生活';
 
   @override
@@ -808,6 +816,14 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get studyNoCourses => '本学期暂无课程。';
 
   @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作业：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试。';
+
+  @override
   String get lifeTitle => '生活';
 
   @override
@@ -1211,6 +1227,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get studyNoCourses => '本學期暫無課程。';
+
+  @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作業：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作業數量載入失敗，請重新整理。';
 
   @override
   String get lifeTitle => '生活';
