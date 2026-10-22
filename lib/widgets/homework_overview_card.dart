@@ -10,6 +10,7 @@ import '../homework/homework_presentation.dart';
 import '../homework/homework_urgency.dart';
 import '../homework/homework_theme.dart';
 import 'scrolling_badge.dart';
+import 'flat_tile_style.dart';
 import '../l10n/generated/app_localizations.dart';
 
 /// Presentation of the existing snapshot. No network, cache, or submission
@@ -208,7 +209,7 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
                       children: [
                         for (final item in entry.value)
                           FTile.raw(
-                            style: homeworkTileStyle(theme),
+                            style: flatTileStyle(theme),
                             key: ValueKey(
                               'homework-${item.course.id}-${item.id}',
                             ),
@@ -279,7 +280,7 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
                     FTile.raw(
-                      style: homeworkTileStyle(theme),
+                      style: flatTileStyle(theme),
                       child: Padding(
                         padding: theme.style.pagePadding,
                         child: _AssignmentContent(

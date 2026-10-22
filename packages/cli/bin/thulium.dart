@@ -11,6 +11,7 @@ import 'package:thulium_cli/cli_learn_course_cache_store.dart';
 import 'package:thulium_cli/cli_session_reconnect.dart';
 import 'package:thulium_cli/learn_course_formatter.dart';
 import 'package:thulium_cli/learn_homework_formatter.dart';
+import 'package:thulium_cli/learn_materials_formatter.dart';
 
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
@@ -89,6 +90,35 @@ ArgParser _buildParser() {
       ..addFlag('verbose', help: 'Print safe request diagnostics.')
       ..addFlag('refresh', help: 'Refresh the course list before counting.'),
   );
+  parser.addCommand(
+    'learn-materials',
+    ArgParser()
+      ..addOption(
+        'semester',
+        abbr: 's',
+        help: 'Academic semester ID (defaults to the current semester).',
+      )
+      ..addOption(
+        'course-id',
+        help: 'List only this course from the semester catalog.',
+      )
+      ..addOption(
+        'size',
+        defaultsTo: '200',
+        help: 'Maximum materials requested per course (not a total count).',
+      )
+      ..addFlag('verbose', help: 'Print safe request diagnostics.')
+      ..addFlag(
+        'refresh',
+        help: 'Refresh the course catalog before listing materials.',
+      )
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show command usage.',
+      ),
+  );
   return parser;
 }
 
@@ -96,15 +126,37 @@ Future<void> _runCommand(ArgResults command) async {
   final name = command.command?.name;
   if (name == null) {
     stdout.writeln(
-      'Usage: thulium <login|logout|status|session|schedule|learn-courses|learn-homework>',
+      'Usage: thulium <login|logout|status|session|schedule|learn-courses|learn-homework|learn-materials>',
     );
     return;
+  }
+
+  int? materialSize;
+  if (name == 'learn-materials') {
+    if (command.command!['help'] as bool) {
+      stdout.writeln('Usage: thulium learn-materials [options]');
+      stdout.writeln(_buildParser().commands['learn-materials']!.usage);
+      return;
+    }
+    materialSize = int.tryParse(command.command!['size'] as String);
+    if (materialSize == null || materialSize <= 0) {
+      throw const FormatException('--size must be a positive integer.');
+    }
+    final courseId = command.command!['course-id'] as String?;
+    if (courseId != null && courseId.trim().isEmpty) {
+      throw const FormatException('--course-id must not be empty.');
+    }
+    if (command.command!.rest.isNotEmpty) {
+      throw const FormatException('Use --course-id to select a course.');
+    }
   }
 
   final store = CliAuthSessionStore();
   final calendarCache = CourseScheduleCache(CliCourseScheduleCacheStore());
   final learnCache = LearnCourseCache(CliLearnCourseCacheStore());
-  final promptOutput = name == 'learn-homework' ? stderr : stdout;
+  final promptOutput = name == 'learn-homework' || name == 'learn-materials'
+      ? stderr
+      : stdout;
   final client = TsinghuaAuthClient(
     sessionStore: store,
     credentialStore: store,
@@ -217,6 +269,45 @@ Future<void> _runCommand(ArgResults command) async {
                     },
                 ],
               },
+          semester: semester,
+        ),
+      );
+    case 'learn-materials':
+      final session = await client.restore();
+      if (session == null) {
+        throw StateError('Not logged in. Run `thulium login` first.');
+      }
+      final semester =
+          (command.command!['semester'] as String?) ??
+          AcademicSemester.forDate(DateTime.now());
+      final catalogService = LearnCourseCatalogService(
+        client,
+        cache: learnCache,
+      );
+      final materials = await reconnect.run(
+        commandName: 'learn-materials',
+        savedSession: session,
+        request: (isRetry) async {
+          final catalog = await catalogService.loadSemester(
+            semester,
+            forceRefresh: isRetry || command.command!['refresh'] as bool,
+          );
+          if (catalogService.lastSource == LearnCourseSource.staleCache) {
+            stderr.writeln('Update failed; using the saved course list.');
+          }
+          return LearnMaterialService(client).fetchCourses(
+            catalog,
+            courseId: command.command!['course-id'] as String?,
+            size: materialSize!,
+          );
+        },
+        shouldReconnect: (error) =>
+            error is PortalCsrfUnavailable || error is PortalSessionRejected,
+      );
+      stdout.writeln(
+        formatLearnMaterials(
+          materials,
+          studentId: session.userId,
           semester: semester,
         ),
       );
@@ -391,7 +482,8 @@ bool _verboseRequested(String commandName, ArgResults command) =>
     (commandName == 'login' ||
         commandName == 'schedule' ||
         commandName == 'learn-courses' ||
-        commandName == 'learn-homework') &&
+        commandName == 'learn-homework' ||
+        commandName == 'learn-materials') &&
     command['verbose'] as bool;
 
 void _printSchedule(CourseSchedule schedule) {

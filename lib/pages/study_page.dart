@@ -3,6 +3,8 @@ import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
+import '../widgets/flat_tile_style.dart';
+
 /// Keeps room for future study shortcuts above the Learn course list.
 final class StudyPage extends StatelessWidget {
   const StudyPage({
@@ -33,11 +35,11 @@ final class StudyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colors = context.theme.colors;
+    final theme = context.theme;
+    final colors = theme.colors;
     final locale = Localizations.localeOf(context).languageCode;
     final courseTitleStyle = context.theme.typography.md;
-    final courseMetadataStyle = context.theme.typography.sm.copyWith(
-      fontSize: 12,
+    final courseMetadataStyle = theme.typography.xs.copyWith(
       color: colors.mutedForeground,
     );
     return ListView(
@@ -114,72 +116,82 @@ final class StudyPage extends StatelessWidget {
             padding: const EdgeInsets.only(top: 20),
             child: Text(l10n.studyNoCourses),
           ),
-        for (final course in catalog?.courses ?? <LearnCourse>[])
+        if (catalog?.courses.isNotEmpty ?? false)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.secondary.withValues(alpha: 0.18),
-                border: Border.all(color: colors.border),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            locale == 'en' && course.englishName.isNotEmpty
-                                ? course.englishName
-                                : course.name,
-                            style: courseTitleStyle.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (!homeworkFailed &&
-                            (unsubmittedHomework[course.id] ?? 0) > 0) ...[
-                          const SizedBox(width: 8),
-                          Semantics(
-                            label: l10n.studyUnsubmittedHomework(
-                              unsubmittedHomework[course.id]!,
-                            ),
-                            excludeSemantics: true,
-                            child: Tooltip(
-                              message: l10n.studyUnsubmittedHomework(
-                                unsubmittedHomework[course.id]!,
-                              ),
-                              excludeFromSemantics: true,
-                              child: FBadge(
-                                key: ValueKey('homework-badge-${course.id}'),
-                                variant: FBadgeVariant.destructive,
+            padding: EdgeInsets.only(top: theme.style.pagePadding.top),
+            child: FTileGroup(
+              intrinsicWidth: false,
+              physics: const NeverScrollableScrollPhysics(),
+              divider: FItemDivider.full,
+              children: [
+                for (final course in catalog!.courses)
+                  FTile.raw(
+                    key: ValueKey('study-course-${course.id}'),
+                    style: flatTileStyle(theme),
+                    child: Padding(
+                      padding: theme.style.pagePadding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
                                 child: Text(
-                                  '${unsubmittedHomework[course.id]}',
+                                  locale == 'en' &&
+                                          course.englishName.isNotEmpty
+                                      ? course.englishName
+                                      : course.name,
+                                  style: courseTitleStyle.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
+                              if (!homeworkFailed &&
+                                  (unsubmittedHomework[course.id] ?? 0) >
+                                      0) ...[
+                                const SizedBox(width: 8),
+                                Semantics(
+                                  label: l10n.studyUnsubmittedHomework(
+                                    unsubmittedHomework[course.id]!,
+                                  ),
+                                  excludeSemantics: true,
+                                  child: Tooltip(
+                                    message: l10n.studyUnsubmittedHomework(
+                                      unsubmittedHomework[course.id]!,
+                                    ),
+                                    excludeFromSemantics: true,
+                                    child: FBadge(
+                                      key: ValueKey(
+                                        'homework-badge-${course.id}',
+                                      ),
+                                      variant: FBadgeVariant.destructive,
+                                      child: Text(
+                                        '${unsubmittedHomework[course.id]}',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
+                          if (course.teacherName.isNotEmpty ||
+                              course.schedule.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              [
+                                if (course.teacherName.isNotEmpty)
+                                  course.teacherName,
+                                if (course.schedule.isNotEmpty) course.schedule,
+                              ].join(' · '),
+                              style: courseMetadataStyle,
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    if (course.teacherName.isNotEmpty ||
-                        course.schedule.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        [
-                          if (course.teacherName.isNotEmpty) course.teacherName,
-                          if (course.schedule.isNotEmpty) course.schedule,
-                        ].join(' · '),
-                        style: courseMetadataStyle,
                       ),
-                    ],
-                  ],
-                ),
-              ),
+                    ),
+                  ),
+              ],
             ),
           ),
       ],

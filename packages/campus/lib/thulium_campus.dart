@@ -10,6 +10,7 @@ part 'src/course_schedule_cache.dart';
 part 'src/custom_plan.dart';
 part 'src/learn_courses.dart';
 part 'src/learn_homework.dart';
+part 'src/learn_materials.dart';
 part 'src/learn_homework_cache.dart';
 part 'src/learn_course_catalog.dart';
 part 'src/learn_course_cache.dart';

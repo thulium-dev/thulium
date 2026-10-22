@@ -39,15 +39,3 @@ Color badgeTextOn(FThemeData theme, Color background) {
         textContrast(a, background) >= textContrast(b, background) ? a : b,
   );
 }
-
-/// Flat resting surface; interaction feedback continues to use Forui variants.
-FItemStyleDelta homeworkTileStyle(FThemeData theme) => FItemStyleDelta.delta(
-  backgroundColor: FVariantsValueDelta.delta([
-    FVariantValueDeltaOperation.base(theme.colors.background),
-  ]),
-  contentDecoration: FVariantsDelta.delta([
-    FVariantOperation.base(
-      DecorationDelta.shapeDelta(color: theme.colors.background),
-    ),
-  ]),
-);
