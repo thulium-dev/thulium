@@ -27,7 +27,7 @@ void main() {
     await tester.pumpWidget(ThuliumApp(sessionStore: store));
     await tester.pumpAndSettle();
 
-    expect(find.text('Student events'), findsOneWidget);
+    expect(find.text('Upcoming assignments'), findsOneWidget);
     expect(find.text('Welcome, THUer'), findsNothing);
   });
 
@@ -71,9 +71,18 @@ void main() {
     await tester.pumpWidget(ThuliumApp(sessionStore: store));
     await tester.pumpAndSettle();
 
-    expect(tester.getSize(find.byType(LanguageButton)), const Size(40, 40));
-    expect(tester.getSize(find.byTooltip('Theme')), const Size(40, 40));
-    expect(tester.getSize(find.byTooltip('Settings')), const Size(40, 40));
+    expect(
+      tester.getSize(find.byType(LanguageButton)),
+      Size.square(FThemes.neutral.light.touch.style.sizes.tile),
+    );
+    expect(
+      tester.getSize(find.byTooltip('Theme')),
+      Size.square(FThemes.neutral.light.touch.style.sizes.tile),
+    );
+    expect(
+      tester.getSize(find.byTooltip('Settings')),
+      Size.square(FThemes.neutral.light.touch.style.sizes.tile),
+    );
 
     await tester.tap(find.byType(LanguageButton));
     await tester.pumpAndSettle();

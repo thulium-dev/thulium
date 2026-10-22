@@ -411,10 +411,127 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试。';
 
   @override
+  String get homeworkTitle => '近期作业';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作业更新失败，正在显示已保存的数据。';
+
+  @override
+  String get homeworkLoadError => '作业加载失败，请刷新重试。';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止时间未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京时间）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩余 $days 天 $hours 小时';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩余 $minutes 分钟';
+  }
+
+  @override
   String get lifeTitle => '生活';
 
   @override
   String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
+
+  @override
+  String get homeworkTimezone => '截止时间均为北京时间（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '刷新作业';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '刚刚更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新于 $minutes 分钟前';
+  }
+
+  @override
+  String get homeworkLoading => '正在加载作业';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本周';
+
+  @override
+  String get homeworkGroupLater => '之后';
+
+  @override
+  String get homeworkWithinHour => '1 小时内';
+
+  @override
+  String get homeworkWithinDay => '24 小时内';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天内';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京时间';
+
+  @override
+  String get homeworkNoGrade => '不计分';
+
+  @override
+  String get homeworkDetails => '作业详情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作业操作';
+
+  @override
+  String get homeworkOpenWeb => '打开网页';
+
+  @override
+  String get homeworkRemindLater => '稍后提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '标记已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作当前不可用。';
+
+  @override
+  String get homeworkActionFailed => '操作失败，请重试。';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -824,10 +941,127 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试。';
 
   @override
+  String get homeworkTitle => '近期作业';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作业更新失败，正在显示已保存的数据。';
+
+  @override
+  String get homeworkLoadError => '作业加载失败，请刷新重试。';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止时间未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京时间）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩余 $days 天 $hours 小时';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩余 $minutes 分钟';
+  }
+
+  @override
   String get lifeTitle => '生活';
 
   @override
   String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
+
+  @override
+  String get homeworkTimezone => '截止时间均为北京时间（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '刷新作业';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '刚刚更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新于 $minutes 分钟前';
+  }
+
+  @override
+  String get homeworkLoading => '正在加载作业';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本周';
+
+  @override
+  String get homeworkGroupLater => '之后';
+
+  @override
+  String get homeworkWithinHour => '1 小时内';
+
+  @override
+  String get homeworkWithinDay => '24 小时内';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天内';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京时间';
+
+  @override
+  String get homeworkNoGrade => '不计分';
+
+  @override
+  String get homeworkDetails => '作业详情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作业操作';
+
+  @override
+  String get homeworkOpenWeb => '打开网页';
+
+  @override
+  String get homeworkRemindLater => '稍后提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '标记已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作当前不可用。';
+
+  @override
+  String get homeworkActionFailed => '操作失败，请重试。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1237,8 +1471,125 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get studyHomeworkLoadError => '未交作業數量載入失敗，請重新整理。';
 
   @override
+  String get homeworkTitle => '近期作業';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作業更新失敗，正在顯示已儲存的資料。';
+
+  @override
+  String get homeworkLoadError => '作業載入失敗，請重新整理。';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止時間未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京時間）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩餘 $days 天 $hours 小時';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩餘 $hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩餘 $minutes 分鐘';
+  }
+
+  @override
   String get lifeTitle => '生活';
 
   @override
   String get lifeDescription => '校園生活服務和日常工具將在這裡顯示。';
+
+  @override
+  String get homeworkTimezone => '截止時間均為北京時間（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '重新整理作業';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '剛剛更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新於 $minutes 分鐘前';
+  }
+
+  @override
+  String get homeworkLoading => '正在載入作業';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本週';
+
+  @override
+  String get homeworkGroupLater => '之後';
+
+  @override
+  String get homeworkWithinHour => '1 小時內';
+
+  @override
+  String get homeworkWithinDay => '24 小時內';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天內';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京時間';
+
+  @override
+  String get homeworkNoGrade => '不計分';
+
+  @override
+  String get homeworkDetails => '作業詳情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作業操作';
+
+  @override
+  String get homeworkOpenWeb => '開啟網頁';
+
+  @override
+  String get homeworkRemindLater => '稍後提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '標記已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作目前無法使用。';
+
+  @override
+  String get homeworkActionFailed => '操作失敗，請重試。';
 }

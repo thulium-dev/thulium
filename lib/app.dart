@@ -6,7 +6,9 @@ import 'package:thulium_auth/thulium_auth.dart';
 import 'auth/secure_auth_session_store.dart';
 import 'auth/secure_course_schedule_cache_store.dart';
 import 'auth/secure_learn_course_cache_store.dart';
+import 'auth/secure_learn_homework_cache_store.dart';
 import 'pages/home_page.dart';
+import 'homework/homework_theme.dart';
 import 'pages/welcome_page.dart';
 
 /// The root application widget owns global locale and theme state.
@@ -93,6 +95,11 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       } catch (error) {
         debugPrint('Thulium course cache removal failed: $error');
       }
+      try {
+        await SecureLearnHomeworkCacheStore().clear();
+      } catch (error) {
+        debugPrint('Thulium homework cache removal failed: $error');
+      }
     }
 
     if (mounted) setState(() => _hasSession = false);
@@ -101,8 +108,8 @@ final class _ThuliumAppState extends State<ThuliumApp> {
 
   @override
   Widget build(BuildContext context) {
-    final lightTheme = FThemes.neutral.light.touch;
-    final darkTheme = FThemes.neutral.dark.touch;
+    final lightTheme = withHomeworkTheme(FThemes.neutral.light.touch);
+    final darkTheme = withHomeworkTheme(FThemes.neutral.dark.touch);
 
     return MaterialApp(
       title: 'Thulium',

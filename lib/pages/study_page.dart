@@ -15,6 +15,7 @@ final class StudyPage extends StatelessWidget {
     this.unsubmittedHomework = const {},
     this.homeworkLoading = false,
     this.homeworkFailed = false,
+    this.homeworkStale = false,
     super.key,
   });
 
@@ -27,6 +28,7 @@ final class StudyPage extends StatelessWidget {
   final Map<String, int> unsubmittedHomework;
   final bool homeworkLoading;
   final bool homeworkFailed;
+  final bool homeworkStale;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +84,11 @@ final class StudyPage extends StatelessWidget {
           ],
         ),
         Text(semester, style: context.theme.typography.sm),
+        if (homeworkStale)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(l10n.homeworkStale),
+          ),
         if (homeworkFailed)
           Padding(
             padding: const EdgeInsets.only(top: 8),

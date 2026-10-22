@@ -429,9 +429,134 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not load assignment counts. Try refreshing.';
 
   @override
+  String get homeworkTitle => 'Upcoming assignments';
+
+  @override
+  String get homeworkEmpty => 'All done';
+
+  @override
+  String get homeworkStale =>
+      'Could not update assignments; showing saved data.';
+
+  @override
+  String get homeworkLoadError => 'Could not load assignments. Try refreshing.';
+
+  @override
+  String get homeworkExpired => 'Overdue';
+
+  @override
+  String get homeworkUnknownDeadline => 'Deadline unavailable';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return 'Due: $deadline (Beijing time)';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '${days}d ${hours}h left';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '${hours}h ${minutes}m left';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '${minutes}m left';
+  }
+
+  @override
   String get lifeTitle => 'Life';
 
   @override
   String get lifeDescription =>
       'Campus life services and everyday tools will appear here.';
+
+  @override
+  String get homeworkTimezone => 'All deadlines use Beijing time (UTC+8).';
+
+  @override
+  String get homeworkRefresh => 'Refresh assignments';
+
+  @override
+  String get homeworkNeverUpdated => 'Not updated yet';
+
+  @override
+  String get homeworkUpdatedNow => 'Updated just now';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes ago',
+      one: '1 minute ago',
+    );
+    return 'Updated $_temp0';
+  }
+
+  @override
+  String get homeworkLoading => 'Loading assignments';
+
+  @override
+  String get homeworkGroupOverdue => 'Overdue';
+
+  @override
+  String get homeworkGroupToday => 'Today';
+
+  @override
+  String get homeworkGroupThisWeek => 'This week';
+
+  @override
+  String get homeworkGroupLater => 'Later';
+
+  @override
+  String get homeworkWithinHour => 'Within 1h';
+
+  @override
+  String get homeworkWithinDay => 'Within 24h';
+
+  @override
+  String get homeworkWithinThreeDays => 'Within 3 days';
+
+  @override
+  String get homeworkLater => 'Later';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return 'Due $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => 'Beijing time';
+
+  @override
+  String get homeworkNoGrade => 'Not graded';
+
+  @override
+  String get homeworkDetails => 'Assignment details';
+
+  @override
+  String get homeworkBack => 'Back';
+
+  @override
+  String get homeworkActions => 'Assignment actions';
+
+  @override
+  String get homeworkOpenWeb => 'Open website';
+
+  @override
+  String get homeworkRemindLater => 'Remind me later';
+
+  @override
+  String get homeworkMarkSubmitted => 'Mark as submitted';
+
+  @override
+  String get homeworkActionsUnavailable =>
+      'Actions without a connected provider are unavailable.';
+
+  @override
+  String get homeworkActionFailed => 'Action failed. Please try again.';
 }

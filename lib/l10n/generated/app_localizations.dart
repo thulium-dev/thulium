@@ -886,6 +886,66 @@ abstract class AppLocalizations {
   /// **'Could not load assignment counts. Try refreshing.'**
   String get studyHomeworkLoadError;
 
+  /// No description provided for @homeworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming assignments'**
+  String get homeworkTitle;
+
+  /// No description provided for @homeworkEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'All done'**
+  String get homeworkEmpty;
+
+  /// No description provided for @homeworkStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update assignments; showing saved data.'**
+  String get homeworkStale;
+
+  /// No description provided for @homeworkLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load assignments. Try refreshing.'**
+  String get homeworkLoadError;
+
+  /// No description provided for @homeworkExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get homeworkExpired;
+
+  /// No description provided for @homeworkUnknownDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline unavailable'**
+  String get homeworkUnknownDeadline;
+
+  /// No description provided for @homeworkDueAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Due: {deadline} (Beijing time)'**
+  String homeworkDueAt(String deadline);
+
+  /// No description provided for @homeworkRemainingDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d {hours}h left'**
+  String homeworkRemainingDays(int days, int hours);
+
+  /// No description provided for @homeworkRemainingHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h {minutes}m left'**
+  String homeworkRemainingHours(int hours, int minutes);
+
+  /// No description provided for @homeworkRemainingMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m left'**
+  String homeworkRemainingMinutes(int minutes);
+
   /// No description provided for @lifeTitle.
   ///
   /// In en, this message translates to:
@@ -897,6 +957,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Campus life services and everyday tools will appear here.'**
   String get lifeDescription;
+
+  /// No description provided for @homeworkTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'All deadlines use Beijing time (UTC+8).'**
+  String get homeworkTimezone;
+
+  /// No description provided for @homeworkRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh assignments'**
+  String get homeworkRefresh;
+
+  /// No description provided for @homeworkNeverUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not updated yet'**
+  String get homeworkNeverUpdated;
+
+  /// No description provided for @homeworkUpdatedNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated just now'**
+  String get homeworkUpdatedNow;
+
+  /// No description provided for @homeworkUpdatedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {minutes, plural, =1{1 minute ago} other{{minutes} minutes ago}}'**
+  String homeworkUpdatedMinutes(int minutes);
+
+  /// No description provided for @homeworkLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading assignments'**
+  String get homeworkLoading;
+
+  /// No description provided for @homeworkGroupOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get homeworkGroupOverdue;
+
+  /// No description provided for @homeworkGroupToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get homeworkGroupToday;
+
+  /// No description provided for @homeworkGroupThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get homeworkGroupThisWeek;
+
+  /// No description provided for @homeworkGroupLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get homeworkGroupLater;
+
+  /// No description provided for @homeworkWithinHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Within 1h'**
+  String get homeworkWithinHour;
+
+  /// No description provided for @homeworkWithinDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Within 24h'**
+  String get homeworkWithinDay;
+
+  /// No description provided for @homeworkWithinThreeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Within 3 days'**
+  String get homeworkWithinThreeDays;
+
+  /// No description provided for @homeworkLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get homeworkLater;
+
+  /// No description provided for @homeworkDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {deadline}'**
+  String homeworkDeadline(String deadline);
+
+  /// No description provided for @homeworkRowTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Beijing time'**
+  String get homeworkRowTimezone;
+
+  /// No description provided for @homeworkNoGrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Not graded'**
+  String get homeworkNoGrade;
+
+  /// No description provided for @homeworkDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignment details'**
+  String get homeworkDetails;
+
+  /// No description provided for @homeworkBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get homeworkBack;
+
+  /// No description provided for @homeworkActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignment actions'**
+  String get homeworkActions;
+
+  /// No description provided for @homeworkOpenWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Open website'**
+  String get homeworkOpenWeb;
+
+  /// No description provided for @homeworkRemindLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me later'**
+  String get homeworkRemindLater;
+
+  /// No description provided for @homeworkMarkSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as submitted'**
+  String get homeworkMarkSubmitted;
+
+  /// No description provided for @homeworkActionsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions without a connected provider are unavailable.'**
+  String get homeworkActionsUnavailable;
+
+  /// No description provided for @homeworkActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action failed. Please try again.'**
+  String get homeworkActionFailed;
 }
 
 class _AppLocalizationsDelegate

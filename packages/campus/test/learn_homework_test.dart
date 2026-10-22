@@ -7,6 +7,70 @@ import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
+  test(
+    'fetches complete reminder details and interprets deadlines in China time',
+    () async {
+      final sizes = <String>[];
+      final deadline = DateTime.utc(2026, 10, 21, 15, 59);
+      final auth = await _auth((request) {
+        final size = request.url.queryParameters['size']!;
+        sizes.add(size);
+        final empty = request.url.queryParameters['wlkcid'] == 'empty-course';
+        final count = empty ? 0 : 7;
+        final rows = empty
+            ? []
+            : List.generate(
+                size == '5' ? 5 : 7,
+                (index) => {
+                  'xszyid': 'assignment-$index',
+                  'bt': 'Assignment $index',
+                  'wlkcid': 'course-id',
+                  'xh': 'test-student',
+                  'jzsj': index == 0 ? deadline.millisecondsSinceEpoch : null,
+                  'jzsjStr': index == 1 ? '2026-10-21 23:59' : '',
+                },
+              );
+        return http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {'iTotalRecords': '$count', 'aaData': rows},
+          }),
+          200,
+          request: request,
+        );
+      });
+      final snapshot = await LearnHomeworkService(
+        auth,
+      ).fetchUnsubmittedHomework(_catalog);
+      expect(snapshot.counts, {'course-id': 7, 'empty-course': 0});
+      expect(snapshot.assignments, hasLength(7));
+      expect(snapshot.assignments[0].deadline, deadline);
+      expect(snapshot.assignments[1].deadline, deadline);
+      expect(snapshot.assignments[2].deadline, isNull);
+      expect(sizes, ['5', '7', '5']);
+    },
+  );
+
+  test(
+    'a still-truncated assignment response is not presented as complete',
+    () async {
+      final auth = await _auth(
+        (request) => http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {'iTotalRecords': '7', 'aaData': []},
+          }),
+          200,
+          request: request,
+        ),
+      );
+      await expectLater(
+        LearnHomeworkService(auth).fetchUnsubmittedHomework(_catalog),
+        throwsFormatException,
+      );
+    },
+  );
+
   test('course reminders request only unsubmitted totals', () async {
     final requests = <http.Request>[];
     final auth = await _auth((request) {

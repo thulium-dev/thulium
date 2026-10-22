@@ -87,6 +87,12 @@ come from the server's total-record metadata, not the first five returned rows.
 Diagnostics and reconnection messages go to stderr, keeping stdout valid YAML.
 If any count cannot be fetched, the command fails instead of reporting it as zero.
 
+The app persists unsubmitted assignments and course badge counts in secure
+storage, scoped to the account and semester. Saved data appears while a live
+update runs; an offline or failed update retains it with a notice. Every app
+entry, resume, and manual refresh requests current assignments. Logout clears
+the snapshot. Deadlines are stored as UTC instants and countdowns are recalculated.
+
 When a protected CLI request reports an expired session, the CLI tries the
 saved credentials, then offers an interactive sign-in if needed. A successful
 reconnection retries the original request once.
