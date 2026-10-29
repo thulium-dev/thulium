@@ -115,6 +115,94 @@ final class LearnMaterialService {
     return List.unmodifiable(result);
   }
 
+  /// Downloads all pages of the PDF representation.
+  Future<List<int>> downloadPdf({
+    required String fileId,
+    required String courseId,
+  }) => _downloadPdf(fileId: fileId, courseId: courseId, pageType: 'all');
+
+  /// Downloads the cover preview for use by clients such as the app.
+  Future<List<int>> downloadPdfCover({
+    required String fileId,
+    required String courseId,
+  }) => _downloadPdf(fileId: fileId, courseId: courseId, pageType: 'first');
+
+  Future<List<int>> _downloadPdf({
+    required String fileId,
+    required String courseId,
+    required String pageType,
+  }) async {
+    final idPattern = RegExp(r'^[A-Za-z0-9_-]+$');
+    if (!idPattern.hasMatch(fileId) || !idPattern.hasMatch(courseId)) {
+      throw ArgumentError(
+        'File and course IDs must contain only letters, numbers, underscores or hyphens.',
+      );
+    }
+    await LearnPlatformSession(_authClient).open();
+    final target = Uri(
+      scheme: 'https',
+      host: _LEARN_HOST,
+      pathSegments: [
+        'f',
+        'wlxt',
+        'kc',
+        'wj_wjb',
+        'student',
+        'downloadPdfStream',
+        pageType,
+        fileId,
+        courseId,
+        'mk_kcwj',
+      ],
+    );
+    final referer = Uri.https(
+      _LEARN_HOST,
+      '/f/wlxt/kc/wj_wjb/student/beforePlay',
+      {
+        'sfgk': '0',
+        'wjid': fileId,
+        'mk': 'mk_kcwj',
+        'pageType': pageType,
+        'browser': '-1',
+      },
+    );
+    final response = await _authClient.getAuthenticatedBytes(
+      TsinghuaWebVpnRedirect.forTarget(target),
+      referer: TsinghuaWebVpnRedirect.forTarget(referer),
+    );
+    final bytes = response.bodyBytes;
+    final signature = latin1.decode(bytes.take(1024).toList());
+    final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+    final isPdf =
+        RegExp(r'%PDF-[12]\.\d').hasMatch(signature) &&
+        !contentType.startsWith('text/html') &&
+        !contentType.contains('json');
+    final preview = utf8.decode(
+      bytes.take(4096).toList(),
+      allowMalformed: true,
+    );
+    if (_isLearnSignInResponse(
+      response.statusCode,
+      response.request?.url,
+      isPdf ? '' : preview,
+    )) {
+      // Do not log response previews here: a successful binary response may
+      // contain private course content rather than an authentication page.
+      throw const PortalSessionRejected();
+    }
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Material download failed: HTTP ${response.statusCode}.',
+      );
+    }
+    if (!isPdf) {
+      throw const FormatException(
+        'Learn did not return a PDF. The file may not support PDF preview or the session may have expired.',
+      );
+    }
+    return bytes;
+  }
+
   Future<List<LearnMaterial>> _fetch(
     String courseId,
     int size,

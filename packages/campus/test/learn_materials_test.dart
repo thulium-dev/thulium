@@ -8,6 +8,164 @@ import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
   test(
+    'downloads the captured PDF route with its viewer referer and exact bytes',
+    () async {
+      final bytes = [
+        ...utf8.encode(
+          '%PDF-1.7\n% sm2publickey is document content, not a login page\n',
+        ),
+        ...List.generate(256, (index) => index),
+        ...utf8.encode('\n%%EOF'),
+      ];
+      final auth = await _auth((request) {
+        expect(
+          request.url.path,
+          endsWith(
+            '/f/wlxt/kc/wj_wjb/student/downloadPdfStream/all/file-1/physics/mk_kcwj',
+          ),
+        );
+        expect(request.url.host, TsinghuaWebVpnRedirect.WEBVPN_HOST);
+        final referer = Uri.parse(request.headers['referer']!);
+        expect(referer.path, endsWith('/f/wlxt/kc/wj_wjb/student/beforePlay'));
+        expect(referer.queryParameters, {
+          'sfgk': '0',
+          'wjid': 'file-1',
+          'mk': 'mk_kcwj',
+          'pageType': 'all',
+          'browser': '-1',
+        });
+        expect(request.headers['cookie'], contains('JSESSIONID=learn-session'));
+        return http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'application/pdf'},
+          request: request,
+        );
+      });
+      expect(
+        await LearnMaterialService(
+          auth,
+        ).downloadPdf(fileId: 'file-1', courseId: 'physics'),
+        bytes,
+      );
+    },
+  );
+
+  test(
+    'cover download retains the first-page route and viewer referer',
+    () async {
+      final bytes = utf8.encode('%PDF-1.7\ncover\n%%EOF');
+      final auth = await _auth((request) {
+        expect(
+          request.url.path,
+          endsWith('/downloadPdfStream/first/file-1/physics/mk_kcwj'),
+        );
+        expect(
+          Uri.parse(request.headers['referer']!).queryParameters['pageType'],
+          'first',
+        );
+        return http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'application/pdf'},
+          request: request,
+        );
+      });
+      expect(
+        await LearnMaterialService(
+          auth,
+        ).downloadPdfCover(fileId: 'file-1', courseId: 'physics'),
+        bytes,
+      );
+    },
+  );
+
+  test(
+    'download session errors are reconnectable, not saved as PDFs',
+    () async {
+      for (final status in [200, 401, 403]) {
+        final auth = await _auth(
+          (request) => http.Response(
+            '<html>sm2publickey</html>',
+            status,
+            headers: {'content-type': 'text/html'},
+            request: request,
+          ),
+        );
+        await expectLater(
+          LearnMaterialService(
+            auth,
+          ).downloadPdf(fileId: 'file-1', courseId: 'physics'),
+          throwsA(isA<PortalSessionRejected>()),
+        );
+      }
+    },
+  );
+
+  test(
+    'empty, non-PDF, misleading HTML, partial and failed downloads are rejected',
+    () async {
+      for (final body in [
+        '',
+        '<html>Unavailable</html>',
+        '{"error":"PDF unavailable"}',
+      ]) {
+        final auth = await _auth(
+          (request) => http.Response(body, 200, request: request),
+        );
+        await expectLater(
+          LearnMaterialService(
+            auth,
+          ).downloadPdf(fileId: 'file-1', courseId: 'physics'),
+          throwsFormatException,
+        );
+      }
+      final html = await _auth(
+        (request) => http.Response(
+          '<html>%PDF-1.7 not available</html>',
+          200,
+          headers: {'content-type': 'text/html'},
+          request: request,
+        ),
+      );
+      await expectLater(
+        LearnMaterialService(
+          html,
+        ).downloadPdf(fileId: 'file-1', courseId: 'physics'),
+        throwsFormatException,
+      );
+      for (final status in [206, 404, 500]) {
+        final auth = await _auth(
+          (request) => http.Response('%PDF-1.7', status, request: request),
+        );
+        await expectLater(
+          LearnMaterialService(
+            auth,
+          ).downloadPdf(fileId: 'file-1', courseId: 'physics'),
+          throwsStateError,
+        );
+      }
+    },
+  );
+
+  test('invalid download IDs fail before opening a Learn session', () async {
+    final auth = await _auth(
+      (_) => throw StateError('Unexpected network access'),
+      onLanding: () => fail('Unexpected roaming'),
+    );
+    for (final id in ['', '../file', 'file?x=1', 'file/other']) {
+      await expectLater(
+        LearnMaterialService(auth).downloadPdf(fileId: id, courseId: 'physics'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        LearnMaterialService(auth).downloadPdf(fileId: 'file-1', courseId: id),
+        throwsArgumentError,
+      );
+    }
+  });
+
+  test(
     'requests the captured route with shared roaming, scoped cookies and limit',
     () async {
       final requests = <http.Request>[];

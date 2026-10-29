@@ -12,6 +12,7 @@ import 'package:thulium_cli/cli_session_reconnect.dart';
 import 'package:thulium_cli/learn_course_formatter.dart';
 import 'package:thulium_cli/learn_homework_formatter.dart';
 import 'package:thulium_cli/learn_materials_formatter.dart';
+import 'package:thulium_cli/material_download_file.dart';
 
 // Uppercase snake case is the project convention for named constants.
 // ignore_for_file: constant_identifier_names
@@ -93,6 +94,7 @@ ArgParser _buildParser() {
   parser.addCommand(
     'learn-materials',
     ArgParser()
+      ..addCommand('download', _materialDownloadParser())
       ..addOption(
         'semester',
         abbr: 's',
@@ -119,42 +121,103 @@ ArgParser _buildParser() {
         help: 'Show command usage.',
       ),
   );
+  parser.addCommand(
+    'learn-materials-cover',
+    _materialDownloadParser(cover: true)
+      ..addCommand('download', _materialDownloadParser(cover: true)),
+  );
   return parser;
 }
+
+ArgParser _materialDownloadParser({bool cover = false}) => ArgParser()
+  ..addOption('file-id', help: 'File ID from learn-materials output.')
+  ..addOption('course-id', help: 'Course ID that owns the file.')
+  ..addOption(
+    'output',
+    abbr: 'o',
+    help: 'Destination path (defaults to FILE_ID${cover ? '-cover' : ''}.pdf).',
+  )
+  ..addFlag('force', negatable: false, help: 'Replace an existing output file.')
+  ..addFlag('verbose', help: 'Print safe request diagnostics.')
+  ..addFlag('help', abbr: 'h', negatable: false, help: 'Show download usage.');
 
 Future<void> _runCommand(ArgResults command) async {
   final name = command.command?.name;
   if (name == null) {
     stdout.writeln(
-      'Usage: thulium <login|logout|status|session|schedule|learn-courses|learn-homework|learn-materials>',
+      'Usage: thulium <login|logout|status|session|schedule|learn-courses|learn-homework|learn-materials|learn-materials-cover>',
     );
     return;
   }
 
   int? materialSize;
-  if (name == 'learn-materials') {
-    if (command.command!['help'] as bool) {
-      stdout.writeln('Usage: thulium learn-materials [options]');
-      stdout.writeln(_buildParser().commands['learn-materials']!.usage);
+  final isMaterialDownload =
+      name == 'learn-materials-cover' ||
+      (name == 'learn-materials' &&
+          command.command!.command?.name == 'download');
+  final materialOptions = isMaterialDownload
+      ? command.command!.command ?? command.command!
+      : command.command!;
+  String? materialOutput;
+  if (name == 'learn-materials' || name == 'learn-materials-cover') {
+    if (materialOptions['help'] as bool ||
+        (isMaterialDownload && command.command!['help'] as bool)) {
+      final parser = _buildParser().commands[name]!;
+      stdout.writeln(
+        'Usage: thulium $name${command.command!.command?.name == 'download' ? ' download' : ''} [options]',
+      );
+      stdout.writeln(
+        command.command!.command?.name == 'download'
+            ? parser.commands['download']!.usage
+            : parser.usage,
+      );
       return;
     }
-    materialSize = int.tryParse(command.command!['size'] as String);
-    if (materialSize == null || materialSize <= 0) {
-      throw const FormatException('--size must be a positive integer.');
+    if (isMaterialDownload) {
+      for (final name in ['file-id', 'course-id']) {
+        final value = materialOptions[name] as String?;
+        if (value == null || !RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(value)) {
+          throw FormatException(
+            '--$name is required and must be a valid Learn ID.',
+          );
+        }
+      }
+      materialOutput =
+          materialOptions['output'] as String? ??
+          '${materialOptions['file-id']}${name == 'learn-materials-cover' ? '-cover' : ''}.pdf';
+      if (materialOutput.trim().isEmpty) {
+        throw const FormatException('--output must not be empty.');
+      }
+      if (!(materialOptions['force'] as bool) &&
+          await FileSystemEntity.type(materialOutput, followLinks: false) !=
+              FileSystemEntityType.notFound) {
+        throw FileSystemException(
+          'Output already exists. Use --force to replace it.',
+          materialOutput,
+        );
+      }
+    } else {
+      materialSize = int.tryParse(materialOptions['size'] as String);
+      if (materialSize == null || materialSize <= 0) {
+        throw const FormatException('--size must be a positive integer.');
+      }
+      final courseId = materialOptions['course-id'] as String?;
+      if (courseId != null && courseId.trim().isEmpty) {
+        throw const FormatException('--course-id must not be empty.');
+      }
     }
-    final courseId = command.command!['course-id'] as String?;
-    if (courseId != null && courseId.trim().isEmpty) {
-      throw const FormatException('--course-id must not be empty.');
-    }
-    if (command.command!.rest.isNotEmpty) {
-      throw const FormatException('Use --course-id to select a course.');
+    if (materialOptions.rest.isNotEmpty) {
+      throw const FormatException('Specify IDs using the named options.');
     }
   }
 
   final store = CliAuthSessionStore();
   final calendarCache = CourseScheduleCache(CliCourseScheduleCacheStore());
   final learnCache = LearnCourseCache(CliLearnCourseCacheStore());
-  final promptOutput = name == 'learn-homework' || name == 'learn-materials'
+  final promptOutput =
+      name == 'learn-homework' ||
+          name == 'learn-materials' ||
+          name == 'learn-materials-cover'
       ? stderr
       : stdout;
   final client = TsinghuaAuthClient(
@@ -272,10 +335,38 @@ Future<void> _runCommand(ArgResults command) async {
           semester: semester,
         ),
       );
+    case 'learn-materials-cover':
     case 'learn-materials':
       final session = await client.restore();
       if (session == null) {
         throw StateError('Not logged in. Run `thulium login` first.');
+      }
+      if (isMaterialDownload) {
+        final bytes = await reconnect.run(
+          commandName: name == 'learn-materials-cover'
+              ? name
+              : 'learn-materials download',
+          savedSession: session,
+          request: (_) {
+            final service = LearnMaterialService(client);
+            final download = name == 'learn-materials-cover'
+                ? service.downloadPdfCover
+                : service.downloadPdf;
+            return download(
+              fileId: materialOptions['file-id'] as String,
+              courseId: materialOptions['course-id'] as String,
+            );
+          },
+          shouldReconnect: (error) =>
+              error is PortalCsrfUnavailable || error is PortalSessionRejected,
+        );
+        final saved = await saveMaterialDownload(
+          bytes,
+          outputPath: materialOutput!,
+          overwrite: materialOptions['force'] as bool,
+        );
+        stdout.writeln('Saved ${bytes.length} bytes to ${saved.path}');
+        return;
       }
       final semester =
           (command.command!['semester'] as String?) ??
@@ -478,13 +569,20 @@ Future<void> _revealSessionCookies(AuthSession session) async {
   }
 }
 
-bool _verboseRequested(String commandName, ArgResults command) =>
-    (commandName == 'login' ||
-        commandName == 'schedule' ||
-        commandName == 'learn-courses' ||
-        commandName == 'learn-homework' ||
-        commandName == 'learn-materials') &&
-    command['verbose'] as bool;
+bool _verboseRequested(String commandName, ArgResults command) {
+  if ((commandName == 'learn-materials' ||
+          commandName == 'learn-materials-cover') &&
+      command.command?.name == 'download') {
+    return command.command!['verbose'] as bool || command['verbose'] as bool;
+  }
+  return (commandName == 'login' ||
+          commandName == 'schedule' ||
+          commandName == 'learn-courses' ||
+          commandName == 'learn-homework' ||
+          (commandName == 'learn-materials' ||
+              commandName == 'learn-materials-cover')) &&
+      command['verbose'] as bool;
+}
 
 void _printSchedule(CourseSchedule schedule) {
   final courses = schedule.occurrences.toList()

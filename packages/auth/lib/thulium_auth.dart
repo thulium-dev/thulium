@@ -630,6 +630,37 @@ final class TsinghuaAuthClient {
     return _asTextResponse(response);
   }
 
+  /// Sends an authenticated GET without decoding or re-encoding file bytes.
+  /// Redirect cookies and timeout behavior match [getAuthenticated].
+  Future<http.Response> getAuthenticatedBytes(Uri uri, {Uri? referer}) async {
+    if (_session == null) {
+      throw StateError(
+        'Restore an authenticated session before making requests.',
+      );
+    }
+    if (!_isTsinghuaHost(uri.host) ||
+        (referer != null && !_isTsinghuaHost(referer.host))) {
+      throw ArgumentError('Only Tsinghua hosts are allowed.');
+    }
+    final requestUri =
+        uri.host.toLowerCase() == TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_HOST
+        ? TsinghuaWebVpnRedirect.forTarget(uri)
+        : uri;
+    final response = await _request(
+      requestUri,
+      decodeBody: false,
+      tsinghuaRedirectsOnly: true,
+      referer: referer,
+    );
+    await _persistSession();
+    return http.Response.bytes(
+      response.bytes,
+      response.statusCode,
+      headers: response.headers,
+      request: http.Request('GET', response.uri),
+    );
+  }
+
   /// Establishes a WebVPN session for a campus service using its roaming ID.
   ///
   /// The returned response is the target service's landing page. Only the
@@ -1275,6 +1306,9 @@ final class TsinghuaAuthClient {
     Uri uri, {
     String method = 'GET',
     Map<String, String>? form,
+    bool decodeBody = true,
+    bool tsinghuaRedirectsOnly = false,
+    Uri? referer,
   }) async {
     var current = uri;
     var currentMethod = method;
@@ -1291,6 +1325,7 @@ final class TsinghuaAuthClient {
         ..followRedirects = false
         ..headers['User-Agent'] = _USER_AGENT
         ..headers['Cookie'] = _cookieHeaderForRequest(current);
+      if (referer != null) request.headers['Referer'] = referer.toString();
       if (currentForm != null) {
         request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         request.bodyFields = currentForm;
@@ -1316,11 +1351,13 @@ final class TsinghuaAuthClient {
         );
         rethrow;
       }
-      final body = _decodeResponseBody(
-        bytes,
-        response.headers['content-type'],
-        current,
-      );
+      final body = decodeBody
+          ? _decodeResponseBody(
+              bytes,
+              response.headers['content-type'],
+              current,
+            )
+          : '';
       _captureResponseCookies(current, response.headers['set-cookie']);
       final location = response.headers['location'];
       trace?.call(
@@ -1332,9 +1369,18 @@ final class TsinghuaAuthClient {
       if (location == null ||
           response.statusCode < 300 ||
           response.statusCode >= 400) {
-        return _Response(response.statusCode, response.headers, body, current);
+        return _Response(
+          response.statusCode,
+          response.headers,
+          body,
+          current,
+          bytes,
+        );
       }
       final redirected = current.resolveUri(Uri.parse(location));
+      if (tsinghuaRedirectsOnly && !_isTsinghuaHost(redirected.host)) {
+        throw StateError('The file download redirected outside Tsinghua.');
+      }
       // The academic calendar can redirect to an absolute origin URL. Keep
       // that hop in the same WebVPN session as the original calendar request.
       current =
@@ -1477,7 +1523,16 @@ final class TsinghuaAuthClient {
 }
 
 final class _Response {
-  const _Response(this.statusCode, this.headers, this.body, this.uri);
+  const _Response(
+    this.statusCode,
+    this.headers,
+    this.body,
+    this.uri,
+    this.bytes,
+  );
+
+  /// Unmodified bytes for authenticated binary downloads.
+  final List<int> bytes;
 
   /// HTTP status returned by the identity or WebVPN endpoint.
   final int statusCode;
