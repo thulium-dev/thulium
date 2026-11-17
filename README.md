@@ -61,6 +61,19 @@ it to a project file. Linux uses Secret Service and macOS uses Keychain. Other
 platforms will report that a secure session backend is not available until one
 is added.
 
+On Linux, the CLI requires `secret-tool` (provided by `libsecret`, included in
+the Nix development shell) and an unlocked Secret Service keyring in the current
+desktop session. On NixOS, if no Secret Service provider is already configured,
+enable GNOME Keyring in your system configuration:
+
+```nix
+services.gnome.gnome-keyring.enable = true;
+```
+
+Rebuild your NixOS configuration and log out and back in. If the keyring remains
+locked, unlock it with a keyring manager such as Seahorse. Then re-enter
+`nix develop` and run the CLI from `packages/cli`.
+
 The application and CLI cache the current academic calendar per account in
 platform secure storage. A successful fetch is reused for 24 hours; an older
 copy can be shown if the portal is temporarily unavailable. Manual refresh and
