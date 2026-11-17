@@ -176,5 +176,19 @@
   "homeworkRemindLater": "稍后提醒",
   "homeworkMarkSubmitted": "标记已提交",
   "homeworkActionsUnavailable": "未接入的操作当前不可用。",
-  "homeworkActionFailed": "操作失败，请重试。"
+  "homeworkActionFailed": "操作失败，请重试。",
+  "courseFiles": "课程文件",
+  "courseAssignments": "课程作业",
+  "courseAssignmentsScope": "未提交、已提交及已批改",
+  "courseFilesEmpty": "暂无课程文件。",
+  "courseFilesLimited": "最多显示 {count} 个文件，教学平台上可能还有更多文件。",
+  "courseContentError": "无法加载课程内容，请重试。",
+  "coursePreviewError": "无法预览，教学平台可能尚未提供此文件的 PDF 预览。请重试或前往教学平台查看。",
+  "courseSessionExpired": "登录已过期，请重新登录。",
+  "courseUnsubmitted": "未提交",
+  "courseSubmitted": "已提交，待批改",
+  "courseGraded": "已批改",
+  "courseAssignmentsEmpty": "此分类暂无作业。",
+  "coursePreviewUnsupported": "Linux 暂不支持文档预览。",
+  "sessionVerificationRequired": "更新校园数据需要重新验证，已保存的信息仍可查看。"
 }

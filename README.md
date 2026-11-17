@@ -15,6 +15,21 @@ The project currently uses Forui `0.22.x`, which is compatible with Flutter
 3.44. Forui `0.26.x` requires Flutter 3.47 or newer; upgrade the dependency
 after upgrading Flutter.
 
+## Course documents
+
+Select a course under My courses to open its files or assignments. Assignment
+lists include unsubmitted, submitted (awaiting grading), and graded sections.
+The latter two use the same sibling GET endpoints already used by the shared
+homework counts service; they still need verification with a live Learn account.
+
+Document previews use `pdfx` to render the authenticated PDF representation
+returned by Learn. Word documents are displayed through Learn's PDF conversion,
+not a local DOC/DOCX parser. Files without an available PDF representation show
+a retryable error. In-app preview supports Android, iOS, macOS, Windows and Web;
+Linux shows an unsupported-platform message. The app does not send documents
+to an additional conversion service. The native viewer may create temporary
+files in the application's private cache directory.
+
 ## Localization
 
 Application strings are stored in ARB files under `lib/l10n` and generated with:

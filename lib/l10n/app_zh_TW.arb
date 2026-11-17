@@ -176,5 +176,19 @@
   "homeworkRemindLater": "稍後提醒",
   "homeworkMarkSubmitted": "標記已提交",
   "homeworkActionsUnavailable": "未接入的操作目前無法使用。",
-  "homeworkActionFailed": "操作失敗，請重試。"
+  "homeworkActionFailed": "操作失敗，請重試。",
+  "courseFiles": "課程檔案",
+  "courseAssignments": "課程作業",
+  "courseAssignmentsScope": "未繳交、已繳交及已批改",
+  "courseFilesEmpty": "暫無課程檔案。",
+  "courseFilesLimited": "最多顯示 {count} 個檔案，教學平台上可能還有更多檔案。",
+  "courseContentError": "無法載入課程內容，請重試。",
+  "coursePreviewError": "無法預覽，教學平台可能尚未提供此檔案的 PDF 預覽。請重試或前往教學平台查看。",
+  "courseSessionExpired": "登入已過期，請重新登入。",
+  "courseUnsubmitted": "未繳交",
+  "courseSubmitted": "已繳交，待批改",
+  "courseGraded": "已批改",
+  "courseAssignmentsEmpty": "此分類暫無作業。",
+  "coursePreviewUnsupported": "Linux 暫不支援文件預覽。",
+  "sessionVerificationRequired": "更新校園資料需要重新驗證，已儲存的資訊仍可查看。"
 }

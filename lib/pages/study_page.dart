@@ -14,6 +14,7 @@ final class StudyPage extends StatelessWidget {
     required this.isStale,
     required this.error,
     required this.onRefresh,
+    this.onCourseSelected,
     this.unsubmittedHomework = const {},
     this.homeworkLoading = false,
     this.homeworkFailed = false,
@@ -27,6 +28,7 @@ final class StudyPage extends StatelessWidget {
   final bool isStale;
   final Object? error;
   final VoidCallback onRefresh;
+  final ValueChanged<LearnCourse>? onCourseSelected;
   final Map<String, int> unsubmittedHomework;
   final bool homeworkLoading;
   final bool homeworkFailed;
@@ -127,6 +129,9 @@ final class StudyPage extends StatelessWidget {
               children: [
                 for (final course in catalog!.courses)
                   FTile.raw(
+                    onPress: onCourseSelected == null
+                        ? null
+                        : () => onCourseSelected!(course),
                     key: ValueKey('study-course-${course.id}'),
                     style: flatTileStyle(theme),
                     child: Padding(

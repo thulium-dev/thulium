@@ -17,6 +17,8 @@ import '../widgets/homework_overview_card.dart';
 import 'settings_page.dart';
 import 'calendar_page.dart';
 import 'study_page.dart';
+import 'course_detail_page.dart';
+import '../study/course_content_source.dart';
 
 /// The authenticated application shell with the primary navigation sections.
 final class HomePage extends StatefulWidget {
@@ -46,6 +48,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   int _selectedIndex = 0;
   bool _hasOpenedPlans = false;
+  bool _requiresSignIn = false;
   late String _semester;
   LearnCourseCatalog? _courseCatalog;
   Object? _courseError;
@@ -148,15 +151,22 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
       if (!mounted || generation != _courseRequestGeneration) return;
       setState(() {
+        _requiresSignIn = false;
         _courseCatalog = catalog;
         _coursesStale = service.lastSource == LearnCourseSource.staleCache;
         _coursesLoading = false;
         _homeworkLoading = true;
       });
       await _loadHomework(client, credentials, session, catalog, generation);
-    } on TwoFactorInteractionRequired {
+    } on TwoFactorInteractionRequired catch (error) {
       if (mounted && generation == _courseRequestGeneration) {
-        widget.onSessionExpired();
+        setState(() {
+          _requiresSignIn = true;
+          _courseError = error;
+          _coursesStale = _courseCatalog?.semester == semester;
+          _coursesLoading = false;
+          _homeworkLoading = false;
+        });
       }
     } catch (error) {
       debugPrint('[study] course loading failed type=${error.runtimeType}');
@@ -233,6 +243,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (!mounted || generation != _courseRequestGeneration) return;
       final fetchedAt = DateTime.now();
       setState(() {
+        _requiresSignIn = false;
         _homeworkUpdatedAt = fetchedAt;
         _unsubmittedHomework = snapshot.counts;
         _homeworkAssignments = snapshot.assignments;
@@ -254,8 +265,11 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
     } on TwoFactorInteractionRequired {
       if (mounted && generation == _courseRequestGeneration) {
-        setState(() => _homeworkLoading = false);
-        widget.onSessionExpired();
+        setState(() {
+          _requiresSignIn = true;
+          _homeworkLoading = false;
+          _homeworkFailed = true;
+        });
       }
     } on Object catch (error) {
       debugPrint('[study] homework loading failed type=${error.runtimeType}');
@@ -301,6 +315,28 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final calendarTop = headerTop + headerIconSize + headerTop;
 
     return FScaffold(
+      header: _requiresSignIn
+          ? SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: theme.style.pagePadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.sessionVerificationRequired,
+                      style: theme.typography.sm,
+                    ),
+                    SizedBox(height: theme.style.pagePadding.top),
+                    FButton(
+                      onPress: widget.onSessionExpired,
+                      child: Text(l10n.signInAction),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
       footer: AppBottomNavigation(
         index: _selectedIndex,
         onChange: (index) => setState(() {
@@ -386,6 +422,23 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       _hasHomeworkSnapshot &&
                       (_homeworkFailed || _courseError != null),
                   onRefresh: () => unawaited(_loadCourses(forceRefresh: true)),
+                  onCourseSelected: (course) {
+                    final catalog = _courseCatalog;
+                    if (catalog == null) return;
+                    Navigator.of(context).push<void>(
+                      PageRouteBuilder(
+                        pageBuilder: (_, _, _) => CourseDetailPage(
+                          course: course,
+                          source: CourseContentSource(
+                            store:
+                                widget.sessionStore ?? SecureAuthSessionStore(),
+                            catalog: catalog,
+                          ),
+                          onSessionExpired: widget.onSessionExpired,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             Positioned(

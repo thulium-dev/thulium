@@ -559,4 +559,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeworkActionFailed => 'Action failed. Please try again.';
+
+  @override
+  String get courseFiles => 'Course files';
+
+  @override
+  String get courseAssignments => 'Course assignments';
+
+  @override
+  String get courseAssignmentsScope => 'Unsubmitted, submitted and graded';
+
+  @override
+  String get courseFilesEmpty => 'No course files yet.';
+
+  @override
+  String courseFilesLimited(int count) {
+    return 'Showing up to $count files; more files may be available on Learn.';
+  }
+
+  @override
+  String get courseContentError =>
+      'Could not load course content. Please try again.';
+
+  @override
+  String get coursePreviewError =>
+      'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform.';
+
+  @override
+  String get courseSessionExpired =>
+      'Your session has expired. Sign in again to continue.';
+
+  @override
+  String get courseUnsubmitted => 'Unsubmitted';
+
+  @override
+  String get courseSubmitted => 'Submitted, awaiting grading';
+
+  @override
+  String get courseGraded => 'Graded';
+
+  @override
+  String get courseAssignmentsEmpty => 'No assignments in this category.';
+
+  @override
+  String get coursePreviewUnsupported =>
+      'Document preview is not supported on Linux yet.';
+
+  @override
+  String get sessionVerificationRequired =>
+      'Verification is required to refresh campus data. Your saved information is still available.';
 }

@@ -185,5 +185,26 @@
   "homeworkActionsUnavailable": "Actions without a connected provider are unavailable.",
   "homeworkActionFailed": "Action failed. Please try again.",
   "@homeworkUpdatedMinutes": {"placeholders": {"minutes": {"type": "int"}}},
-  "@homeworkDeadline": {"placeholders": {"deadline": {"type": "String"}}}
+  "@homeworkDeadline": {"placeholders": {"deadline": {"type": "String"}}},
+  "courseFiles": "Course files",
+  "courseAssignments": "Course assignments",
+  "courseAssignmentsScope": "Unsubmitted, submitted and graded",
+  "courseFilesEmpty": "No course files yet.",
+  "courseFilesLimited": "Showing up to {count} files; more files may be available on Learn.",
+  "courseContentError": "Could not load course content. Please try again.",
+  "coursePreviewError": "Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform.",
+  "courseSessionExpired": "Your session has expired. Sign in again to continue.",
+  "@courseFilesLimited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "courseUnsubmitted": "Unsubmitted",
+  "courseSubmitted": "Submitted, awaiting grading",
+  "courseGraded": "Graded",
+  "courseAssignmentsEmpty": "No assignments in this category.",
+  "coursePreviewUnsupported": "Document preview is not supported on Linux yet.",
+  "sessionVerificationRequired": "Verification is required to refresh campus data. Your saved information is still available."
 }

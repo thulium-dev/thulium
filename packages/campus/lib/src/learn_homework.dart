@@ -1,5 +1,14 @@
 part of '../thulium_campus.dart';
 
+enum LearnHomeworkStatus {
+  unsubmitted('zyListWj'),
+  submitted('zyListYjwg'),
+  graded('zyListYpg');
+
+  const LearnHomeworkStatus(this.endpoint);
+  final String endpoint;
+}
+
 /// Counts are taken from each status endpoint, independently of page size.
 final class LearnHomeworkCounts {
   const LearnHomeworkCounts({
@@ -60,6 +69,26 @@ final class LearnHomeworkService {
   /// Incomplete responses fail instead of silently dropping reminders.
   Future<LearnHomeworkSnapshot> fetchUnsubmittedHomework(
     LearnCourseCatalog catalog,
+  ) => _fetchHomework(catalog, 'zyListWj');
+
+  /// Uses the same sibling endpoints as [fetchCourses], expanding every list
+  /// to its reported total rather than showing only the first five entries.
+  Future<Map<LearnHomeworkStatus, List<LearnHomework>>> fetchCourseAssignments(
+    LearnCourseCatalog catalog,
+  ) async {
+    final result = <LearnHomeworkStatus, List<LearnHomework>>{};
+    for (final status in LearnHomeworkStatus.values) {
+      result[status] = (await _fetchHomework(
+        catalog,
+        status.endpoint,
+      )).assignments;
+    }
+    return Map.unmodifiable(result);
+  }
+
+  Future<LearnHomeworkSnapshot> _fetchHomework(
+    LearnCourseCatalog catalog,
+    String endpoint,
   ) async {
     _validateCatalog(catalog);
     final counts = <String, int>{};
@@ -69,10 +98,10 @@ final class LearnHomeworkService {
     }
     final csrf = await LearnPlatformSession(_authClient).open();
     for (final course in catalog.courses) {
-      var data = await _fetchData(course.id, 'zyListWj', csrf);
+      var data = await _fetchData(course.id, endpoint, csrf);
       var total = _readTotal(data);
       if (total > 5) {
-        data = await _fetchData(course.id, 'zyListWj', csrf, size: total);
+        data = await _fetchData(course.id, endpoint, csrf, size: total);
         total = _readTotal(data);
       }
       final rows = data['aaData'];

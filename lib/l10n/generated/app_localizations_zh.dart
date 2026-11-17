@@ -532,6 +532,50 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeworkActionFailed => '操作失败，请重试。';
+
+  @override
+  String get courseFiles => '课程文件';
+
+  @override
+  String get courseAssignments => '课程作业';
+
+  @override
+  String get courseAssignmentsScope => '未提交、已提交及已批改';
+
+  @override
+  String get courseFilesEmpty => '暂无课程文件。';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多显示 $count 个文件，教学平台上可能还有更多文件。';
+  }
+
+  @override
+  String get courseContentError => '无法加载课程内容，请重试。';
+
+  @override
+  String get coursePreviewError => '无法预览，教学平台可能尚未提供此文件的 PDF 预览。请重试或前往教学平台查看。';
+
+  @override
+  String get courseSessionExpired => '登录已过期，请重新登录。';
+
+  @override
+  String get courseUnsubmitted => '未提交';
+
+  @override
+  String get courseSubmitted => '已提交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分类暂无作业。';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暂不支持文档预览。';
+
+  @override
+  String get sessionVerificationRequired => '更新校园数据需要重新验证，已保存的信息仍可查看。';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -1062,6 +1106,50 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get homeworkActionFailed => '操作失败，请重试。';
+
+  @override
+  String get courseFiles => '课程文件';
+
+  @override
+  String get courseAssignments => '课程作业';
+
+  @override
+  String get courseAssignmentsScope => '未提交、已提交及已批改';
+
+  @override
+  String get courseFilesEmpty => '暂无课程文件。';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多显示 $count 个文件，教学平台上可能还有更多文件。';
+  }
+
+  @override
+  String get courseContentError => '无法加载课程内容，请重试。';
+
+  @override
+  String get coursePreviewError => '无法预览，教学平台可能尚未提供此文件的 PDF 预览。请重试或前往教学平台查看。';
+
+  @override
+  String get courseSessionExpired => '登录已过期，请重新登录。';
+
+  @override
+  String get courseUnsubmitted => '未提交';
+
+  @override
+  String get courseSubmitted => '已提交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分类暂无作业。';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暂不支持文档预览。';
+
+  @override
+  String get sessionVerificationRequired => '更新校园数据需要重新验证，已保存的信息仍可查看。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1592,4 +1680,48 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get homeworkActionFailed => '操作失敗，請重試。';
+
+  @override
+  String get courseFiles => '課程檔案';
+
+  @override
+  String get courseAssignments => '課程作業';
+
+  @override
+  String get courseAssignmentsScope => '未繳交、已繳交及已批改';
+
+  @override
+  String get courseFilesEmpty => '暫無課程檔案。';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多顯示 $count 個檔案，教學平台上可能還有更多檔案。';
+  }
+
+  @override
+  String get courseContentError => '無法載入課程內容，請重試。';
+
+  @override
+  String get coursePreviewError => '無法預覽，教學平台可能尚未提供此檔案的 PDF 預覽。請重試或前往教學平台查看。';
+
+  @override
+  String get courseSessionExpired => '登入已過期，請重新登入。';
+
+  @override
+  String get courseUnsubmitted => '未繳交';
+
+  @override
+  String get courseSubmitted => '已繳交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分類暫無作業。';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暫不支援文件預覽。';
+
+  @override
+  String get sessionVerificationRequired => '更新校園資料需要重新驗證，已儲存的資訊仍可查看。';
 }

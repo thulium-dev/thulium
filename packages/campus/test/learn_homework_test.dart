@@ -8,6 +8,52 @@ import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
   test(
+    'course assignment lists expand each status and keep statuses separate',
+    () async {
+      final requested = <String>[];
+      final auth = await _auth((request) {
+        final status = request.url.pathSegments.last;
+        requested.add(status);
+        final empty = request.url.queryParameters['wlkcid'] == 'empty-course';
+        final size = int.parse(request.url.queryParameters['size']!);
+        return http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {
+              'iTotalRecords': empty ? 0 : 6,
+              'aaData': empty
+                  ? []
+                  : List.generate(
+                      size < 6 ? size : 6,
+                      (i) => {
+                        'xszyid': '$status-$i',
+                        'bt': '$status assignment $i',
+                        'wlkcid': 'course-id',
+                        'xh': 'test-student',
+                      },
+                    ),
+            },
+          }),
+          200,
+          request: request,
+        );
+      });
+      final result = await LearnHomeworkService(
+        auth,
+      ).fetchCourseAssignments(_catalog);
+      expect(result.keys, LearnHomeworkStatus.values);
+      for (final status in LearnHomeworkStatus.values) {
+        expect(result[status], hasLength(6));
+        expect(result[status]!.first.id, '${status.endpoint}-0');
+        expect(
+          requested.where((path) => path == status.endpoint),
+          hasLength(3),
+        );
+      }
+    },
+  );
+
+  test(
     'fetches complete reminder details and interprets deadlines in China time',
     () async {
       final sizes = <String>[];

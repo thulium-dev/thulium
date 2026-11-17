@@ -1107,6 +1107,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Action failed. Please try again.'**
   String get homeworkActionFailed;
+
+  /// No description provided for @courseFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Course files'**
+  String get courseFiles;
+
+  /// No description provided for @courseAssignments.
+  ///
+  /// In en, this message translates to:
+  /// **'Course assignments'**
+  String get courseAssignments;
+
+  /// No description provided for @courseAssignmentsScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsubmitted, submitted and graded'**
+  String get courseAssignmentsScope;
+
+  /// No description provided for @courseFilesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No course files yet.'**
+  String get courseFilesEmpty;
+
+  /// No description provided for @courseFilesLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing up to {count} files; more files may be available on Learn.'**
+  String courseFilesLimited(int count);
+
+  /// No description provided for @courseContentError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load course content. Please try again.'**
+  String get courseContentError;
+
+  /// No description provided for @coursePreviewError.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform.'**
+  String get coursePreviewError;
+
+  /// No description provided for @courseSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to continue.'**
+  String get courseSessionExpired;
+
+  /// No description provided for @courseUnsubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsubmitted'**
+  String get courseUnsubmitted;
+
+  /// No description provided for @courseSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted, awaiting grading'**
+  String get courseSubmitted;
+
+  /// No description provided for @courseGraded.
+  ///
+  /// In en, this message translates to:
+  /// **'Graded'**
+  String get courseGraded;
+
+  /// No description provided for @courseAssignmentsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No assignments in this category.'**
+  String get courseAssignmentsEmpty;
+
+  /// No description provided for @coursePreviewUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Document preview is not supported on Linux yet.'**
+  String get coursePreviewUnsupported;
+
+  /// No description provided for @sessionVerificationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification is required to refresh campus data. Your saved information is still available.'**
+  String get sessionVerificationRequired;
 }
 
 class _AppLocalizationsDelegate

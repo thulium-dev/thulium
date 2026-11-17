@@ -10,6 +10,29 @@ import 'package:thulium/pages/study_page.dart';
 import 'package:thulium/widgets/language_button.dart';
 
 void main() {
+  testWidgets(
+    'background verification keeps the home until sign in is requested',
+    (tester) async {
+      final store = _VerificationRequiredStore(_savedSession());
+      await tester.pumpWidget(ThuliumApp(sessionStore: store));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upcoming assignments'), findsOneWidget);
+      expect(find.text('Welcome, THUer'), findsNothing);
+      expect(
+        find.textContaining('Verification is required to refresh campus data.'),
+        findsOneWidget,
+      );
+      expect(store.clears, 0);
+      expect(store.saved, isNotNull);
+
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome, THUer'), findsOneWidget);
+      expect(store.clears, 0);
+    },
+  );
+
   testWidgets('shows the Thulium welcome page', (tester) async {
     await tester.pumpWidget(ThuliumApp(sessionStore: MemoryAuthSessionStore()));
     await tester.pumpAndSettle();
@@ -131,3 +154,27 @@ void main() {
 
 AuthSession _savedSession() =>
     const AuthSession(userId: '2022012050', fingerprint: 'test', cookies: {});
+
+/// The first restore succeeds. A subsequent background operation requires
+/// interactive verification, reproducing the home-to-welcome regression.
+class _VerificationRequiredStore implements AuthSessionStore {
+  _VerificationRequiredStore(this.saved);
+  AuthSession? saved;
+  int _reads = 0;
+  int clears = 0;
+
+  @override
+  Future<AuthSession?> read() async {
+    if (++_reads > 1) throw const TwoFactorInteractionRequired();
+    return saved;
+  }
+
+  @override
+  Future<void> write(AuthSession session) async => saved = session;
+
+  @override
+  Future<void> clear() async {
+    clears++;
+    saved = null;
+  }
+}
