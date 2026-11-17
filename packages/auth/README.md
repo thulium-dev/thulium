@@ -27,6 +27,15 @@ authentication errors with `shouldReconnect`. Network and parsing errors do not
 trigger a credential login. A server-required second factor is propagated for
 the caller's verification flow; it does not clear saved credentials.
 
+Device trust records browser consent separately from the optional legacy
+`fingerGenPrint` token. Sign-in asks once before the first credential submission,
+so trusted-browser `singleLogin` fields are present from the WebVPN stage onward.
+Fingerprint registration still happens only after successful code verification.
+Server-provided `checkSingle` forms are followed before falling back to
+credentials, including during silent portal renewal. This allows the WebVPN and
+information-portal stages to share a verified identity without unnecessarily
+requesting another code. A genuine server challenge is still verified.
+
 Coordinate explicit sign-in and sign-out with `AuthSessionRunner.exclusive` as
 well. Apply any UI timeout outside `run`, so a timed-out caller does not release
 the queue while its underlying request can still persist cookies.

@@ -14,6 +14,7 @@ import 'dart:io' show HttpDate, HttpException;
 import 'package:dart_sm/dart_sm.dart';
 import 'package:fast_gbk/fast_gbk.dart' as gbk_codec;
 import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as html;
 
 import 'src/response_diagnostics.dart';
 import 'tsinghua_webvpn_redirect.dart';
@@ -140,6 +141,7 @@ final class AuthSession {
     required this.cookies,
     this.scopedCookies = const [],
     this.fingerGenPrint,
+    this.trustedBrowser = false,
   });
 
   /// The numeric Tsinghua account identifier used during sign-in.
@@ -166,6 +168,11 @@ final class AuthSession {
   /// This value is sensitive and must be persisted only through a secure store.
   final String? fingerGenPrint;
 
+  /// Whether the user allowed trusted-browser SSO on this installation.
+  /// This is independent of an optional legacy token; the server still decides
+  /// whether the browser is trusted and whether verification is necessary.
+  final bool trustedBrowser;
+
   /// Converts the session to a JSON-compatible map for secure persistence.
   Map<String, Object?> toJson() => {
     'userId': userId,
@@ -173,6 +180,7 @@ final class AuthSession {
     'cookies': cookies,
     'scopedCookies': scopedCookies.map((cookie) => cookie.toJson()).toList(),
     if (fingerGenPrint != null) 'fingerGenPrint': fingerGenPrint,
+    if (trustedBrowser) 'trustedBrowser': true,
   };
 
   /// Reconstructs a session previously produced by [toJson].
@@ -187,6 +195,10 @@ final class AuthSession {
         )
         .toList(growable: false),
     fingerGenPrint: json['fingerGenPrint'] as String?,
+    trustedBrowser:
+        json['trustedBrowser'] as bool? ??
+        (json['fingerGenPrint'] is String &&
+            (json['fingerGenPrint'] as String).isNotEmpty),
   );
 
   /// Encodes this session as a single string for key-value secure stores.
@@ -535,6 +547,9 @@ final class TsinghuaAuthClient {
   AuthSession? get session => _session;
   AuthSession? _session;
   String? _fingerGenPrint;
+  bool _trustedBrowser = false;
+  bool? _trustDecision;
+  bool _registeredDuringLogin = false;
 
   /// Restores the last session without asking for the password.
   Future<AuthSession?> restore() async {
@@ -552,6 +567,8 @@ final class TsinghuaAuthClient {
     }
 
     _session = restored;
+    _trustedBrowser =
+        restored.trustedBrowser || restored.fingerGenPrint?.isNotEmpty == true;
     _cookieJar.restore(restored.scopedCookies);
     return restored;
   }
@@ -864,13 +881,20 @@ final class TsinghuaAuthClient {
   }
 
   Future<void> _trySilentPortalReconnect() async {
-    if (_session == null) return;
+    final session = _session;
+    if (session == null) return;
     try {
       trace?.call('Trying portal reconnection with the saved SSO cookies.');
       await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
-      final portal = await _request(
+      var portal = await _request(
         Uri.parse('$_ID_LOGIN_FORM_URL$_INFO_ROAMING_ID'),
       );
+      portal =
+          await _trustedIdentityEntry(
+            portal,
+            fingerprint: session.fingerprint,
+          ) ??
+          portal;
       if (portal.body.contains('登录成功。正在重定向到')) {
         await _finishIdentityRedirect(portal.body, throughWebVpnOAuth: true);
       }
@@ -934,6 +958,7 @@ final class TsinghuaAuthClient {
       cookies: Map<String, String>.unmodifiable(_cookieJar.legacyValues),
       scopedCookies: _cookieJar.cookies,
       fingerGenPrint: current.fingerGenPrint,
+      trustedBrowser: current.trustedBrowser || _trustedBrowser,
     );
     _session = updated;
     await _sessionStore?.write(updated);
@@ -950,6 +975,7 @@ final class TsinghuaAuthClient {
     _cookieJar.clear();
     _session = null;
     _fingerGenPrint = null;
+    _trustedBrowser = false;
     await _sessionStore?.clear();
     return false;
   }
@@ -973,30 +999,30 @@ final class TsinghuaAuthClient {
             previousSession.fingerprint == fingerprint
         ? previousSession.fingerGenPrint
         : null;
+    _trustedBrowser =
+        previousSession != null &&
+        previousSession.userId == userId &&
+        previousSession.fingerprint == fingerprint &&
+        (previousSession.trustedBrowser ||
+            previousSession.fingerGenPrint?.isNotEmpty == true);
+    // singleLogin must be present on the initial credential submission, before
+    // WebVPN and the portal establish separate ID sessions. Ask once up front
+    // rather than first asking after verification, when that POST is too late.
+    _trustDecision =
+        _trustedBrowser ||
+        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
+    _registeredDuringLogin = false;
     // The old account must not be used to probe or silently renew the portal
     // while a new credential-based login is establishing its own session.
     _session = null;
     _cookieJar.clear();
 
     final loginPage = await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
-    final publicKey = _extract(
-      loginPage.body,
-      'id="sm2publicKey"[^>]*>([^<]+)',
-    );
-    if (publicKey == null || publicKey.isEmpty) {
-      throw StateError('The identity login public key was not found.');
-    }
-
-    var response = await _request(
-      Uri.parse(_ID_LOGIN_URL),
-      method: 'POST',
-      form: {
-        'i_user': userId,
-        'i_pass': '04${SM2.encrypt(password, publicKey)}',
-        'fingerPrint': fingerprint,
-        'fingerGenPrint': _fingerGenPrint ?? '',
-        'i_captcha': '',
-      },
+    var response = await _identityEntry(
+      loginPage,
+      userId: userId,
+      password: password,
+      fingerprint: fingerprint,
     );
 
     if (response.body.contains('二次认证')) {
@@ -1023,6 +1049,7 @@ final class TsinghuaAuthClient {
       cookies: Map<String, String>.unmodifiable(_cookieJar.legacyValues),
       scopedCookies: _cookieJar.cookies,
       fingerGenPrint: _fingerGenPrint,
+      trustedBrowser: _trustedBrowser || _trustDecision == true,
     );
     _session = result;
     await _sessionStore?.write(result);
@@ -1039,6 +1066,7 @@ final class TsinghuaAuthClient {
       _cookieJar.clear();
       _session = null;
       _fingerGenPrint = null;
+      _trustedBrowser = false;
       try {
         await _sessionStore?.clear();
       } finally {
@@ -1125,7 +1153,7 @@ final class TsinghuaAuthClient {
       // Only a well-formed server rejection reaches this branch. A caller can
       // keep its input surface open without treating network failures as a
       // rejected code.
-      trace?.call('2FA code verification was rejected; requesting another.');
+      trace?.call('2FA code verification was rejected; awaiting corrected input.');
       return false;
     });
     if (verified == null) {
@@ -1133,9 +1161,11 @@ final class TsinghuaAuthClient {
     }
     final verifiedResponse = verified!;
 
-    // Match the upstream trust-device flow: only register after explicit user
-    // consent, then retain the returned finger3 for the next CAS service stage.
-    if (await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false))) {
+    // Register only after verified 2FA and explicit consent. A legacy token is
+    // optional; browser SSO can be established without one.
+    _trustDecision ??=
+        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
+    if (_trustDecision! && !_registeredDuringLogin) {
       await _saveTrustedDevice(fingerprint);
     }
 
@@ -1176,12 +1206,17 @@ final class TsinghuaAuthClient {
         trace?.call('Trusted-device registration was not accepted.');
         return;
       }
+      // Current deployments can acknowledge registration without an object.
+      // Browser SSO is not conditional on receiving a legacy token string.
+      _trustedBrowser = true;
+      _registeredDuringLogin = true;
+      trace?.call('Trusted-device registration accepted.');
       final token = response['object'];
       if (token is String && token.isNotEmpty) {
         _fingerGenPrint = token;
         trace?.call('Trusted-device credential received.');
       } else {
-        trace?.call('Trusted-device registration returned no credential.');
+        trace?.call('Trusted-device registration needs no legacy credential.');
       }
     } catch (_) {
       // Device trust is optional; its failure must not invalidate successful
@@ -1256,17 +1291,43 @@ final class TsinghuaAuthClient {
     final loginPage = await _request(
       Uri.parse('$_ID_LOGIN_FORM_URL$_INFO_ROAMING_ID'),
     );
-    final publicKey = _extract(
-      loginPage.body,
-      'id="sm2publicKey"[^>]*>([^<]+)',
+    var response = await _identityEntry(
+      loginPage,
+      userId: userId,
+      password: password,
+      fingerprint: fingerprint,
     );
-    if (publicKey == null || publicKey.isEmpty) {
-      throw StateError(
-        'The information-portal identity public key was not found.',
-      );
+    if (response.body.contains('二次认证')) {
+      response = await _completeTwoFactor(fingerprint: fingerprint);
     }
+    _ensureIdentityLoginSucceeded(response.body);
+    await _finishIdentityRedirect(response.body, throughWebVpnOAuth: true);
+  }
 
-    var response = await _request(
+  /// Follow the server's trusted-browser entry before resubmitting a password.
+  /// Only the documented ID-origin actions may receive the supplied fields.
+  Future<_Response> _identityEntry(
+    _Response entry, {
+    required String userId,
+    required String password,
+    required String fingerprint,
+  }) async {
+    if (entry.body.contains('登录成功。正在重定向到')) return entry;
+    final trusted = await _trustedIdentityEntry(
+      entry,
+      fingerprint: fingerprint,
+    );
+    final document = html.parse(trusted?.body ?? entry.body);
+    final publicKey = document.getElementById('sm2publicKey')?.text.trim();
+    if (trusted != null && (publicKey == null || publicKey.isEmpty)) {
+      return trusted;
+    }
+    // A denied SSO entry can return a fresh credential form. Fall back once
+    // using that public key, retaining any server-required second factor.
+    if (publicKey == null || publicKey.isEmpty) {
+      throw StateError('The identity login public key was not found.');
+    }
+    return _request(
       Uri.parse(_ID_LOGIN_URL),
       method: 'POST',
       form: {
@@ -1275,13 +1336,61 @@ final class TsinghuaAuthClient {
         'fingerPrint': fingerprint,
         'fingerGenPrint': _fingerGenPrint ?? '',
         'i_captcha': '',
+        if (_trustedBrowser || _trustDecision == true) 'singleLogin': 'on',
+        if (_trustedBrowser || _trustDecision == true) 'deviceName': 'Thulium',
       },
     );
-    if (response.body.contains('二次认证')) {
-      response = await _completeTwoFactor(fingerprint: fingerprint);
+  }
+
+  Future<_Response?> _trustedIdentityEntry(
+    _Response entry, {
+    required String fingerprint,
+  }) async {
+    if (!_trustedBrowser && _trustDecision != true) return null;
+    final document = html.parse(entry.body);
+    if (document.getElementById('sm2publicKey') != null) return null;
+    final forms = document
+        .querySelectorAll('form')
+        .where(
+          (form) => form.querySelector('input[name="fingerPrint"]') != null,
+        );
+    if (forms.isEmpty) return null;
+    final form = forms.first;
+    final action = Uri.parse(
+      _ID_HOST_URL,
+    ).resolve(form.attributes['action'] ?? '');
+    if (action.scheme != 'https' ||
+        action.host != Uri.parse(_ID_HOST_URL).host ||
+        action.port != 443 ||
+        action.userInfo.isNotEmpty ||
+        !const [
+          '/do/off/ui/auth/login/checkSingle',
+          '/security_check',
+        ].contains(action.path)) {
+      throw StateError('The trusted-browser form has an unexpected action.');
     }
-    _ensureIdentityLoginSucceeded(response.body);
-    await _finishIdentityRedirect(response.body, throughWebVpnOAuth: true);
+    final fields = <String, String>{};
+    for (final input in form.querySelectorAll('input[name]')) {
+      final name = input.attributes['name']!;
+      final type = input.attributes['type']?.toLowerCase();
+      if (input.attributes.containsKey('disabled') ||
+          const [
+            'password',
+            'file',
+            'submit',
+            'button',
+            'reset',
+          ].contains(type) ||
+          (const ['checkbox', 'radio'].contains(type) &&
+              !input.attributes.containsKey('checked'))) {
+        continue;
+      }
+      fields[name] = name == 'fingerPrint'
+          ? fingerprint
+          : input.attributes['value'] ?? '';
+    }
+    trace?.call('Using the trusted-browser identity entry.');
+    return _request(action, method: 'POST', form: fields);
   }
 
   Uri _webVpnOAuthRedirectUri(Uri target) {
