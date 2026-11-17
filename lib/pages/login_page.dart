@@ -160,11 +160,13 @@ final class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      await _authClient.login(
-        userId: _studentIdController.text.trim(),
-        password: _passwordController.text,
-        fingerprint: await _sessionStore.getOrCreateFingerprint(),
-      );
+      await AuthSessionRunner.exclusive(_sessionStore, () async {
+        await _authClient.login(
+          userId: _studentIdController.text.trim(),
+          password: _passwordController.text,
+          fingerprint: await _sessionStore.getOrCreateFingerprint(),
+        );
+      });
       if (mounted) widget.onLoginSuccess();
     } catch (error) {
       // Do not expose server internals or distinguish which credential was

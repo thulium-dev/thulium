@@ -18,6 +18,8 @@ import 'package:http/http.dart' as http;
 import 'src/response_diagnostics.dart';
 import 'tsinghua_webvpn_redirect.dart';
 
+part 'src/session_runner.dart';
+
 // Entry point that starts the WebVPN OAuth flow and redirects to the identity
 // provider. Keeping these endpoints in one place makes protocol updates easier
 // to review and prevents URL fragments from being duplicated throughout the

@@ -118,49 +118,43 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
     try {
       final store = widget.sessionStore ?? SecureAuthSessionStore();
-      final credentials = store is AuthCredentialStore
-          ? store as AuthCredentialStore
-          : null;
-      final client = TsinghuaAuthClient(
-        sessionStore: store,
-        credentialStore: credentials,
-        trace: (message) => debugPrint('[auth] $message'),
-      );
-      final session = await client.restore();
-      if (session == null) throw const PortalSessionRejected();
-      await _restoreHomework(session.userId, semester, generation);
-      if (!mounted || generation != _courseRequestGeneration) return;
-      final service = LearnCourseCatalogService(
-        client,
-        cache: widget.sessionStore == null
-            ? LearnCourseCache(SecureLearnCourseCacheStore())
-            : null,
-      );
-      LearnCourseCatalog catalog;
-      try {
-        catalog = await service
-            .loadSemester(semester, forceRefresh: forceRefresh)
-            .timeout(_LOAD_TIMEOUT);
-      } on PortalCsrfUnavailable {
-        if (!await _reconnectCourses(client, credentials, session)) rethrow;
-        catalog = await service
-            .loadSemester(semester, forceRefresh: true)
-            .timeout(_LOAD_TIMEOUT);
-      } on PortalSessionRejected {
-        if (!await _reconnectCourses(client, credentials, session)) rethrow;
-        catalog = await service
-            .loadSemester(semester, forceRefresh: true)
-            .timeout(_LOAD_TIMEOUT);
-      }
+      LearnCourseSource? source;
+      final catalog =
+          await AuthSessionRunner(
+                store,
+                trace: (message) => debugPrint('[auth] $message'),
+              )
+              .run(
+                request: (client, isRetry) async {
+                  final session = client.session!;
+                  await _restoreHomework(session.userId, semester, generation);
+                  if (!mounted || generation != _courseRequestGeneration) {
+                    throw StateError('Course refresh was superseded.');
+                  }
+                  final service = LearnCourseCatalogService(
+                    client,
+                    cache: widget.sessionStore == null
+                        ? LearnCourseCache(SecureLearnCourseCacheStore())
+                        : null,
+                  );
+                  final catalog = await service.loadSemester(
+                    semester,
+                    forceRefresh: forceRefresh || isRetry,
+                  );
+                  source = service.lastSource;
+                  return catalog;
+                },
+              )
+              .timeout(_LOAD_TIMEOUT);
       if (!mounted || generation != _courseRequestGeneration) return;
       setState(() {
         _requiresSignIn = false;
         _courseCatalog = catalog;
-        _coursesStale = service.lastSource == LearnCourseSource.staleCache;
+        _coursesStale = source == LearnCourseSource.staleCache;
         _coursesLoading = false;
         _homeworkLoading = true;
       });
-      await _loadHomework(client, credentials, session, catalog, generation);
+      await _loadHomework(store, catalog, generation);
     } on TwoFactorInteractionRequired catch (error) {
       if (mounted && generation == _courseRequestGeneration) {
         setState(() {
@@ -219,30 +213,23 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _loadHomework(
-    TsinghuaAuthClient client,
-    AuthCredentialStore? credentials,
-    AuthSession session,
+    AuthSessionStore store,
     LearnCourseCatalog catalog,
     int generation,
   ) async {
     try {
-      final service = LearnHomeworkService(client);
-      LearnHomeworkSnapshot snapshot;
-      try {
-        snapshot = await service
-            .fetchUnsubmittedHomework(catalog)
-            .timeout(_LOAD_TIMEOUT);
-      } on Object catch (error) {
-        if (error is! PortalCsrfUnavailable &&
-            error is! PortalSessionRejected) {
-          rethrow;
-        }
-        if (!mounted || generation != _courseRequestGeneration) return;
-        if (!await _reconnectCourses(client, credentials, session)) rethrow;
-        snapshot = await service
-            .fetchUnsubmittedHomework(catalog)
-            .timeout(_LOAD_TIMEOUT);
-      }
+      final snapshot =
+          await AuthSessionRunner(
+                store,
+                trace: (message) => debugPrint('[auth] $message'),
+              )
+              .run(
+                expectedUserId: catalog.userId,
+                request: (client, _) => LearnHomeworkService(
+                  client,
+                ).fetchUnsubmittedHomework(catalog),
+              )
+              .timeout(_LOAD_TIMEOUT);
       if (!mounted || generation != _courseRequestGeneration) return;
       final fetchedAt = DateTime.now();
       setState(() {
@@ -255,7 +242,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       });
       try {
         await _homeworkCache?.writeFor(
-          session.userId,
+          catalog.userId,
           catalog.semester,
           snapshot,
           fetchedAt,
@@ -282,25 +269,6 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _homeworkFailed = true;
       });
     }
-  }
-
-  Future<bool> _reconnectCourses(
-    TsinghuaAuthClient client,
-    AuthCredentialStore? store,
-    AuthSession session,
-  ) async {
-    final credentials = await store?.readCredentials();
-    if (credentials == null || credentials.userId != session.userId) {
-      return false;
-    }
-    await client
-        .login(
-          userId: session.userId,
-          password: credentials.password,
-          fingerprint: session.fingerprint,
-        )
-        .timeout(_LOAD_TIMEOUT);
-    return true;
   }
 
   @override

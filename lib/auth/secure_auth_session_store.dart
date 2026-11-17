@@ -13,8 +13,13 @@ import 'package:thulium_auth/thulium_auth.dart';
 /// Persists sessions and reusable credentials under distinct secure keys.
 final class SecureAuthSessionStore
     implements AuthSessionStore, AuthCredentialStore {
-  SecureAuthSessionStore({FlutterSecureStorage? storage})
-    : _storage = storage ?? _createStorage();
+  factory SecureAuthSessionStore({FlutterSecureStorage? storage}) =>
+      storage == null ? _shared : SecureAuthSessionStore._(storage);
+
+  SecureAuthSessionStore._(this._storage);
+
+  // Every default app client must participate in the same authentication queue.
+  static final _shared = SecureAuthSessionStore._(_createStorage());
 
   // A single stable key keeps the storage format independent from the
   // platform-specific secure-storage implementation.

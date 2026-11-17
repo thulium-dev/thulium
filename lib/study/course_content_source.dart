@@ -1,44 +1,19 @@
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
-/// Each request owns its authentication client so separate screens cannot race
-/// session restoration. Authenticated document responses are never logged here.
+/// Course requests share the app's authentication queue. Document responses
+/// are not logged, and only typed session failures trigger credential recovery.
 class CourseContentSource {
   const CourseContentSource({required this.store, required this.catalog});
 
   final AuthSessionStore store;
   final LearnCourseCatalog catalog;
 
-  Future<T> _request<T>(
-    Future<T> Function(TsinghuaAuthClient) operation,
-  ) async {
-    final credentials = store is AuthCredentialStore
-        ? store as AuthCredentialStore
-        : null;
-    final client = TsinghuaAuthClient(
-      sessionStore: store,
-      credentialStore: credentials,
-    );
-    final session = await client.restore();
-    if (session == null || session.userId != catalog.userId) {
-      throw const PortalSessionRejected();
-    }
-    try {
-      return await operation(client);
-    } on Object catch (error) {
-      if (error is! PortalSessionRejected && error is! PortalCsrfUnavailable) {
-        rethrow;
-      }
-      final saved = await credentials?.readCredentials();
-      if (saved == null || saved.userId != session.userId) rethrow;
-      await client.login(
-        userId: session.userId,
-        password: saved.password,
-        fingerprint: session.fingerprint,
+  Future<T> _request<T>(Future<T> Function(TsinghuaAuthClient) operation) =>
+      AuthSessionRunner(store).run(
+        expectedUserId: catalog.userId,
+        request: (client, _) => operation(client),
       );
-      return operation(client);
-    }
-  }
 
   LearnCourseCatalog _single(LearnCourse course) => LearnCourseCatalog(
     userId: catalog.userId,

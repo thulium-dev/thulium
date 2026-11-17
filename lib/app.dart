@@ -55,17 +55,25 @@ final class _ThuliumAppState extends State<ThuliumApp> {
 
   Future<bool> _logout() async {
     final sessionStore = widget.sessionStore ?? SecureAuthSessionStore();
+    return AuthSessionRunner.exclusive(
+      sessionStore,
+      () => _logoutStoredSession(sessionStore),
+    );
+  }
+
+  Future<bool> _logoutStoredSession(AuthSessionStore sessionStore) async {
     try {
       // Restore the persisted cookies before calling logout so the identity
       // service can invalidate the active remote session as well.
       final client = TsinghuaAuthClient(
         sessionStore: sessionStore,
+        requestTimeout: const Duration(seconds: 8),
         credentialStore: sessionStore is AuthCredentialStore
             ? sessionStore as AuthCredentialStore
             : null,
       );
       await client.restore();
-      await client.logout().timeout(const Duration(seconds: 8));
+      await client.logout();
     } catch (error) {
       // Logout should still work offline: the auth client's finally block
       // clears local data, and this fallback covers failures during restore.
