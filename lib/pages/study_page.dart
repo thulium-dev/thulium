@@ -120,6 +120,7 @@ final class StudyPage extends StatelessWidget {
           Padding(
             padding: EdgeInsets.only(top: theme.style.pagePadding.top),
             child: FTileGroup(
+              style: flatTileGroupStyle,
               intrinsicWidth: false,
               physics: const NeverScrollableScrollPhysics(),
               divider: FItemDivider.full,

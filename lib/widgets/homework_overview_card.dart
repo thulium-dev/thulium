@@ -190,6 +190,7 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
                   SizedBox(
                     width: double.infinity,
                     child: FTileGroup(
+                      style: flatTileGroupStyle,
                       intrinsicWidth: false,
                       physics: const NeverScrollableScrollPhysics(),
                       divider: FItemDivider.full,
