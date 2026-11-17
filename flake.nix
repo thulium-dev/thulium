@@ -25,8 +25,11 @@
             };
           };
           androidSdk = pkgs.androidenv.composeAndroidPackages {
-            platformVersions = [ "36" ];
+            # jni_flutter compiles against API 35; the app uses API 36.
+            platformVersions = [ "35" "36" ];
             buildToolsVersions = [ "36.0.0" ];
+            includeCmake = true;
+            cmakeVersions = [ "3.22.1" ];
             includeNDK = true;
             ndkVersions = [ "28.2.13676358" ];
           };
