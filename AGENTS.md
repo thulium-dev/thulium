@@ -1,5 +1,8 @@
 # Interface Style
 
+For Thulium UI work, consult `.agents/skills/thulium-ui/SKILL.md` for shared
+components, copy, interaction states, navigation, and review conventions.
+
 Use a restrained, dark, minimalist visual language for Thulium, consistent with
 the existing calendar and Forui components.
 
@@ -21,3 +24,6 @@ the existing calendar and Forui components.
   platform.
 - Do not introduce Material-styled widgets into Forui product surfaces. Use the
   existing project patterns for platform integration where needed.
+- Preserve the accepted central calendar panel: its grid, layout, colors, and
+  interactions should remain unchanged during general UI refactors unless the
+  user explicitly requests changes to that panel.

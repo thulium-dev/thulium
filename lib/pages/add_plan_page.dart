@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+
+import '../widgets/app_page_scaffold.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
@@ -188,36 +190,23 @@ final class _AddPlanPageState extends State<AddPlanPage> {
       PlanRepeat.weekly: l10n.planRepeatWeekly,
       PlanRepeat.intervalDays: l10n.planRepeatInterval,
     };
-    return FScaffold(
+    return AppPageScaffold(
+      title: widget.initialPlan == null && widget.initialOccurrence == null
+          ? l10n.planAddTitle
+          : l10n.planEditTitle,
+      maxWidth: 560,
       child: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FButton.icon(
-                        semanticsLabel: l10n.backAction,
-                        variant: FButtonVariant.ghost,
-                        onPress: () => Navigator.of(context).pop(),
-                        child: const Icon(Icons.arrow_back),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      widget.initialPlan == null &&
-                              widget.initialOccurrence == null
-                          ? l10n.planAddTitle
-                          : l10n.planEditTitle,
-                      style: context.theme.typography.xl2,
-                    ),
-                    const SizedBox(height: 24),
                     FTextFormField(
                       control: FTextFieldControl.managed(controller: _name),
                       label: Text(l10n.planName),

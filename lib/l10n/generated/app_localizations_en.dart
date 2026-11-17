@@ -16,7 +16,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeDescription =>
-      'Campus information, useful services, and everyday tools in one place.';
+      'Campus information, useful services, and everyday tools in one place';
 
   @override
   String get explore => 'Explore';
@@ -55,11 +55,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInAction => 'Sign in';
 
   @override
-  String get requiredField => 'This field is required.';
+  String get requiredField => 'This field is required';
 
   @override
   String get loginError =>
-      'Sign-in failed. Check your student ID and password, then try again.';
+      'Sign-in failed. Check your student ID and password, then try again';
 
   @override
   String get showPassword => 'Show password';
@@ -89,14 +89,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get verificationCodeInvalid =>
-      'That code was not accepted. Please try again.';
+      'That code was not accepted. Please try again';
 
   @override
   String get trustDeviceTitle => 'Trust this device?';
 
   @override
   String get trustDeviceDescription =>
-      'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control.';
+      'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control';
 
   @override
   String get trustDeviceAction => 'Trust device';
@@ -121,7 +121,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logoutError =>
-      'Could not clear the saved session. Please try again.';
+      'Could not clear the saved session. Please try again';
 
   @override
   String get eventsTab => 'Events';
@@ -140,14 +140,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventsDescription =>
-      'Upcoming classes, academic calendar reminders, and other student-related events will appear here.';
+      'Upcoming classes, academic calendar reminders, and other student-related events will appear here';
 
   @override
   String get plansTitle => 'Student plans';
 
   @override
   String get plansDescription =>
-      'Your academic calendar and custom plans will appear here.';
+      'Your academic calendar and custom plans will appear here';
 
   @override
   String calendarWeek(int week) {
@@ -186,7 +186,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarExportPngCurrentWeekOnly =>
-      'PNG exports the current week only.';
+      'PNG exports the current week only';
 
   @override
   String get calendarExportDateColumn => 'Date';
@@ -229,30 +229,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarExportNoEvents =>
-      'No events are available for the selected options.';
+      'No events are available for the selected options';
 
   @override
   String get calendarExportFailed =>
-      'Could not export the calendar. Please try again.';
+      'Could not export the calendar. Please try again';
 
   @override
-  String get calendarExportSaved => 'Calendar file saved.';
+  String get calendarExportSaved => 'Calendar file saved';
 
   @override
   String get calendarLoading => 'Loading calendar…';
 
   @override
-  String get calendarLoadError => 'Could not load the academic calendar.';
+  String get calendarLoadError => 'Could not load the academic calendar';
 
   @override
   String get calendarStaleCache =>
-      'Showing a saved calendar because the latest update failed.';
+      'Showing a saved calendar because the latest update failed';
 
   @override
   String get calendarRetry => 'Retry';
 
   @override
-  String get calendarNoCourses => 'No plans scheduled for this week.';
+  String get calendarNoCourses => 'No plans scheduled for this week';
 
   @override
   String get calendarOverlappingPlans => 'Overlapping plans';
@@ -292,7 +292,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planCategoryDuplicate =>
-      'A category with this name already exists.';
+      'A category with this name already exists';
 
   @override
   String get planRepeat => 'Repeat';
@@ -318,20 +318,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planIntervalDays => 'Interval in days';
 
   @override
-  String get planIntervalInvalid => 'Enter a positive number of days.';
+  String get planIntervalInvalid => 'Enter a positive number of days';
 
   @override
-  String get planTimeRequired => 'Choose a date, start time, and end time.';
+  String get planTimeRequired => 'Choose a date, start time, and end time';
 
   @override
   String get planEndAfterStart =>
-      'End time must be later than start time on the same day.';
+      'End time must be later than start time on the same day';
 
   @override
   String get planSave => 'Save plan';
 
   @override
-  String get planSaveError => 'Could not save this plan. Please try again.';
+  String get planSaveError => 'Could not save this plan. Please try again';
 
   @override
   String get planEditTitle => 'Edit plan';
@@ -371,15 +371,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planConfirmFetchedLesson =>
-      'This lesson will be hidden in Thulium only. School calendar data will not be changed.';
+      'This lesson will be hidden in Thulium only. School calendar data will not be changed';
 
   @override
   String get planConfirmDeleteSeries =>
-      'Every occurrence of this repeating plan will be deleted, including individual edits.';
+      'Every occurrence of this repeating plan will be deleted, including individual edits';
 
   @override
   String get planConfirmOneOccurrence =>
-      'Only this occurrence will be removed. Other occurrences will remain.';
+      'Only this occurrence will be removed. Other occurrences will remain';
 
   @override
   String get planDontAskAgain => 'Don\'t ask again for this action';
@@ -395,13 +395,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyDescription =>
-      'Study tools and learning resources will appear here.';
+      'Study tools and learning resources will appear here';
 
   @override
   String get studyToolsTitle => 'Study shortcuts';
 
   @override
-  String get studyToolsPlaceholder => 'Study shortcuts will appear here.';
+  String get studyToolsPlaceholder => 'Study shortcuts will appear here';
 
   @override
   String get studyCoursesTitle => 'My courses';
@@ -410,14 +410,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyRefresh => 'Refresh courses';
 
   @override
-  String get studyLoadError => 'Could not load courses. Try refreshing.';
+  String get studyLoadError => 'Could not load courses. Try refreshing';
 
   @override
   String get studyStaleCourses =>
-      'Showing saved courses because the update failed.';
+      'Showing saved courses because the update failed';
 
   @override
-  String get studyNoCourses => 'No courses were found for this semester.';
+  String get studyNoCourses => 'No courses were found for this semester';
 
   @override
   String studyUnsubmittedHomework(int count) {
@@ -426,7 +426,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyHomeworkLoadError =>
-      'Could not load assignment counts. Try refreshing.';
+      'Could not load assignment counts. Try refreshing';
 
   @override
   String get homeworkTitle => 'Upcoming assignments';
@@ -436,10 +436,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeworkStale =>
-      'Could not update assignments; showing saved data.';
+      'Could not update assignments; showing saved data';
 
   @override
-  String get homeworkLoadError => 'Could not load assignments. Try refreshing.';
+  String get homeworkLoadError => 'Could not load assignments. Try refreshing';
 
   @override
   String get homeworkExpired => 'Overdue';
@@ -472,10 +472,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lifeDescription =>
-      'Campus life services and everyday tools will appear here.';
+      'Campus life services and everyday tools will appear here';
 
   @override
-  String get homeworkTimezone => 'All deadlines use Beijing time (UTC+8).';
+  String get homeworkTimezone => 'All deadlines use Beijing time (UTC+8)';
 
   @override
   String get homeworkRefresh => 'Refresh assignments';
@@ -555,10 +555,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeworkActionsUnavailable =>
-      'Actions without a connected provider are unavailable.';
+      'Actions without a connected provider are unavailable';
 
   @override
-  String get homeworkActionFailed => 'Action failed. Please try again.';
+  String get homeworkActionFailed => 'Action failed. Please try again';
 
   @override
   String get courseFiles => 'Course files';
@@ -567,27 +567,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseAssignments => 'Course assignments';
 
   @override
-  String get courseAssignmentsScope => 'Unsubmitted, submitted and graded';
-
-  @override
-  String get courseFilesEmpty => 'No course files yet.';
+  String get courseFilesEmpty => 'No course files yet';
 
   @override
   String courseFilesLimited(int count) {
-    return 'Showing up to $count files; more files may be available on Learn.';
+    return 'Showing up to $count files; more files may be available on Learn';
   }
 
   @override
   String get courseContentError =>
-      'Could not load course content. Please try again.';
+      'Could not load course content. Please try again';
 
   @override
   String get coursePreviewError =>
-      'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform.';
+      'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform';
 
   @override
   String get courseSessionExpired =>
-      'Your session has expired. Sign in again to continue.';
+      'Your session has expired. Sign in again to continue';
 
   @override
   String get courseUnsubmitted => 'Unsubmitted';
@@ -599,13 +596,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseGraded => 'Graded';
 
   @override
-  String get courseAssignmentsEmpty => 'No assignments in this category.';
+  String get courseAssignmentsEmpty => 'No assignments in this category';
 
   @override
   String get coursePreviewUnsupported =>
-      'Document preview is not supported on Linux yet.';
+      'Document preview is not supported on Linux yet';
 
   @override
   String get sessionVerificationRequired =>
-      'Verification is required to refresh campus data. Your saved information is still available.';
+      'Verification is required to refresh campus data. Your saved information is still available';
+
+  @override
+  String get courseContentLoading => 'Loading course content';
+
+  @override
+  String get coursePreviewLoading => 'Loading document';
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart' show TextInputAction;
 import 'package:forui/forui.dart';
+
+import '../widgets/app_page_scaffold.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 
@@ -278,10 +280,12 @@ final class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return FScaffold(
+    return AppPageScaffold(
+      title: l10n.loginTitle,
+      maxWidth: 480,
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
@@ -290,21 +294,6 @@ final class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FButton.icon(
-                        semanticsLabel: l10n.backAction,
-                        variant: FButtonVariant.ghost,
-                        onPress: () => Navigator.of(context).pop(),
-                        child: context.theme.icons.arrowLeft(
-                          context,
-                          semanticsLabel: l10n.backAction,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(l10n.loginTitle, style: context.theme.typography.xl2),
-                    const SizedBox(height: 32),
                     FTextFormField(
                       control: FTextFieldControl.managed(
                         controller: _studentIdController,

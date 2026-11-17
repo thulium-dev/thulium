@@ -4,8 +4,9 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 import '../widgets/flat_tile_style.dart';
+import '../widgets/app_icon_button.dart';
 
-/// Keeps room for future study shortcuts above the Learn course list.
+/// Semester courses and their current assignment counts.
 final class StudyPage extends StatelessWidget {
   const StudyPage({
     required this.semester,
@@ -47,24 +48,6 @@ final class StudyPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Text(l10n.studyToolsTitle, style: context.theme.typography.lg),
-        const SizedBox(height: 10),
-        Container(
-          key: const ValueKey('study-shortcut-reserved'),
-          height: 92,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            l10n.studyToolsPlaceholder,
-            style: context.theme.typography.sm.copyWith(
-              color: colors.mutedForeground,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
         Row(
           children: [
             Expanded(
@@ -77,13 +60,10 @@ final class StudyPage extends StatelessWidget {
               const FCircularProgress(size: FCircularProgressSizeVariant.xs),
               const SizedBox(width: 8),
             ],
-            Tooltip(
-              message: l10n.studyRefresh,
-              child: FButton.icon(
-                variant: FButtonVariant.ghost,
-                onPress: isLoading || homeworkLoading ? null : onRefresh,
-                child: const Icon(Icons.refresh),
-              ),
+            AppIconButton(
+              label: l10n.studyRefresh,
+              icon: FLucideIcons.refreshCw,
+              onPress: isLoading || homeworkLoading ? null : onRefresh,
             ),
           ],
         ),
@@ -135,7 +115,9 @@ final class StudyPage extends StatelessWidget {
                     key: ValueKey('study-course-${course.id}'),
                     style: flatTileStyle(theme),
                     child: Padding(
-                      padding: theme.style.pagePadding,
+                      padding: EdgeInsets.symmetric(
+                        vertical: theme.style.pagePadding.top,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

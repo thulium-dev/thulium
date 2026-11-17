@@ -39,7 +39,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Image (.png)').last);
     await tester.pumpAndSettle();
-    expect(find.text('PNG exports the current week only.'), findsOneWidget);
+    expect(find.text('PNG exports the current week only'), findsOneWidget);
     await tester.tap(find.text('Export').last);
     await tester.pumpAndSettle();
     expect(selection?.format, CalendarExportFormat.png);

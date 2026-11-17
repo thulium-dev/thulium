@@ -11,6 +11,8 @@ import '../homework/homework_urgency.dart';
 import '../homework/homework_theme.dart';
 import 'scrolling_badge.dart';
 import 'flat_tile_style.dart';
+import '../navigation/app_page_route.dart';
+import 'app_page_scaffold.dart';
 import '../l10n/generated/app_localizations.dart';
 
 /// Presentation of the existing snapshot. No network, cache, or submission
@@ -259,27 +261,18 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
     LearnHomework homework,
   ) async {
     await Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, _, _) {
+      AppPageRoute<void>(
+        context: context,
+        builder: (context) {
           final l10n = AppLocalizations.of(context)!;
           final theme = context.theme;
-          return FScaffold(
-            header: FHeader.nested(
-              title: Text(l10n.homeworkDetails),
-              prefixes: [
-                FButton.icon(
-                  size: FButtonSizeVariant.lg,
-                  variant: FButtonVariant.ghost,
-                  semanticsLabel: l10n.homeworkBack,
-                  onPress: () => Navigator.of(context).pop(),
-                  child: const Icon(FLucideIcons.arrowLeft),
-                ),
-              ],
-            ),
+          return AppPageScaffold(
+            title: l10n.homeworkDetails,
             child: ListView(
               padding: theme.style.pagePadding,
               children: [
                 FTileGroup(
+                  style: flatTileGroupStyle,
                   intrinsicWidth: false,
                   physics: const NeverScrollableScrollPhysics(),
                   children: [

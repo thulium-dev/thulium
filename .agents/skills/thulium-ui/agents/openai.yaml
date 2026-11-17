@@ -1,0 +1,4 @@
+interface:
+  display_name: "Thulium UI"
+  short_description: "Maintain Thulium’s quiet Forui interface"
+  default_prompt: "Use $thulium-ui to implement or review a Thulium interface change"

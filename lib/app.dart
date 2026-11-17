@@ -147,7 +147,7 @@ final class _ThuliumAppState extends State<ThuliumApp> {
         );
       },
       home: _isRestoringSession
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          ? const FScaffold(child: Center(child: FCircularProgress()))
           : _hasSession
           ? HomePage(
               onLocaleSelected: _setLocale,

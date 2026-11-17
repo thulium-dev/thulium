@@ -85,11 +85,11 @@ void main() {
       await mount('student');
       expect(find.text('Saved assignment'), findsOneWidget);
       expect(
-        find.text('Could not update assignments; showing saved data.'),
+        find.text('Could not update assignments; showing saved data'),
         findsOneWidget,
       );
       expect(
-        find.text('Could not load assignments. Try refreshing.'),
+        find.text('Could not load assignments. Try refreshing'),
         findsNothing,
       );
       expect(tester.takeException(), isNull);
@@ -102,7 +102,7 @@ void main() {
       await mount('other-student');
       expect(find.text('Saved assignment'), findsNothing);
       expect(
-        find.text('Could not load assignments. Try refreshing.'),
+        find.text('Could not load assignments. Try refreshing'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

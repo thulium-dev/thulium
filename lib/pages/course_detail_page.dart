@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:forui/forui.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,9 @@ import '../l10n/generated/app_localizations.dart';
 import '../study/course_content_source.dart';
 import '../widgets/flat_tile_style.dart';
 import '../widgets/course_document_preview.dart';
+import '../widgets/app_page_scaffold.dart';
+import '../navigation/app_page_route.dart';
+import '../widgets/course_content_loading.dart';
 
 class CourseDetailPage extends StatelessWidget {
   const CourseDetailPage({
@@ -30,14 +35,24 @@ class CourseDetailPage extends StatelessWidget {
             course.englishName.isNotEmpty
         ? course.englishName
         : course.name;
-    return FScaffold(
-      header: _header(context, name),
+    return AppPageScaffold(
+      title: name,
       child: ListView(
         children: [
           if (course.teacherName.isNotEmpty)
-            Text(course.teacherName, style: theme.typography.sm),
+            Text(
+              course.teacherName,
+              style: theme.typography.sm.copyWith(
+                color: theme.colors.mutedForeground,
+              ),
+            ),
           if (course.schedule.isNotEmpty)
-            Text(course.schedule, style: theme.typography.sm),
+            Text(
+              course.schedule,
+              style: theme.typography.sm.copyWith(
+                color: theme.colors.mutedForeground,
+              ),
+            ),
           SizedBox(height: theme.style.pagePadding.top),
           FTileGroup(
             style: flatTileGroupStyle,
@@ -45,6 +60,7 @@ class CourseDetailPage extends StatelessWidget {
             divider: FItemDivider.full,
             children: [
               FTile(
+                style: flatTileStyle(theme),
                 title: Text(l10n.courseFiles),
                 prefix: const Icon(FLucideIcons.files),
                 onPress: () => _push(
@@ -69,6 +85,7 @@ class CourseDetailPage extends StatelessWidget {
                           children: [
                             for (final file in data.materials)
                               FTile(
+                                style: flatTileStyle(context.theme),
                                 key: ValueKey('course-file-${file.id}'),
                                 title: Text(file.title),
                                 subtitle: Text(
@@ -97,8 +114,8 @@ class CourseDetailPage extends StatelessWidget {
                 ),
               ),
               FTile(
+                style: flatTileStyle(theme),
                 title: Text(l10n.courseAssignments),
-                subtitle: Text(l10n.courseAssignmentsScope),
                 prefix: const Icon(FLucideIcons.listTodo),
                 onPress: () => _push(
                   context,
@@ -125,6 +142,7 @@ class CourseDetailPage extends StatelessWidget {
                             children: [
                               for (final assignment in entry.value)
                                 FTile(
+                                  style: flatTileStyle(context.theme),
                                   title: Text(assignment.title),
                                   subtitle: Text(
                                     assignment.deadline == null
@@ -159,21 +177,7 @@ class CourseDetailPage extends StatelessWidget {
 
 void _push(BuildContext context, Widget page) => Navigator.of(
   context,
-).push<void>(PageRouteBuilder(pageBuilder: (_, _, _) => page));
-
-FHeader _header(BuildContext context, String title, {Widget? suffix}) =>
-    FHeader.nested(
-      title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
-      prefixes: [
-        FButton.icon(
-          variant: FButtonVariant.ghost,
-          semanticsLabel: AppLocalizations.of(context)!.homeworkBack,
-          onPress: () => Navigator.of(context).pop(),
-          child: const Icon(FLucideIcons.arrowLeft),
-        ),
-      ],
-      suffixes: [?suffix],
-    );
+).push<void>(AppPageRoute(context: context, builder: (_) => page));
 
 class _CourseResourcePage<T> extends StatefulWidget {
   const _CourseResourcePage({
@@ -194,78 +198,138 @@ class _CourseResourcePage<T> extends StatefulWidget {
 }
 
 class _CourseResourcePageState<T> extends State<_CourseResourcePage<T>> {
-  late Future<T> _future = widget.load();
-  int _generation = 0;
+  T? _data;
+  Object? _error;
+  bool _loading = true;
+  int _contentGeneration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
 
   Future<void> _refresh() async {
-    final future = widget.load();
+    if (_loading) return;
     setState(() {
-      _future = future;
-      _generation++;
+      _loading = true;
+      _error = null;
     });
-    // FutureBuilder owns error presentation, including failures during refresh.
+    await _load();
+  }
+
+  Future<void> _load() async {
     try {
-      await future;
-    } on Object {
-      /* Displayed by FutureBuilder. */
+      final data = await widget.load();
+      if (!mounted) return;
+      setState(() {
+        _data = data;
+        _error = null;
+        _loading = false;
+        _contentGeneration++;
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _loading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return FScaffold(
-      childPad: !widget.document,
-      header: _header(
-        context,
-        widget.title,
-        suffix: FButton.icon(
+    final expired =
+        _error is PortalSessionRejected ||
+        _error is PortalCsrfUnavailable ||
+        _error is TwoFactorInteractionRequired;
+    final errorText = expired
+        ? l10n.courseSessionExpired
+        : widget.document
+        ? l10n.coursePreviewError
+        : l10n.courseContentError;
+    final data = _data;
+    final Widget content;
+    if (data != null) {
+      content = Column(
+        children: [
+          if (_error != null)
+            Padding(
+              padding: context.theme.style.pagePadding,
+              child: FAlert(
+                title: Text(errorText),
+                subtitle: expired
+                    ? FButton(
+                        onPress: widget.onSessionExpired,
+                        child: Text(l10n.signInAction),
+                      )
+                    : null,
+              ),
+            ),
+          Expanded(
+            child: KeyedSubtree(
+              key: ValueKey(widget.document ? _contentGeneration : 0),
+              child: widget.builder(context, data, _refresh),
+            ),
+          ),
+        ],
+      );
+    } else if (_loading) {
+      content = CourseContentLoading(document: widget.document);
+    } else {
+      content = Center(
+        child: Padding(
+          padding: context.theme.style.pagePadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                errorText,
+                style: context.theme.typography.sm,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: context.theme.style.pagePadding.top),
+              FButton(
+                onPress: expired ? widget.onSessionExpired : _refresh,
+                child: Text(expired ? l10n.signInAction : l10n.calendarRetry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return AppPageScaffold(
+      title: widget.title,
+      fullBleed: widget.document,
+      actions: [
+        FButton.icon(
           variant: FButtonVariant.ghost,
           semanticsLabel: l10n.studyRefresh,
-          onPress: _refresh,
-          child: const Icon(FLucideIcons.refreshCw),
+          onPress: _loading ? null : _refresh,
+          child: _loading
+              ? const FCircularProgress(size: FCircularProgressSizeVariant.xs)
+              : const Icon(FLucideIcons.refreshCw),
         ),
-      ),
-      child: FutureBuilder<T>(
-        key: ValueKey(_generation),
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: FCircularProgress());
-          }
-          if (snapshot.hasError) {
-            final expired =
-                snapshot.error is PortalSessionRejected ||
-                snapshot.error is PortalCsrfUnavailable;
-            return Center(
-              child: Padding(
-                padding: context.theme.style.pagePadding,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FAlert(
-                      title: Text(
-                        expired
-                            ? l10n.courseSessionExpired
-                            : widget.document
-                            ? l10n.coursePreviewError
-                            : l10n.courseContentError,
-                      ),
-                    ),
-                    SizedBox(height: context.theme.style.pagePadding.top),
-                    FButton(
-                      onPress: expired ? widget.onSessionExpired : _refresh,
-                      child: Text(
-                        expired ? l10n.loginTitle : l10n.calendarRetry,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          return widget.builder(context, snapshot.data as T, _refresh);
-        },
+      ],
+      child: AnimatedSwitcher(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 160),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        layoutBuilder: (current, previous) =>
+            Stack(fit: StackFit.expand, children: [...previous, ?current]),
+        child: KeyedSubtree(
+          key: ValueKey(
+            data != null
+                ? 'content'
+                : _loading
+                ? 'loading'
+                : 'error',
+          ),
+          child: content,
+        ),
       ),
     );
   }

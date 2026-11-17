@@ -6,13 +6,18 @@ const flatTileGroupStyle = FTileGroupStyleDelta.delta(
   decoration: DecorationDelta.value(BoxDecoration()),
 );
 
-/// Flat resting surface; interaction feedback continues to use Forui variants.
+/// Navigation rows stay on the page surface, including while pressed/hovered.
+/// Forui's keyboard focus outline is retained independently of the background.
 FItemStyleDelta flatTileStyle(
   FThemeData theme, {
-  bool highlightOnInteraction = true,
+  bool highlightOnInteraction = false,
 }) => FItemStyleDelta.delta(
+  padding: const EdgeInsetsGeometryDelta.value(EdgeInsets.zero),
+  rawContentStyle: const FRawItemContentStyleDelta.delta(
+    padding: EdgeInsetsGeometryDelta.value(EdgeInsets.zero),
+  ),
   backgroundColor: FVariantsValueDelta.delta([
-    FVariantValueDeltaOperation.base(theme.colors.background),
+    FVariantValueDeltaOperation.all(theme.colors.background),
   ]),
   contentDecoration: FVariantsDelta.delta([
     if (highlightOnInteraction)

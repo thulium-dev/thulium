@@ -66,10 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(StudyPage), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('study-shortcut-reserved')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('study-shortcut-reserved')), findsNothing);
   });
 
   testWidgets('opens settings from the authenticated home', (tester) async {
@@ -78,7 +75,7 @@ void main() {
 
     await tester.pumpWidget(ThuliumApp(sessionStore: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Settings'));
+    await tester.tap(find.bySemanticsLabel('Settings'));
     await tester.pumpAndSettle();
 
     expect(find.text('Settings'), findsOneWidget);
@@ -99,11 +96,11 @@ void main() {
       Size.square(FThemes.neutral.light.touch.style.sizes.tile),
     );
     expect(
-      tester.getSize(find.byTooltip('Theme')),
+      tester.getSize(find.bySemanticsLabel('Theme')),
       Size.square(FThemes.neutral.light.touch.style.sizes.tile),
     );
     expect(
-      tester.getSize(find.byTooltip('Settings')),
+      tester.getSize(find.bySemanticsLabel('Settings')),
       Size.square(FThemes.neutral.light.touch.style.sizes.tile),
     );
 

@@ -6,6 +6,7 @@ import 'package:forui/forui.dart';
 import 'package:pdfx/pdfx.dart';
 
 import '../l10n/generated/app_localizations.dart';
+import 'course_content_loading.dart';
 
 /// Owns the native document controller for the lifetime of one preview route.
 class CourseDocumentPreview extends StatefulWidget {
@@ -78,21 +79,28 @@ class _CourseDocumentPreviewState extends State<CourseDocumentPreview> {
               if (mounted) setState(() => _page = page);
             },
             builders: PdfViewBuilders<DefaultBuilderOptions>(
-              options: const DefaultBuilderOptions(),
+              options: DefaultBuilderOptions(
+                loaderSwitchDuration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 160),
+              ),
               documentLoaderBuilder: (_) =>
-                  const Center(child: FCircularProgress()),
+                  const CourseContentLoading(document: true),
               pageLoaderBuilder: (_) =>
-                  const Center(child: FCircularProgress()),
+                  const CourseContentLoading(document: true),
               errorBuilder: (context, error) =>
                   Center(child: Text(l10n.coursePreviewError)),
             ),
           ),
         ),
-        if (_pages != null)
-          Padding(
-            padding: context.theme.style.pagePadding,
-            child: Text('$_page / $_pages', style: context.theme.typography.xs),
+        SizedBox(
+          height: context.theme.style.sizes.tile,
+          child: Center(
+            child: _pages == null
+                ? const SizedBox.shrink()
+                : Text('$_page / $_pages', style: context.theme.typography.xs),
           ),
+        ),
       ],
     );
   }

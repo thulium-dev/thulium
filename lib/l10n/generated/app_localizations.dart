@@ -115,7 +115,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Campus information, useful services, and everyday tools in one place.'**
+  /// **'Campus information, useful services, and everyday tools in one place'**
   String get welcomeDescription;
 
   /// No description provided for @explore.
@@ -193,13 +193,13 @@ abstract class AppLocalizations {
   /// No description provided for @requiredField.
   ///
   /// In en, this message translates to:
-  /// **'This field is required.'**
+  /// **'This field is required'**
   String get requiredField;
 
   /// No description provided for @loginError.
   ///
   /// In en, this message translates to:
-  /// **'Sign-in failed. Check your student ID and password, then try again.'**
+  /// **'Sign-in failed. Check your student ID and password, then try again'**
   String get loginError;
 
   /// No description provided for @showPassword.
@@ -253,7 +253,7 @@ abstract class AppLocalizations {
   /// No description provided for @verificationCodeInvalid.
   ///
   /// In en, this message translates to:
-  /// **'That code was not accepted. Please try again.'**
+  /// **'That code was not accepted. Please try again'**
   String get verificationCodeInvalid;
 
   /// No description provided for @trustDeviceTitle.
@@ -265,7 +265,7 @@ abstract class AppLocalizations {
   /// No description provided for @trustDeviceDescription.
   ///
   /// In en, this message translates to:
-  /// **'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control.'**
+  /// **'Tsinghua may remember this device and ask for fewer verification codes. Only choose this on a device you control'**
   String get trustDeviceDescription;
 
   /// No description provided for @trustDeviceAction.
@@ -313,7 +313,7 @@ abstract class AppLocalizations {
   /// No description provided for @logoutError.
   ///
   /// In en, this message translates to:
-  /// **'Could not clear the saved session. Please try again.'**
+  /// **'Could not clear the saved session. Please try again'**
   String get logoutError;
 
   /// No description provided for @eventsTab.
@@ -349,7 +349,7 @@ abstract class AppLocalizations {
   /// No description provided for @eventsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Upcoming classes, academic calendar reminders, and other student-related events will appear here.'**
+  /// **'Upcoming classes, academic calendar reminders, and other student-related events will appear here'**
   String get eventsDescription;
 
   /// No description provided for @plansTitle.
@@ -361,7 +361,7 @@ abstract class AppLocalizations {
   /// No description provided for @plansDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your academic calendar and custom plans will appear here.'**
+  /// **'Your academic calendar and custom plans will appear here'**
   String get plansDescription;
 
   /// No description provided for @calendarWeek.
@@ -433,7 +433,7 @@ abstract class AppLocalizations {
   /// No description provided for @calendarExportPngCurrentWeekOnly.
   ///
   /// In en, this message translates to:
-  /// **'PNG exports the current week only.'**
+  /// **'PNG exports the current week only'**
   String get calendarExportPngCurrentWeekOnly;
 
   /// No description provided for @calendarExportDateColumn.
@@ -517,19 +517,19 @@ abstract class AppLocalizations {
   /// No description provided for @calendarExportNoEvents.
   ///
   /// In en, this message translates to:
-  /// **'No events are available for the selected options.'**
+  /// **'No events are available for the selected options'**
   String get calendarExportNoEvents;
 
   /// No description provided for @calendarExportFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not export the calendar. Please try again.'**
+  /// **'Could not export the calendar. Please try again'**
   String get calendarExportFailed;
 
   /// No description provided for @calendarExportSaved.
   ///
   /// In en, this message translates to:
-  /// **'Calendar file saved.'**
+  /// **'Calendar file saved'**
   String get calendarExportSaved;
 
   /// No description provided for @calendarLoading.
@@ -541,13 +541,13 @@ abstract class AppLocalizations {
   /// No description provided for @calendarLoadError.
   ///
   /// In en, this message translates to:
-  /// **'Could not load the academic calendar.'**
+  /// **'Could not load the academic calendar'**
   String get calendarLoadError;
 
   /// No description provided for @calendarStaleCache.
   ///
   /// In en, this message translates to:
-  /// **'Showing a saved calendar because the latest update failed.'**
+  /// **'Showing a saved calendar because the latest update failed'**
   String get calendarStaleCache;
 
   /// No description provided for @calendarRetry.
@@ -559,7 +559,7 @@ abstract class AppLocalizations {
   /// No description provided for @calendarNoCourses.
   ///
   /// In en, this message translates to:
-  /// **'No plans scheduled for this week.'**
+  /// **'No plans scheduled for this week'**
   String get calendarNoCourses;
 
   /// No description provided for @calendarOverlappingPlans.
@@ -637,7 +637,7 @@ abstract class AppLocalizations {
   /// No description provided for @planCategoryDuplicate.
   ///
   /// In en, this message translates to:
-  /// **'A category with this name already exists.'**
+  /// **'A category with this name already exists'**
   String get planCategoryDuplicate;
 
   /// No description provided for @planRepeat.
@@ -685,19 +685,19 @@ abstract class AppLocalizations {
   /// No description provided for @planIntervalInvalid.
   ///
   /// In en, this message translates to:
-  /// **'Enter a positive number of days.'**
+  /// **'Enter a positive number of days'**
   String get planIntervalInvalid;
 
   /// No description provided for @planTimeRequired.
   ///
   /// In en, this message translates to:
-  /// **'Choose a date, start time, and end time.'**
+  /// **'Choose a date, start time, and end time'**
   String get planTimeRequired;
 
   /// No description provided for @planEndAfterStart.
   ///
   /// In en, this message translates to:
-  /// **'End time must be later than start time on the same day.'**
+  /// **'End time must be later than start time on the same day'**
   String get planEndAfterStart;
 
   /// No description provided for @planSave.
@@ -709,7 +709,7 @@ abstract class AppLocalizations {
   /// No description provided for @planSaveError.
   ///
   /// In en, this message translates to:
-  /// **'Could not save this plan. Please try again.'**
+  /// **'Could not save this plan. Please try again'**
   String get planSaveError;
 
   /// No description provided for @planEditTitle.
@@ -787,19 +787,19 @@ abstract class AppLocalizations {
   /// No description provided for @planConfirmFetchedLesson.
   ///
   /// In en, this message translates to:
-  /// **'This lesson will be hidden in Thulium only. School calendar data will not be changed.'**
+  /// **'This lesson will be hidden in Thulium only. School calendar data will not be changed'**
   String get planConfirmFetchedLesson;
 
   /// No description provided for @planConfirmDeleteSeries.
   ///
   /// In en, this message translates to:
-  /// **'Every occurrence of this repeating plan will be deleted, including individual edits.'**
+  /// **'Every occurrence of this repeating plan will be deleted, including individual edits'**
   String get planConfirmDeleteSeries;
 
   /// No description provided for @planConfirmOneOccurrence.
   ///
   /// In en, this message translates to:
-  /// **'Only this occurrence will be removed. Other occurrences will remain.'**
+  /// **'Only this occurrence will be removed. Other occurrences will remain'**
   String get planConfirmOneOccurrence;
 
   /// No description provided for @planDontAskAgain.
@@ -829,7 +829,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Study tools and learning resources will appear here.'**
+  /// **'Study tools and learning resources will appear here'**
   String get studyDescription;
 
   /// No description provided for @studyToolsTitle.
@@ -841,7 +841,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyToolsPlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Study shortcuts will appear here.'**
+  /// **'Study shortcuts will appear here'**
   String get studyToolsPlaceholder;
 
   /// No description provided for @studyCoursesTitle.
@@ -859,19 +859,19 @@ abstract class AppLocalizations {
   /// No description provided for @studyLoadError.
   ///
   /// In en, this message translates to:
-  /// **'Could not load courses. Try refreshing.'**
+  /// **'Could not load courses. Try refreshing'**
   String get studyLoadError;
 
   /// No description provided for @studyStaleCourses.
   ///
   /// In en, this message translates to:
-  /// **'Showing saved courses because the update failed.'**
+  /// **'Showing saved courses because the update failed'**
   String get studyStaleCourses;
 
   /// No description provided for @studyNoCourses.
   ///
   /// In en, this message translates to:
-  /// **'No courses were found for this semester.'**
+  /// **'No courses were found for this semester'**
   String get studyNoCourses;
 
   /// No description provided for @studyUnsubmittedHomework.
@@ -883,7 +883,7 @@ abstract class AppLocalizations {
   /// No description provided for @studyHomeworkLoadError.
   ///
   /// In en, this message translates to:
-  /// **'Could not load assignment counts. Try refreshing.'**
+  /// **'Could not load assignment counts. Try refreshing'**
   String get studyHomeworkLoadError;
 
   /// No description provided for @homeworkTitle.
@@ -901,13 +901,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeworkStale.
   ///
   /// In en, this message translates to:
-  /// **'Could not update assignments; showing saved data.'**
+  /// **'Could not update assignments; showing saved data'**
   String get homeworkStale;
 
   /// No description provided for @homeworkLoadError.
   ///
   /// In en, this message translates to:
-  /// **'Could not load assignments. Try refreshing.'**
+  /// **'Could not load assignments. Try refreshing'**
   String get homeworkLoadError;
 
   /// No description provided for @homeworkExpired.
@@ -955,13 +955,13 @@ abstract class AppLocalizations {
   /// No description provided for @lifeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Campus life services and everyday tools will appear here.'**
+  /// **'Campus life services and everyday tools will appear here'**
   String get lifeDescription;
 
   /// No description provided for @homeworkTimezone.
   ///
   /// In en, this message translates to:
-  /// **'All deadlines use Beijing time (UTC+8).'**
+  /// **'All deadlines use Beijing time (UTC+8)'**
   String get homeworkTimezone;
 
   /// No description provided for @homeworkRefresh.
@@ -1099,13 +1099,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeworkActionsUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Actions without a connected provider are unavailable.'**
+  /// **'Actions without a connected provider are unavailable'**
   String get homeworkActionsUnavailable;
 
   /// No description provided for @homeworkActionFailed.
   ///
   /// In en, this message translates to:
-  /// **'Action failed. Please try again.'**
+  /// **'Action failed. Please try again'**
   String get homeworkActionFailed;
 
   /// No description provided for @courseFiles.
@@ -1120,40 +1120,34 @@ abstract class AppLocalizations {
   /// **'Course assignments'**
   String get courseAssignments;
 
-  /// No description provided for @courseAssignmentsScope.
-  ///
-  /// In en, this message translates to:
-  /// **'Unsubmitted, submitted and graded'**
-  String get courseAssignmentsScope;
-
   /// No description provided for @courseFilesEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No course files yet.'**
+  /// **'No course files yet'**
   String get courseFilesEmpty;
 
   /// No description provided for @courseFilesLimited.
   ///
   /// In en, this message translates to:
-  /// **'Showing up to {count} files; more files may be available on Learn.'**
+  /// **'Showing up to {count} files; more files may be available on Learn'**
   String courseFilesLimited(int count);
 
   /// No description provided for @courseContentError.
   ///
   /// In en, this message translates to:
-  /// **'Could not load course content. Please try again.'**
+  /// **'Could not load course content. Please try again'**
   String get courseContentError;
 
   /// No description provided for @coursePreviewError.
   ///
   /// In en, this message translates to:
-  /// **'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform.'**
+  /// **'Preview is unavailable. The file may not have a PDF preview on Learn. Please retry or open it on the teaching platform'**
   String get coursePreviewError;
 
   /// No description provided for @courseSessionExpired.
   ///
   /// In en, this message translates to:
-  /// **'Your session has expired. Sign in again to continue.'**
+  /// **'Your session has expired. Sign in again to continue'**
   String get courseSessionExpired;
 
   /// No description provided for @courseUnsubmitted.
@@ -1177,20 +1171,32 @@ abstract class AppLocalizations {
   /// No description provided for @courseAssignmentsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No assignments in this category.'**
+  /// **'No assignments in this category'**
   String get courseAssignmentsEmpty;
 
   /// No description provided for @coursePreviewUnsupported.
   ///
   /// In en, this message translates to:
-  /// **'Document preview is not supported on Linux yet.'**
+  /// **'Document preview is not supported on Linux yet'**
   String get coursePreviewUnsupported;
 
   /// No description provided for @sessionVerificationRequired.
   ///
   /// In en, this message translates to:
-  /// **'Verification is required to refresh campus data. Your saved information is still available.'**
+  /// **'Verification is required to refresh campus data. Your saved information is still available'**
   String get sessionVerificationRequired;
+
+  /// No description provided for @courseContentLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading course content'**
+  String get courseContentLoading;
+
+  /// No description provided for @coursePreviewLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading document'**
+  String get coursePreviewLoading;
 }
 
 class _AppLocalizationsDelegate

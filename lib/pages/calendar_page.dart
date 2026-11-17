@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:forui/forui.dart';
+
+import '../navigation/app_page_route.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:thulium_campus/thulium_campus.dart';
@@ -264,7 +266,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         ? today
         : monday;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
+      AppPageRoute(
+        context: context,
         builder: (context) => AddPlanPage(
           initialDate: date,
           categories: _customPlans.categories,
@@ -505,7 +508,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   }) async {
     final initialRule = editSeries ? entry.rule! : null;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
+      AppPageRoute(
+        context: context,
         builder: (context) => AddPlanPage(
           initialDate: editSeries
               ? initialRule!.startsAt

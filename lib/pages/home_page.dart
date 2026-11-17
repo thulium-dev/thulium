@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+
+import '../navigation/app_page_route.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
@@ -12,6 +14,7 @@ import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_learn_course_cache_store.dart';
 import '../auth/secure_learn_homework_cache_store.dart';
 import '../widgets/language_button.dart';
+import '../widgets/app_icon_button.dart';
 import '../widgets/app_bottom_navigation.dart';
 import '../widgets/homework_overview_card.dart';
 import 'settings_page.dart';
@@ -426,8 +429,9 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     final catalog = _courseCatalog;
                     if (catalog == null) return;
                     Navigator.of(context).push<void>(
-                      PageRouteBuilder(
-                        pageBuilder: (_, _, _) => CourseDetailPage(
+                      AppPageRoute(
+                        context: context,
+                        builder: (_) => CourseDetailPage(
                           course: course,
                           source: CourseContentSource(
                             store:
@@ -451,19 +455,13 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     onSelected: widget.onLocaleSelected,
                     buttonSize: headerIconSize,
                   ),
-                  SizedBox.square(
-                    dimension: headerIconSize,
-                    child: IconButton(
-                      tooltip: l10n.theme,
-                      padding: EdgeInsets.zero,
-                      iconSize: 20,
-                      icon: Icon(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Icons.light_mode_outlined
-                            : Icons.dark_mode_outlined,
-                      ),
-                      onPressed: widget.onThemeToggle,
-                    ),
+                  AppIconButton(
+                    label: l10n.theme,
+                    size: headerIconSize,
+                    icon: Theme.of(context).brightness == Brightness.dark
+                        ? FLucideIcons.sun
+                        : FLucideIcons.moon,
+                    onPress: widget.onThemeToggle,
                   ),
                 ],
               ),
@@ -471,17 +469,14 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Positioned(
               top: headerTop,
               right: theme.style.pagePadding.right,
-              child: SizedBox.square(
-                dimension: headerIconSize,
-                child: IconButton(
-                  tooltip: l10n.settingsTitle,
-                  padding: EdgeInsets.zero,
-                  iconSize: 20,
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SettingsPage(onLogout: widget.onLogout),
-                    ),
+              child: AppIconButton(
+                label: l10n.settingsTitle,
+                size: headerIconSize,
+                icon: FLucideIcons.settings,
+                onPress: () => Navigator.of(context).push(
+                  AppPageRoute<void>(
+                    context: context,
+                    builder: (_) => SettingsPage(onLogout: widget.onLogout),
                   ),
                 ),
               ),
