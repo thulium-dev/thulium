@@ -7,13 +7,21 @@ const flatTileGroupStyle = FTileGroupStyleDelta.delta(
 );
 
 /// Flat resting surface; interaction feedback continues to use Forui variants.
-FItemStyleDelta flatTileStyle(FThemeData theme) => FItemStyleDelta.delta(
+FItemStyleDelta flatTileStyle(
+  FThemeData theme, {
+  bool highlightOnInteraction = true,
+}) => FItemStyleDelta.delta(
   backgroundColor: FVariantsValueDelta.delta([
     FVariantValueDeltaOperation.base(theme.colors.background),
   ]),
   contentDecoration: FVariantsDelta.delta([
-    FVariantOperation.base(
-      DecorationDelta.shapeDelta(color: theme.colors.background),
-    ),
+    if (highlightOnInteraction)
+      FVariantOperation.base(
+        DecorationDelta.shapeDelta(color: theme.colors.background),
+      )
+    else
+      FVariantOperation.all(
+        DecorationDelta.shapeDelta(color: theme.colors.background),
+      ),
   ]),
 );

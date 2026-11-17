@@ -210,7 +210,10 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
                       children: [
                         for (final item in entry.value)
                           FTile.raw(
-                            style: flatTileStyle(theme),
+                            style: flatTileStyle(
+                              theme,
+                              highlightOnInteraction: false,
+                            ),
                             key: ValueKey(
                               'homework-${item.course.id}-${item.id}',
                             ),
@@ -331,37 +334,40 @@ final class _HomeworkOverviewCardState extends State<HomeworkOverviewCard>
         context: context,
         side: FLayout.btt,
         useSafeArea: true,
-        builder: (sheetContext) => SingleChildScrollView(
-          padding: sheetContext.theme.style.pagePadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.homeworkActions,
-                style: sheetContext.theme.typography.lg,
-              ),
-              if (options.any((option) => option.$2 == null)) ...[
-                SizedBox(height: sheetContext.theme.style.pagePadding.top),
-                FAlert(title: Text(l10n.homeworkActionsUnavailable)),
-              ],
-              for (final option in options) ...[
-                SizedBox(height: sheetContext.theme.style.pagePadding.top),
-                FButton(
-                  size: FButtonSizeVariant.lg,
-                  variant: FButtonVariant.outline,
-                  onPress: option.$2 == null
-                      ? null
-                      : () {
-                          Navigator.of(sheetContext).pop();
-                          unawaited(_execute(context, option.$2!, homework));
-                        },
-                  child: Flexible(
-                    child: Text(option.$1, textAlign: TextAlign.center),
-                  ),
+        builder: (sheetContext) => ColoredBox(
+          color: sheetContext.theme.colors.background,
+          child: SingleChildScrollView(
+            padding: sheetContext.theme.style.pagePadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.homeworkActions,
+                  style: sheetContext.theme.typography.lg,
                 ),
+                if (options.any((option) => option.$2 == null)) ...[
+                  SizedBox(height: sheetContext.theme.style.pagePadding.top),
+                  FAlert(title: Text(l10n.homeworkActionsUnavailable)),
+                ],
+                for (final option in options) ...[
+                  SizedBox(height: sheetContext.theme.style.pagePadding.top),
+                  FButton(
+                    size: FButtonSizeVariant.lg,
+                    variant: FButtonVariant.outline,
+                    onPress: option.$2 == null
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            unawaited(_execute(context, option.$2!, homework));
+                          },
+                    child: Flexible(
+                      child: Text(option.$1, textAlign: TextAlign.center),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
