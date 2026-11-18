@@ -191,5 +191,7 @@
   "coursePreviewUnsupported": "Linux 暂不支持文档预览",
   "sessionVerificationRequired": "更新校园数据需要重新验证，已保存的信息仍可查看",
   "courseContentLoading": "正在加载课程内容",
-  "coursePreviewLoading": "正在加载文档"
+  "coursePreviewLoading": "正在加载文档",
+  "exportDiagnostics": "导出诊断日志",
+  "exportDiagnosticsError": "日志导出失败，请重试"
 }

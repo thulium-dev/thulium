@@ -48,11 +48,14 @@ dependencies:
   # Upgrade to ^0.26.0 after moving to Flutter 3.47+.
   forui: ^0.22.0
   pdfx: ^2.11.0
+  shared_preferences: ^2.5.6
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   test: ^1.26.0
+  shared_preferences_platform_interface: ^2.4.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

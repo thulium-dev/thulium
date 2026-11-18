@@ -25,6 +25,62 @@ const _session = AuthSession(
 );
 
 void main() {
+  for (final portalOnly in [false, true]) {
+    test(
+      'verification diagnostics identify ${portalOnly ? 'portal' : 'WebVPN'} without exposing credentials',
+      () async {
+        final store = _Store();
+        final transport = _Transport()
+          ..needsVerification = true
+          ..verifyPortalOnly = portalOnly;
+        final events = <String>[];
+        final runner = AuthSessionRunner(
+          store,
+          trace: events.add,
+          createClient: () => TsinghuaAuthClient(
+            httpClient: transport,
+            sessionStore: store,
+            credentialStore: store,
+            trace: events.add,
+          ),
+        );
+        await expectLater(
+          runner.run(request: _load),
+          throwsA(isA<TwoFactorInteractionRequired>()),
+        );
+        expect(
+          events,
+          contains(
+            'Second-factor challenge: stage=${portalOnly ? 'information-portal' : 'webvpn'} trustedCredentialPresent=true.',
+          ),
+        );
+        expect(events.join('\n'), isNot(contains('saved-password')));
+        expect(events.join('\n'), isNot(contains('trusted-device')));
+      },
+    );
+  }
+
+  test(
+    'credential recovery keeps the main-branch form without optional SSO consent',
+    () async {
+      final store = _Store();
+      final transport = _Transport()..challengeForSingleLogin = true;
+      expect(await _runner(store, transport).run(request: _load), 'content');
+      expect(transport.logins, 1);
+      for (final form in transport.identityForms) {
+        expect(form.keys.toSet(), {
+          'i_user',
+          'i_pass',
+          'fingerPrint',
+          'fingerGenPrint',
+          'i_captcha',
+        });
+        expect(form['fingerPrint'], _session.fingerprint);
+        expect(form['fingerGenPrint'], _session.fingerGenPrint);
+      }
+    },
+  );
+
   test(
     'exhausted CSRF recovery falls back to saved credentials once',
     () async {
@@ -357,6 +413,8 @@ class _Transport extends http.BaseClient {
   int logins = 0;
   bool rejectRetry = false;
   bool needsVerification = false;
+  bool challengeForSingleLogin = false;
+  bool verifyPortalOnly = false;
   bool emptyCookieUntilPassword = false;
   bool rejectRoamingUntilPassword = false;
   int roamingRequests = 0;
@@ -387,7 +445,11 @@ class _Transport extends http.BaseClient {
         body = '<span id="sm2publicKey">$publicKey</span>';
       case '/do/off/ui/auth/login/check':
         identityForms.add(Uri.splitQueryString((request as http.Request).body));
-        body = needsVerification
+        body =
+            ((needsVerification &&
+                    (!verifyPortalOnly || identityForms.length > 1)) ||
+                (challengeForSingleLogin &&
+                    identityForms.last['singleLogin'] == 'on'))
             ? '二次认证'
             : '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>';
       case '/wengine-vpn/cookie':

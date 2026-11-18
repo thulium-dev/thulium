@@ -139,6 +139,20 @@ android/ ios/ web/      Mobile and web targets
 linux/ macos/ windows/  Desktop targets
 ```
 
+## Diagnostic logs
+
+Open Settings → Export diagnostic logs to share a text file on Android/iOS.
+The welcome page also exposes Settings, so export remains available when login
+cannot complete. Linux uses a file save dialog.
+
+The app retains up to 2,000 structural events from the last seven days locally,
+including across restarts. Export includes the installed app version/build,
+platform, UTC timestamps, request categories, HTTP status codes, recovery causes,
+and the stage requesting verification. Event filtering happens before storage:
+passwords, verification codes, account identifiers, cookie/token values, full
+URLs, response previews, course titles and document content are not retained.
+Logs are only shared when the user chooses export and a destination.
+
 ## Checks
 
 Tests are grouped by scope: `test/unit/` covers logic and adapters, while

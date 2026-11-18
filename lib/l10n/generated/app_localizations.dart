@@ -1197,6 +1197,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading document'**
   String get coursePreviewLoading;
+
+  /// No description provided for @exportDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Export diagnostic logs'**
+  String get exportDiagnostics;
+
+  /// No description provided for @exportDiagnosticsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export logs, please try again'**
+  String get exportDiagnosticsError;
 }
 
 class _AppLocalizationsDelegate

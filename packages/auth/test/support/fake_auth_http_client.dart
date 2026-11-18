@@ -12,13 +12,18 @@ final class FakeAuthHttpClient extends http.BaseClient {
     this.honorTrustedBrowser = false,
     this.denySingleLogin = false,
     this.singleLoginAction = '/do/off/ui/auth/login/checkSingle',
+    String registeredFingerprint = 'stable-device',
     bool previouslyRegistered = false,
-  }) : _registered = previouslyRegistered;
+  }) : _registered = previouslyRegistered,
+       // Keep the synthetic server's registration identity configurable.
+       // ignore: prefer_initializing_formals
+       _registeredFingerprint = registeredFingerprint;
 
   final bool failInformationRedirect;
   final bool expireCookieBeforeLogin;
   bool _credentialsSubmitted = false;
   bool _registered;
+  String _registeredFingerprint;
   final bool trustWithoutToken;
   final bool trustedPortalForm;
   final bool honorTrustedBrowser;
@@ -46,6 +51,9 @@ final class FakeAuthHttpClient extends http.BaseClient {
     }
     if (request.url.path == '/b/doubleAuth/personal/saveFinger') {
       _registered = true;
+      _registeredFingerprint = Uri.splitQueryString(
+        requestBody,
+      )['fingerprint']!;
     }
     final body = switch (request.url.path) {
       '/login' => '',
@@ -69,7 +77,8 @@ final class FakeAuthHttpClient extends http.BaseClient {
       '/do/off/ui/auth/login/check'
           when honorTrustedBrowser &&
               _registered &&
-              requestBody.contains('singleLogin=on') =>
+              Uri.splitQueryString(requestBody)['fingerPrint'] ==
+                  _registeredFingerprint =>
         '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>',
       '/do/off/ui/auth/login/check' when ++_identityLoginAttempts == 1 =>
         '二次认证',

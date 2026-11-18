@@ -168,7 +168,7 @@ final class AuthSession {
   /// This value is sensitive and must be persisted only through a secure store.
   final String? fingerGenPrint;
 
-  /// Whether the user allowed trusted-browser SSO on this installation.
+  /// Whether the user allowed device registration on this installation.
   /// This is independent of an optional legacy token; the server still decides
   /// whether the browser is trusted and whether verification is necessary.
   final bool trustedBrowser;
@@ -511,7 +511,7 @@ final class TsinghuaAuthClient {
   /// Called only after the selected second-factor code has been requested.
   final TwoFactorCodeHandler? twoFactorCodeHandler;
 
-  /// Called after code verification to obtain explicit consent for device trust.
+  /// Called once per sign-in to obtain consent for post-verification trust.
   final TwoFactorTrustHandler? twoFactorTrustHandler;
 
   /// Optional diagnostic callback. Messages contain no passwords, codes, or
@@ -581,9 +581,14 @@ final class TsinghuaAuthClient {
 
     _session = restored;
     _rememberIdentity(restored);
+    _fingerGenPrint = restored.fingerGenPrint;
     _trustedBrowser =
         restored.trustedBrowser || restored.fingerGenPrint?.isNotEmpty == true;
     _cookieJar.restore(restored.scopedCookies);
+    trace?.call(
+      'Session restored: trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true} '
+      'deviceTrustConsent=${restored.trustedBrowser}.',
+    );
     return restored;
   }
 
@@ -1041,9 +1046,9 @@ final class TsinghuaAuthClient {
         previousSession.fingerprint == fingerprint &&
         (previousSession.trustedBrowser ||
             previousSession.fingerGenPrint?.isNotEmpty == true);
-    // singleLogin must be present on the initial credential submission, before
-    // WebVPN and the portal establish separate ID sessions. Ask once up front
-    // rather than first asking after verification, when that POST is too late.
+    // Cache one device-registration choice for this attempt. Device trust and
+    // the ID site's optional singleLogin checkbox are separate choices; routine
+    // credential recovery must keep the same fields as the main branch.
     _trustDecision =
         _trustedBrowser ||
         await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
@@ -1062,6 +1067,10 @@ final class TsinghuaAuthClient {
     );
 
     if (response.body.contains('二次认证')) {
+      trace?.call(
+        'Second-factor challenge: stage=webvpn '
+        'trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true}.',
+      );
       response = await _completeTwoFactor(fingerprint: fingerprint);
     }
     _ensureIdentityLoginSucceeded(response.body);
@@ -1336,6 +1345,10 @@ final class TsinghuaAuthClient {
       fingerprint: fingerprint,
     );
     if (response.body.contains('二次认证')) {
+      trace?.call(
+        'Second-factor challenge: stage=information-portal '
+        'trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true}.',
+      );
       response = await _completeTwoFactor(fingerprint: fingerprint);
     }
     _ensureIdentityLoginSucceeded(response.body);
@@ -1374,8 +1387,6 @@ final class TsinghuaAuthClient {
         'fingerPrint': fingerprint,
         'fingerGenPrint': _fingerGenPrint ?? '',
         'i_captcha': '',
-        if (_trustedBrowser || _trustDecision == true) 'singleLogin': 'on',
-        if (_trustedBrowser || _trustDecision == true) 'deviceName': 'Thulium',
       },
     );
   }
@@ -1390,7 +1401,11 @@ final class TsinghuaAuthClient {
     final forms = document
         .querySelectorAll('form')
         .where(
-          (form) => form.querySelector('input[name="fingerPrint"]') != null,
+          (form) =>
+              form.querySelector('input[name="fingerPrint"]') != null ||
+              RegExp(
+                r'checkSingle|security_check',
+              ).hasMatch(form.attributes['action'] ?? ''),
         );
     if (forms.isEmpty) return null;
     final form = forms.first;
@@ -1427,6 +1442,11 @@ final class TsinghuaAuthClient {
           ? fingerprint
           : input.attributes['value'] ?? '';
     }
+    // Server forms may omit these inputs or leave a token placeholder empty.
+    // The persisted device credential must survive process/session restoration.
+    fields['fingerPrint'] = fingerprint;
+    fields['fingerGenPrint'] = _fingerGenPrint ?? '';
+    if (action.path.endsWith('/checkSingle')) fields['i_rememberme'] = 'on';
     trace?.call('Using the trusted-browser identity entry.');
     return _request(action, method: 'POST', form: fields);
   }

@@ -800,14 +800,14 @@ void main() {
                   .where((r) => r.url.path == '/do/off/ui/auth/login/check')
                   .last
               as http.Request;
-      expect(portal.bodyFields['singleLogin'], 'on');
+      expect(portal.bodyFields.containsKey('singleLogin'), isFalse);
       final initial =
           client.requests.firstWhere(
                 (r) => r.url.path == '/do/off/ui/auth/login/check',
               )
               as http.Request;
-      expect(initial.bodyFields['singleLogin'], 'on');
-      expect(portal.bodyFields['deviceName'], 'Thulium');
+      expect(initial.bodyFields.containsKey('singleLogin'), isFalse);
+      expect(portal.bodyFields.containsKey('deviceName'), isFalse);
 
       final nextTransport = FakeAuthHttpClient(
         honorTrustedBrowser: true,
@@ -860,6 +860,7 @@ void main() {
               as http.Request;
       expect(single.bodyFields, {
         'fingerPrint': 'stable-device',
+        'fingerGenPrint': '',
         'i_rememberme': 'on',
         'execution': 'one&two',
       });
@@ -1104,6 +1105,52 @@ void main() {
   );
 
   test(
+    'silent trusted confirmation supplies the persisted token and remember-me field',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(
+        AuthSession.fromJson({
+          ..._savedSession().toJson(),
+          'fingerGenPrint': 'saved-trusted-credential',
+        }),
+      );
+      final transport = _SessionValidationClient(
+        studentId: '1234567890',
+        trustedEntry: true,
+        rejectExpiredCookie: true,
+        requiredTrustedCredential: 'saved-trusted-credential',
+      );
+      final auth = TsinghuaAuthClient(
+        httpClient: transport,
+        sessionStore: store,
+      );
+      await auth.restore();
+      expect(await auth.validateSession(), isTrue);
+      final confirmation =
+          transport.requests.singleWhere(
+                (request) =>
+                    request.url.path == '/do/off/ui/auth/login/checkSingle',
+              )
+              as http.Request;
+      expect(
+        confirmation.bodyFields['fingerPrint'],
+        _savedSession().fingerprint,
+      );
+      expect(
+        confirmation.bodyFields['fingerGenPrint'],
+        'saved-trusted-credential',
+      );
+      expect(confirmation.bodyFields['i_rememberme'], 'on');
+      expect(
+        transport.requests.where(
+          (request) => request.url.path == '/do/off/ui/auth/login/check',
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
     'expired portal cookie recovers through live trusted SSO without a password or code',
     () async {
       final store = MemoryAuthSessionStore();
@@ -1154,14 +1201,15 @@ void main() {
       final client = FakeAuthHttpClient(
         expireCookieBeforeLogin: true,
         honorTrustedBrowser: true,
+        registeredFingerprint: 'saved-device',
         previouslyRegistered: true,
       );
       final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
       await auth.restore();
       expect(await auth.validateSession(), isFalse);
       expect(await store.read(), isNull);
-      // The expired cookies are gone, but this client can still request browser
-      // SSO for the same account/device during its one credential recovery.
+      // The expired cookies are gone; the same fingerprint remains available
+      // for server-side device trust without opting into singleLogin.
       final session = await auth.login(
         userId: '1234567890',
         password: 'password',
@@ -1177,7 +1225,7 @@ void main() {
                 (r) => r.url.path == '/do/off/ui/auth/login/check',
               )
               as http.Request;
-      expect(post.bodyFields['singleLogin'], 'on');
+      expect(post.bodyFields.containsKey('singleLogin'), isFalse);
       expect(
         post.headers['Cookie'] ?? '',
         isNot(contains('SESSION=webvpn-session')),
@@ -1283,10 +1331,12 @@ final class _SessionValidationClient extends http.BaseClient {
     this.emptyCookieResponses = 0,
     this.trustedEntry = false,
     this.rejectExpiredCookie = false,
+    this.requiredTrustedCredential,
   });
 
   final bool trustedEntry;
   final bool rejectExpiredCookie;
+  final String? requiredTrustedCredential;
   bool _singleCompleted = false;
   final String studentId;
   final int emptyCookieResponses;
@@ -1303,8 +1353,14 @@ final class _SessionValidationClient extends http.BaseClient {
           '<form action="/do/off/ui/auth/login/checkSingle"><input name="fingerPrint" value=""></form>';
     } else if (trustedEntry &&
         request.url.path == '/do/off/ui/auth/login/checkSingle') {
-      _singleCompleted = true;
-      body = '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>';
+      final fields = (request as http.Request).bodyFields;
+      _singleCompleted =
+          requiredTrustedCredential == null ||
+          (fields['fingerGenPrint'] == requiredTrustedCredential &&
+              fields['i_rememberme'] == 'on');
+      body = _singleCompleted
+          ? '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>'
+          : '二次认证';
     } else if (request.url.path == '/wengine-vpn/cookie') {
       cookieRequests++;
       body = trustedEntry && !_singleCompleted && rejectExpiredCookie

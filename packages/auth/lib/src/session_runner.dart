@@ -55,8 +55,12 @@ final class AuthSessionRunner {
           trace: trace,
         );
     final session = await client.restore();
-    if (session == null ||
-        (expectedUserId != null && session.userId != expectedUserId)) {
+    if (session == null) {
+      trace?.call('Session recovery unavailable: reason=no-session.');
+      throw const PortalSessionRejected();
+    }
+    if (expectedUserId != null && session.userId != expectedUserId) {
+      trace?.call('Session recovery unavailable: reason=account-mismatch.');
       throw const PortalSessionRejected();
     }
     try {
@@ -67,7 +71,18 @@ final class AuthSessionRunner {
           (error is PortalSessionRejected || error is PortalCsrfUnavailable);
       if (!reconnect) rethrow;
       final saved = await credentials?.readCredentials();
-      if (saved == null || saved.userId != session.userId) rethrow;
+      if (saved == null) {
+        trace?.call('Credential recovery skipped: reason=missing-credentials.');
+        rethrow;
+      }
+      if (saved.userId != session.userId) {
+        trace?.call('Credential recovery skipped: reason=account-mismatch.');
+        rethrow;
+      }
+      trace?.call(
+        'Credential recovery: cause=${error.runtimeType} '
+        'trustedCredentialPresent=${session.fingerGenPrint?.isNotEmpty == true}.',
+      );
       trace?.call('Reconnecting with saved credentials; retrying once.');
       try {
         await client.login(

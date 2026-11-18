@@ -52,12 +52,17 @@ service errors. JSON content and injected scripts mentioning login controls do
 not prove logout. PDF reads carry the current Learn CSRF token, and temporary
 service failures offer retry rather than sending users back to sign-in.
 
-Device trust records browser consent separately from the optional legacy
-`fingerGenPrint` token. Sign-in asks once before the first credential submission,
-so trusted-browser `singleLogin` fields are present from the WebVPN stage onward.
-Fingerprint registration still happens only after successful code verification.
+Device trust records registration consent separately from the optional legacy
+`fingerGenPrint` token. Sign-in asks once and registers the fingerprint only after
+successful code verification. Credential forms match `main`: account, encrypted
+password, fingerprint, trusted-device token and captcha. They do not implicitly
+enable the separate `singleLogin`/`deviceName` browser-SSO option. A remembered
+trust choice alone is not proof that the server will waive verification.
 Server-provided `checkSingle` forms are followed before falling back to
-credentials, including during silent portal renewal. This allows the WebVPN and
+credentials, including during silent portal renewal. Restoring a session also
+hydrates its trusted-device token; confirmation forms explicitly receive that
+token, the stable fingerprint and `i_rememberme=on` for `checkSingle`, even when
+the server omits the inputs or supplies empty placeholders. This allows the WebVPN and
 information-portal stages to share a verified identity without unnecessarily
 requesting another code. A genuine server challenge is still verified.
 
@@ -70,3 +75,5 @@ sign-in submissions. The login page guards button and keyboard callbacks before
 enqueueing work, snapshots the submitted credentials, and caches one trust
 choice for that attempt. Verification and dialog completion also reject repeat
 callbacks. Diagnostic attempt IDs and phase names contain no credential values.
+Recovery diagnostics record the triggering error type, the challenge stage
+(`webvpn` or `information-portal`) and token presence, never token values.

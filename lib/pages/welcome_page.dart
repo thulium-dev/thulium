@@ -7,6 +7,7 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 import '../widgets/language_button.dart';
 import '../widgets/app_icon_button.dart';
 import 'login_page.dart';
+import 'settings_page.dart';
 
 /// The unauthenticated landing page shown before the student signs in.
 final class WelcomePage extends StatelessWidget {
@@ -82,6 +83,16 @@ final class WelcomePage extends StatelessWidget {
                         ? FLucideIcons.sun
                         : FLucideIcons.moon,
                     onPress: onThemeToggle,
+                  ),
+                  AppIconButton(
+                    label: l10n.settingsTitle,
+                    icon: FLucideIcons.settings,
+                    onPress: () => Navigator.of(context).push(
+                      AppPageRoute<void>(
+                        context: context,
+                        builder: (_) => const SettingsPage(),
+                      ),
+                    ),
                   ),
                 ],
               ),

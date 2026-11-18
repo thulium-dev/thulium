@@ -207,5 +207,7 @@
   "coursePreviewUnsupported": "Document preview is not supported on Linux yet",
   "sessionVerificationRequired": "Verification is required to refresh campus data. Your saved information is still available",
   "courseContentLoading": "Loading course content",
-  "coursePreviewLoading": "Loading document"
+  "coursePreviewLoading": "Loading document",
+  "exportDiagnostics": "Export diagnostic logs",
+  "exportDiagnosticsError": "Could not export logs, please try again"
 }

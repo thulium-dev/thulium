@@ -611,4 +611,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get coursePreviewLoading => 'Loading document';
+
+  @override
+  String get exportDiagnostics => 'Export diagnostic logs';
+
+  @override
+  String get exportDiagnosticsError =>
+      'Could not export logs, please try again';
 }

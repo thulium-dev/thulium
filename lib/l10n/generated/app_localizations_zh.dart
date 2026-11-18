@@ -579,6 +579,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get coursePreviewLoading => '正在加载文档';
+
+  @override
+  String get exportDiagnostics => '导出诊断日志';
+
+  @override
+  String get exportDiagnosticsError => '日志导出失败，请重试';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -1156,6 +1162,12 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get coursePreviewLoading => '正在加载文档';
+
+  @override
+  String get exportDiagnostics => '导出诊断日志';
+
+  @override
+  String get exportDiagnosticsError => '日志导出失败，请重试';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1733,4 +1745,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get coursePreviewLoading => '正在載入文件';
+
+  @override
+  String get exportDiagnostics => '匯出診斷日誌';
+
+  @override
+  String get exportDiagnosticsError => '日誌匯出失敗，請重試';
 }

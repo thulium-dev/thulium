@@ -191,5 +191,7 @@
   "coursePreviewUnsupported": "Linux 暫不支援文件預覽",
   "sessionVerificationRequired": "更新校園資料需要重新驗證，已儲存的資訊仍可查看",
   "courseContentLoading": "正在載入課程內容",
-  "coursePreviewLoading": "正在載入文件"
+  "coursePreviewLoading": "正在載入文件",
+  "exportDiagnostics": "匯出診斷日誌",
+  "exportDiagnosticsError": "日誌匯出失敗，請重試"
 }
