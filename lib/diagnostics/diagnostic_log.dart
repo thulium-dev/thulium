@@ -177,6 +177,7 @@ const _TYPES = {
   'CourseScheduleException',
   'CourseScheduleSessionExpired',
   'TwoFactorInteractionRequired',
+  'DeviceTrustRegistrationException',
   'UnsupportedError',
   'FlutterError',
   'TypeError',
@@ -369,6 +370,21 @@ String? sanitizeDiagnosticMessage(String input) {
   if (body.startsWith('Credential recovery:')) {
     final cause = _TYPES.contains(value('cause')) ? value('cause') : 'other';
     return '[$scope] Credential recovery: cause=$cause trustedCredentialPresent=${value('trustedCredentialPresent') == 'true'}';
+  }
+  if (body.startsWith('Trusted-device registration rejected:')) {
+    final reason =
+        const {
+          'limit-reached',
+          'session-rejected',
+          'access-restricted',
+          'invalid-fingerprint',
+          'invalid-response',
+          'network-error',
+          'rejected',
+        }.contains(value('reason'))
+        ? value('reason')
+        : 'rejected';
+    return '[$scope] Trusted-device registration rejected: reason=$reason status=${int.tryParse(value('status') ?? '') ?? 0}';
   }
   if (body.startsWith('Session restored:')) {
     return '[$scope] Session restored: trustedCredentialPresent=${value('trustedCredentialPresent') == 'true'} deviceTrustConsent=${value('deviceTrustConsent') == 'true'}';

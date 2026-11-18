@@ -58,8 +58,8 @@ final class LearnHomeworkSnapshot {
 }
 
 /// Reads current homework totals using the captured GET `/student/index/`
-/// API. OneTHU confirms Wj = unsubmitted, Yjwg = submitted but ungraded,
-/// and Ypg = graded, although it uses a separate non-index POST API.
+/// API. Uses Wj for unsubmitted, Yjwg for submitted but ungraded, and Ypg
+/// for graded assignments.
 final class LearnHomeworkService {
   const LearnHomeworkService(this._authClient);
 
@@ -212,8 +212,8 @@ final class LearnHomeworkService {
     int size = 5,
   }) async {
     // The index route is captured for Wj. Reusing that prefix for Yjwg/Ypg
-    // is inferred from the sibling endpoint names; OneTHU confirms those
-    // names on its non-index POST route, not this GET variant.
+    // is inferred from the sibling endpoint names; those GET variants have
+    // not been captured independently.
     final target = Uri.https(
       _LEARN_HOST,
       '/b/wlxt/kczy/zy/student/index/$endpoint',
@@ -279,7 +279,7 @@ DateTime? _homeworkDeadline(Map row) {
   final text = row['jzsjStr'];
   if (text is! String || text.trim().isEmpty) return null;
   // Learn's zone-less string describes campus time, never the device zone.
-  // Use the normal deadline jzsj; bjjzsj is a separate late-submission deadline
-  // according to OneTHU, whose applicability is not established by this list.
+  // Use jzsj for the normal deadline; this list does not establish when the
+  // separate bjjzsj value applies.
   return DateTime.tryParse('${text.trim().replaceFirst(' ', 'T')}+08:00');
 }

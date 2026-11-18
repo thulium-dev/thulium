@@ -103,6 +103,9 @@ void main() {
         '[auth] Credential recovery: cause=PortalSessionRejected trustedCredentialPresent=true.',
       );
       log.record(
+        '[auth] Trusted-device registration rejected: reason=limit-reached status=200 msg=secret-token',
+      );
+      log.record(
         '[auth] Second-factor challenge: stage=webvpn trustedCredentialPresent=true.',
       );
       log.record('arbitrary password=password-value cookie=secret-token');
@@ -122,6 +125,10 @@ void main() {
       expect(report, contains('HTTP GET endpoint=learn-preview'));
       expect(report, contains('status=403 elapsedMs=42'));
       expect(report, contains('cause=PortalSessionRejected'));
+      expect(
+        report,
+        contains('registration rejected: reason=limit-reached status=200'),
+      );
       expect(report, contains('stage=webvpn trustedCredentialPresent=true'));
       expect(report, contains('package:thulium/pages/login_page.dart:12:3'));
     },
@@ -138,6 +145,9 @@ void main() {
       addTearDown(first.dispose);
       first.record(
         '[auth][signin=2] Using the trusted-browser identity entry.',
+      );
+      first.record(
+        '[auth] Trusted-device registration rejected: reason=limit-reached status=200 private-token',
       );
       first.record(
         '[auth] Session restored: trustedCredentialPresent=true deviceTrustConsent=true.',

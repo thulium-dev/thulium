@@ -618,4 +618,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exportDiagnosticsError =>
       'Could not export logs, please try again';
+
+  @override
+  String get deviceTrustLimitTitle => 'Trusted device limit reached';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      'Sign-in can continue, but this device will not be remembered. Manage old trusted browsers at id.tsinghua.edu.cn, then try again';
+
+  @override
+  String get continueSignInAction => 'Continue sign-in';
+
+  @override
+  String get deviceTrustRegistrationError =>
+      'Could not trust this device. Try signing in again and choose Not now, or export diagnostic logs';
 }

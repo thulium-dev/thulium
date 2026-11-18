@@ -42,9 +42,9 @@ If validation cleared rejected cookies and credential recovery fails, the runner
 persists only the original account/device identity, without cookies. This keeps a
 later refresh eligible for recovery while preserving separately saved passwords.
 
-Learn follows the service-first recovery policy used by OneTHU: a confirmed
-Learn login page or HTTP 401 first verifies the main account. If that account is
-still authenticated, rebuild only Learn through roaming and retry the read once.
+For a confirmed Learn login page or HTTP 401, first verify the main account.
+If that account is still authenticated, rebuild only Learn through roaming and
+retry the read once.
 Confirmed main-session rejection is escalated to credential recovery; the
 runner's bounded portal-CSRF fallback remains available as described above.
 Bare file HTTP 403/404/5xx responses and unsupported PDF conversions remain
@@ -53,9 +53,15 @@ not prove logout. PDF reads carry the current Learn CSRF token, and temporary
 service failures offer retry rather than sending users back to sign-in.
 
 Device trust records registration consent separately from the optional legacy
-`fingerGenPrint` token. Sign-in asks once and registers the fingerprint only after
-successful code verification. Credential forms match `main`: account, encrypted
-password, fingerprint, trusted-device token and captcha. They do not implicitly
+`fingerGenPrint` token. Sign-in asks once only after successful code verification,
+then registers the fingerprint. A quota rejection invokes
+`twoFactorAuthLimitHandler` once and continues without claiming this device was
+trusted. Other registration, transport and malformed-response failures throw
+`DeviceTrustRegistrationException` instead of silently succeeding. Provider
+messages are classified into fixed diagnostic reason codes; their raw text is
+not persisted or exported. No registration retry is made later in the same
+login, and no post-login registration is attempted. Credential forms contain the
+account, encrypted password, fingerprint, trusted-device token and captcha. They do not implicitly
 enable the separate `singleLogin`/`deviceName` browser-SSO option. A remembered
 trust choice alone is not proof that the server will waive verification.
 Server-provided `checkSingle` forms are followed before falling back to

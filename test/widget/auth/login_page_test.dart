@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium/pages/login_page.dart';
+import 'package:thulium/auth/secure_auth_session_store.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 
 import '../../../packages/auth/test/support/fake_auth_http_client.dart';
@@ -54,6 +55,7 @@ void main() {
                 required twoFactorMethodHandler,
                 required twoFactorCodeHandler,
                 required twoFactorTrustHandler,
+                required twoFactorAuthLimitHandler,
                 required trace,
               }) => TsinghuaAuthClient(
                 httpClient: transport,
@@ -68,6 +70,7 @@ void main() {
                   }
                   return choice;
                 },
+                twoFactorAuthLimitHandler: twoFactorAuthLimitHandler,
                 trace: trace,
               ),
         ),
@@ -79,8 +82,6 @@ void main() {
   }
 
   Future<void> verify(WidgetTester tester) async {
-    await tester.tap(find.text('Trust device'));
-    await tick(tester);
     await tester.tap(find.text('WeChat'));
     await tick(tester);
     await tester.enterText(find.byType(EditableText).last, '123456');
@@ -89,7 +90,87 @@ void main() {
     await tick(tester);
     await tester.tap(find.text('Confirm'));
     await tick(tester);
+    await tester.tap(find.text('Trust device'));
+    await tick(tester);
   }
+
+  testWidgets(
+    'device quota explains the limit and allows an untrusted sign-in',
+    (tester) async {
+      final transport = FakeAuthHttpClient(trustRejectionMessage: '受信设备数已达上限');
+      var successes = 0;
+      await show(tester, transport, _Dialogs(), success: () => successes++);
+      await tester.tap(find.text('Sign in'));
+      await tick(tester);
+      expect(find.text('Trust this device?'), findsNothing);
+      await verify(tester);
+      expect(find.text('Trusted device limit reached'), findsOneWidget);
+      expect(find.textContaining('id.tsinghua.edu.cn'), findsOneWidget);
+      expect(successes, 0);
+      await tester.tap(find.text('Continue sign-in'));
+      await tick(tester);
+      // The portal may require its own code when registration was refused.
+      await tester.tap(find.text('WeChat'));
+      await tick(tester);
+      await tester.enterText(find.byType(EditableText).last, '123456');
+      await tester.tap(find.text('Confirm'));
+      await tick(tester);
+      expect(successes, 1);
+      expect(find.text('Trust this device?'), findsNothing);
+      expect((await SecureAuthSessionStore().read())!.trustedBrowser, isFalse);
+      expect(
+        transport.requests.where(
+          (request) => request.url.path.endsWith('/saveFinger'),
+        ),
+        hasLength(1),
+      );
+    },
+    semanticsEnabled: false,
+  );
+
+  testWidgets(
+    'other registration rejection is visible and never reports successful sign-in',
+    (tester) async {
+      final transport = FakeAuthHttpClient(
+        trustRejectionMessage: '身份异常 private-token',
+      );
+      var successes = 0;
+      await show(tester, transport, _Dialogs(), success: () => successes++);
+      await tester.tap(find.text('Sign in'));
+      await tick(tester);
+      await verify(tester);
+      expect(
+        find.textContaining('Could not trust this device'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private-token'), findsNothing);
+      expect(successes, 0);
+      // The same screen can retry without registration, rather than trapping
+      // an account behind a provider error from SAVE_FINGER.
+      await tester.tap(find.text('Sign in'));
+      await tick(tester);
+      await tester.tap(find.text('WeChat'));
+      await tick(tester);
+      await tester.enterText(find.byType(EditableText).last, '123456');
+      await tester.tap(find.text('Confirm'));
+      await tick(tester);
+      await tester.tap(find.text('Not now'));
+      await tick(tester);
+      await tester.tap(find.text('WeChat'));
+      await tick(tester);
+      await tester.enterText(find.byType(EditableText).last, '123456');
+      await tester.tap(find.text('Confirm'));
+      await tick(tester);
+      expect(successes, 1);
+      expect(
+        transport.requests.where(
+          (request) => request.url.path.endsWith('/saveFinger'),
+        ),
+        hasLength(1),
+      );
+    },
+    semanticsEnabled: false,
+  );
 
   testWidgets(
     'button plus keyboard submission does not restart trust after a verified login fails',
@@ -179,12 +260,6 @@ void main() {
     await show(tester, transport, dialogs, success: () => successes++);
     await tester.tap(find.text('Sign in'));
     await tick(tester);
-    final trust = tester
-        .widget<FButton>(find.widgetWithText(FButton, 'Trust device'))
-        .onPress!;
-    trust();
-    trust();
-    await tick(tester);
     final method = tester
         .widget<FButton>(find.widgetWithText(FButton, 'WeChat'))
         .onPress!;
@@ -196,6 +271,12 @@ void main() {
     await tester.tap(find.text('Confirm'));
     await tick(tester);
     await tester.tap(find.text('Confirm'));
+    await tick(tester);
+    final trust = tester
+        .widget<FButton>(find.widgetWithText(FButton, 'Trust device'))
+        .onPress!;
+    trust();
+    trust();
     await tick(tester);
     expect(successes, 1);
     expect(dialogs.opened, 3);
@@ -213,8 +294,6 @@ void main() {
       await show(tester, transport, dialogs, success: () => successes++);
       await tester.tap(find.text('Sign in'));
       await tick(tester);
-      await tester.tap(find.text('Trust device'));
-      await tick(tester);
       await tester.tap(find.text('WeChat'));
       await tick(tester);
       await tester.enterText(find.byType(EditableText).last, '123456');
@@ -229,6 +308,8 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(find.text('Confirm'));
+      await tick(tester);
+      await tester.tap(find.text('Trust device'));
       await tick(tester);
       expect(successes, 1);
       // Two requests total: one rejected code and one deliberate retry.

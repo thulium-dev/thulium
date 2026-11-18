@@ -585,6 +585,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exportDiagnosticsError => '日志导出失败，请重试';
+
+  @override
+  String get deviceTrustLimitTitle => '信任设备数量已达上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以继续登录，但不会记住此设备。请到 id.tsinghua.edu.cn 管理旧的信任浏览器后重试';
+
+  @override
+  String get continueSignInAction => '继续登录';
+
+  @override
+  String get deviceTrustRegistrationError => '无法信任此设备，请重新登录并选择“暂不”，或导出诊断日志';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -1168,6 +1181,19 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get exportDiagnosticsError => '日志导出失败，请重试';
+
+  @override
+  String get deviceTrustLimitTitle => '信任设备数量已达上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以继续登录，但不会记住此设备。请到 id.tsinghua.edu.cn 管理旧的信任浏览器后重试';
+
+  @override
+  String get continueSignInAction => '继续登录';
+
+  @override
+  String get deviceTrustRegistrationError => '无法信任此设备，请重新登录并选择“暂不”，或导出诊断日志';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -1751,4 +1777,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get exportDiagnosticsError => '日誌匯出失敗，請重試';
+
+  @override
+  String get deviceTrustLimitTitle => '信任裝置數量已達上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以繼續登入，但不會記住此裝置。請到 id.tsinghua.edu.cn 管理舊的信任瀏覽器後重試';
+
+  @override
+  String get continueSignInAction => '繼續登入';
+
+  @override
+  String get deviceTrustRegistrationError => '無法信任此裝置，請重新登入並選擇「暫不」，或匯出診斷日誌';
 }

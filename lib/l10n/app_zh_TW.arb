@@ -193,5 +193,9 @@
   "courseContentLoading": "正在載入課程內容",
   "coursePreviewLoading": "正在載入文件",
   "exportDiagnostics": "匯出診斷日誌",
-  "exportDiagnosticsError": "日誌匯出失敗，請重試"
+  "exportDiagnosticsError": "日誌匯出失敗，請重試",
+  "deviceTrustLimitTitle": "信任裝置數量已達上限",
+  "deviceTrustLimitDescription": "本次可以繼續登入，但不會記住此裝置。請到 id.tsinghua.edu.cn 管理舊的信任瀏覽器後重試",
+  "continueSignInAction": "繼續登入",
+  "deviceTrustRegistrationError": "無法信任此裝置，請重新登入並選擇「暫不」，或匯出診斷日誌"
 }

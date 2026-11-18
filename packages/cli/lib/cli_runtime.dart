@@ -289,6 +289,10 @@ _Context _context(String name, bool verbose) {
     twoFactorCodeHandler: (verify) =>
         _readTwoFactorCode(verify, output: promptOutput),
     twoFactorTrustHandler: () => _askToTrustDevice(output: promptOutput),
+    twoFactorAuthLimitHandler: () async => promptOutput.writeln(
+      'Trusted device limit reached. This sign-in will continue without remembering '
+      'the device. Manage old trusted browsers at id.tsinghua.edu.cn, then try again.',
+    ),
     trace: verbose ? (message) => stderr.writeln('[auth] $message') : null,
   );
   final reconnect = CliSessionReconnect(

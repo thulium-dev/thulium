@@ -1209,6 +1209,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not export logs, please try again'**
   String get exportDiagnosticsError;
+
+  /// No description provided for @deviceTrustLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trusted device limit reached'**
+  String get deviceTrustLimitTitle;
+
+  /// No description provided for @deviceTrustLimitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in can continue, but this device will not be remembered. Manage old trusted browsers at id.tsinghua.edu.cn, then try again'**
+  String get deviceTrustLimitDescription;
+
+  /// No description provided for @continueSignInAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue sign-in'**
+  String get continueSignInAction;
+
+  /// No description provided for @deviceTrustRegistrationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not trust this device. Try signing in again and choose Not now, or export diagnostic logs'**
+  String get deviceTrustRegistrationError;
 }
 
 class _AppLocalizationsDelegate

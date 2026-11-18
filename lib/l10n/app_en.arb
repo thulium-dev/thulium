@@ -209,5 +209,9 @@
   "courseContentLoading": "Loading course content",
   "coursePreviewLoading": "Loading document",
   "exportDiagnostics": "Export diagnostic logs",
-  "exportDiagnosticsError": "Could not export logs, please try again"
+  "exportDiagnosticsError": "Could not export logs, please try again",
+  "deviceTrustLimitTitle": "Trusted device limit reached",
+  "deviceTrustLimitDescription": "Sign-in can continue, but this device will not be remembered. Manage old trusted browsers at id.tsinghua.edu.cn, then try again",
+  "continueSignInAction": "Continue sign-in",
+  "deviceTrustRegistrationError": "Could not trust this device. Try signing in again and choose Not now, or export diagnostic logs"
 }

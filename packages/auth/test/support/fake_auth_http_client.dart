@@ -12,6 +12,10 @@ final class FakeAuthHttpClient extends http.BaseClient {
     this.honorTrustedBrowser = false,
     this.denySingleLogin = false,
     this.singleLoginAction = '/do/off/ui/auth/login/checkSingle',
+    this.trustRejectionMessage,
+    this.trustStatusCode = 200,
+    this.malformedTrustResponse = false,
+    this.throwTrustRequest = false,
     String registeredFingerprint = 'stable-device',
     bool previouslyRegistered = false,
   }) : _registered = previouslyRegistered,
@@ -20,6 +24,10 @@ final class FakeAuthHttpClient extends http.BaseClient {
        _registeredFingerprint = registeredFingerprint;
 
   final bool failInformationRedirect;
+  final String? trustRejectionMessage;
+  final int trustStatusCode;
+  final bool malformedTrustResponse;
+  final bool throwTrustRequest;
   final bool expireCookieBeforeLogin;
   bool _credentialsSubmitted = false;
   bool _registered;
@@ -50,7 +58,13 @@ final class FakeAuthHttpClient extends http.BaseClient {
       _credentialsSubmitted = true;
     }
     if (request.url.path == '/b/doubleAuth/personal/saveFinger') {
-      _registered = true;
+      if (throwTrustRequest) {
+        throw http.ClientException('synthetic private transport details');
+      }
+      _registered =
+          trustRejectionMessage == null &&
+          !malformedTrustResponse &&
+          trustStatusCode == 200;
       _registeredFingerprint = Uri.splitQueryString(
         requestBody,
       )['fingerprint']!;
@@ -96,6 +110,10 @@ final class FakeAuthHttpClient extends http.BaseClient {
         '{"result":"error","msg":"invalid code"}',
       '/b/doubleAuth/login' =>
         '{"result":"success","object":{"redirectUrl":"http://id.tsinghua.edu.cn/two-factor-redirect"}}',
+      '/b/doubleAuth/personal/saveFinger' when malformedTrustResponse =>
+        '<html>invalid response</html>',
+      '/b/doubleAuth/personal/saveFinger' when trustRejectionMessage != null =>
+        jsonEncode({'result': 'error', 'msg': trustRejectionMessage}),
       '/b/doubleAuth/personal/saveFinger' when trustWithoutToken =>
         '{"result":"success"}',
       '/b/doubleAuth/personal/saveFinger' =>
@@ -115,7 +133,9 @@ final class FakeAuthHttpClient extends http.BaseClient {
     };
     return http.StreamedResponse(
       Stream<List<int>>.value(utf8.encode(body)),
-      request.url.path == '/login'
+      request.url.path == '/b/doubleAuth/personal/saveFinger'
+          ? trustStatusCode
+          : request.url.path == '/login'
           ? 302
           : request.url.path == '/lb-auth/lbredirect' && failInformationRedirect
           ? 307

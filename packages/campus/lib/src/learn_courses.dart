@@ -46,7 +46,7 @@ final class LearnPlatformSession {
     var landing = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
     if (landing.statusCode == 404) {
       // Older roaming links can still point at the removed /student/index
-      // route. OneTHU checks the current course page to establish readiness.
+      // route. Check the current course page to establish readiness.
       landing = await _authClient.getAuthenticated(
         TsinghuaWebVpnRedirect.forTarget(
           Uri.https(_LEARN_HOST, '/f/wlxt/index/course/student/'),

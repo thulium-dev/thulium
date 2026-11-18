@@ -475,6 +475,38 @@ typedef TwoFactorCodeHandler =
 /// Asks whether the user wants this installation registered as a trusted device.
 typedef TwoFactorTrustHandler = Future<bool> Function();
 
+/// Reports the server's trusted-device quota while allowing sign-in to continue.
+typedef TwoFactorAuthLimitHandler = Future<void> Function();
+
+enum DeviceTrustFailureReason {
+  limitReached,
+  sessionRejected,
+  accessRestricted,
+  invalidFingerprint,
+  invalidResponse,
+  networkError,
+  rejected;
+
+  String get diagnosticCode => switch (this) {
+    limitReached => 'limit-reached',
+    sessionRejected => 'session-rejected',
+    accessRestricted => 'access-restricted',
+    invalidFingerprint => 'invalid-fingerprint',
+    invalidResponse => 'invalid-response',
+    networkError => 'network-error',
+    rejected => 'rejected',
+  };
+}
+
+/// Contains only a classified reason; provider messages can contain private data.
+final class DeviceTrustRegistrationException implements Exception {
+  const DeviceTrustRegistrationException(this.reason);
+  final DeviceTrustFailureReason reason;
+  @override
+  String toString() =>
+      'DeviceTrustRegistrationException: ${reason.diagnosticCode}';
+}
+
 /// Receives safe authentication diagnostics without credential values.
 typedef AuthTraceHandler = void Function(String message);
 
@@ -487,6 +519,7 @@ final class TsinghuaAuthClient {
     this.twoFactorMethodHandler,
     this.twoFactorCodeHandler,
     this.twoFactorTrustHandler,
+    this.twoFactorAuthLimitHandler,
     this.trace,
     this.requestTimeout = _DEFAULT_REQUEST_TIMEOUT,
   }) : _http = httpClient ?? http.Client(),
@@ -511,8 +544,10 @@ final class TsinghuaAuthClient {
   /// Called only after the selected second-factor code has been requested.
   final TwoFactorCodeHandler? twoFactorCodeHandler;
 
-  /// Called once per sign-in to obtain consent for post-verification trust.
+  /// Called once after successful code verification to request device trust.
   final TwoFactorTrustHandler? twoFactorTrustHandler;
+
+  final TwoFactorAuthLimitHandler? twoFactorAuthLimitHandler;
 
   /// Optional diagnostic callback. Messages contain no passwords, codes, or
   /// cookie values and are disabled by default.
@@ -786,9 +821,9 @@ final class TsinghuaAuthClient {
 
   String _readInformationPortalCsrf(_Response response) {
     // The WebVPN cookie endpoint returns a cookie string in its response body,
-    // not in Set-Cookie. OneTHU imports that string into its jar before using
-    // the target service. Keep each imported cookie scoped to the service that
-    // owns it; WebVPN infrastructure cookies remain with the proxy host.
+    // not in Set-Cookie. Import that string before using the target service.
+    // Keep imported cookies scoped to their owning service; WebVPN
+    // infrastructure cookies remain with the proxy host.
     final pairs = <String, String>{};
     if (response.statusCode == 200 && !response.body.contains('<')) {
       for (final part in response.body.split(RegExp(r'[;\r\n]'))) {
@@ -1046,12 +1081,9 @@ final class TsinghuaAuthClient {
         previousSession.fingerprint == fingerprint &&
         (previousSession.trustedBrowser ||
             previousSession.fingerGenPrint?.isNotEmpty == true);
-    // Cache one device-registration choice for this attempt. Device trust and
-    // the ID site's optional singleLogin checkbox are separate choices; routine
-    // credential recovery must keep the same fields as the main branch.
-    _trustDecision =
-        _trustedBrowser ||
-        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
+    // Ask about registration only after a code is verified, and
+    // reuse that one choice across the WebVPN and portal stages.
+    _trustDecision = null;
     _registeredDuringLogin = false;
     // The old account must not be used to probe or silently renew the portal
     // while a new credential-based login is establishing its own session.
@@ -1210,6 +1242,9 @@ final class TsinghuaAuthClient {
     }
     final verifiedResponse = verified!;
 
+    _trustDecision ??=
+        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
+
     // Register only after verified 2FA and explicit consent. A legacy token is
     // optional; browser SSO can be established without one.
     if (_trustDecision == true && !_registeredDuringLogin) {
@@ -1237,39 +1272,84 @@ final class TsinghuaAuthClient {
   }
 
   Future<void> _saveTrustedDevice(String fingerprint) async {
+    late final _Response raw;
     try {
-      final response = _decodeJsonObject(
-        (await _request(
-          Uri.parse(_SAVE_FINGER_URL),
-          method: 'POST',
-          form: {
-            'fingerprint': fingerprint,
-            'deviceName': 'Thulium',
-            'radioVal': '是',
-          },
-        )).body,
+      raw = await _request(
+        Uri.parse(_SAVE_FINGER_URL),
+        method: 'POST',
+        form: {
+          'fingerprint': fingerprint,
+          'deviceName': 'Thulium',
+          'radioVal': '是',
+        },
       );
-      if (response['result'] != _TWO_FACTOR_SUCCESS) {
-        trace?.call('Trusted-device registration was not accepted.');
+    } catch (_) {
+      _rejectDeviceTrust(DeviceTrustFailureReason.networkError, 0);
+      throw const DeviceTrustRegistrationException(
+        DeviceTrustFailureReason.networkError,
+      );
+    }
+    final Map<String, dynamic> response;
+    try {
+      response = _decodeJsonObject(raw.body);
+    } catch (_) {
+      final reason = raw.statusCode == 401
+          ? DeviceTrustFailureReason.sessionRejected
+          : raw.statusCode == 403 || raw.statusCode == 429
+          ? DeviceTrustFailureReason.accessRestricted
+          : DeviceTrustFailureReason.invalidResponse;
+      _rejectDeviceTrust(reason, raw.statusCode);
+      throw DeviceTrustRegistrationException(reason);
+    }
+    if (raw.statusCode < 200 ||
+        raw.statusCode >= 300 ||
+        response['result'] != _TWO_FACTOR_SUCCESS) {
+      final message = response['msg'] ?? response['message'];
+      final text = message is String ? message.toLowerCase() : '';
+      final reason =
+          raw.statusCode == 401 ||
+              RegExp(
+                r'未登录|登录.*(?:失效|过期)|not authenticated|login required',
+              ).hasMatch(text)
+          ? DeviceTrustFailureReason.sessionRejected
+          : raw.statusCode == 403 ||
+                raw.statusCode == 429 ||
+                RegExp(r'频繁|rate.?limit|access denied|访问受限').hasMatch(text)
+          ? DeviceTrustFailureReason.accessRestricted
+          : RegExp(r'上限|limit|too many.*(?:device|browser)').hasMatch(text)
+          ? DeviceTrustFailureReason.limitReached
+          : RegExp(
+              r'指纹.*(?:无效|错误|格式|长度)|invalid.*fingerprint|fingerprint.*(?:invalid|format|length)',
+            ).hasMatch(text)
+          ? DeviceTrustFailureReason.invalidFingerprint
+          : DeviceTrustFailureReason.rejected;
+      _rejectDeviceTrust(reason, raw.statusCode);
+      if (reason == DeviceTrustFailureReason.limitReached) {
+        await twoFactorAuthLimitHandler?.call();
         return;
       }
-      // Current deployments can acknowledge registration without an object.
-      // Browser SSO is not conditional on receiving a legacy token string.
-      _trustedBrowser = true;
-      _registeredDuringLogin = true;
-      trace?.call('Trusted-device registration accepted.');
-      final token = response['object'];
-      if (token is String && token.isNotEmpty) {
-        _fingerGenPrint = token;
-        trace?.call('Trusted-device credential received.');
-      } else {
-        trace?.call('Trusted-device registration needs no legacy credential.');
-      }
-    } catch (_) {
-      // Device trust is optional; its failure must not invalidate successful
-      // credential and second-factor verification.
-      trace?.call('Trusted-device registration failed; continuing login.');
+      throw DeviceTrustRegistrationException(reason);
     }
+    // Current deployments can acknowledge registration without an object.
+    // Browser SSO is not conditional on receiving a legacy token string.
+    _trustedBrowser = true;
+    _registeredDuringLogin = true;
+    trace?.call('Trusted-device registration accepted.');
+    final token = response['object'];
+    if (token is String && token.isNotEmpty) {
+      _fingerGenPrint = token;
+      trace?.call('Trusted-device credential received.');
+    } else {
+      trace?.call('Trusted-device registration needs no legacy credential.');
+    }
+  }
+
+  void _rejectDeviceTrust(DeviceTrustFailureReason reason, int status) {
+    _trustedBrowser = false;
+    _trustDecision = false;
+    trace?.call(
+      'Trusted-device registration rejected: reason=${reason.diagnosticCode} status=$status.',
+    );
   }
 
   Map<String, dynamic> _decodeJsonObject(String body) {

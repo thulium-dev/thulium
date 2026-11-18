@@ -16,6 +16,7 @@ typedef LoginAuthClientBuilder =
       required TwoFactorMethodHandler twoFactorMethodHandler,
       required TwoFactorCodeHandler twoFactorCodeHandler,
       required TwoFactorTrustHandler twoFactorTrustHandler,
+      required TwoFactorAuthLimitHandler twoFactorAuthLimitHandler,
       required AuthTraceHandler trace,
     });
 
@@ -169,6 +170,7 @@ final class _LoginPageState extends State<LoginPage> {
         twoFactorMethodHandler: _selectTwoFactorMethod,
         twoFactorCodeHandler: _readTwoFactorCode,
         twoFactorTrustHandler: _askToTrustDevice,
+        twoFactorAuthLimitHandler: _showDeviceTrustLimit,
         trace: (message) => debugPrint('[auth][signin=$_attemptId] $message'),
       );
 
@@ -221,7 +223,9 @@ final class _LoginPageState extends State<LoginPage> {
       );
       if (mounted) {
         setState(
-          () => _errorMessage = AppLocalizations.of(context)!.loginError,
+          () => _errorMessage = error is DeviceTrustRegistrationException
+              ? AppLocalizations.of(context)!.deviceTrustRegistrationError
+              : AppLocalizations.of(context)!.loginError,
         );
       }
     } finally {
@@ -315,6 +319,30 @@ final class _LoginPageState extends State<LoginPage> {
       return existing;
     }
     return _trustChoice = _showTrustDeviceDialog();
+  }
+
+  Future<void> _showDeviceTrustLimit() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    var answered = false;
+    await showFDialog<void>(
+      context: context,
+      builder: (context, _, animation) => FDialog.adaptive(
+        animation: animation,
+        title: Text(l10n.deviceTrustLimitTitle),
+        body: Text(l10n.deviceTrustLimitDescription),
+        actions: [
+          FButton(
+            onPress: () {
+              if (answered || ModalRoute.of(context)?.isCurrent != true) return;
+              answered = true;
+              Navigator.of(context).pop();
+            },
+            child: Text(l10n.continueSignInAction),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool> _showTrustDeviceDialog() async {

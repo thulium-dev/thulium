@@ -50,8 +50,8 @@ final class LearnMaterial {
   final int? downloadCount;
 
   /// Keeps unverified fields available without assigning guessed semantics.
-  /// In particular, OneTHU maps sfqd to "important", while the captured
-  /// response does not establish that meaning; do not call it attendance.
+  /// The captured response does not establish the meaning of sfqd, so retain
+  /// it without treating it as an importance or attendance flag.
   final Map<String, dynamic> rawResponse;
 }
 
@@ -74,8 +74,8 @@ final class LearnMaterialService {
   const LearnMaterialService(this._authClient);
   final TsinghuaAuthClient _authClient;
 
-  /// OneTHU uses 200 here. This endpoint has no offset or total count in the
-  /// supplied response, so preserve the limit and never claim a complete list.
+  /// Requests up to 200 files by default. This endpoint supplies no offset or
+  /// total count, so preserve the limit and never claim a complete list.
   Future<List<LearnCourseMaterials>> fetchCourses(
     LearnCourseCatalog catalog, {
     String? courseId,

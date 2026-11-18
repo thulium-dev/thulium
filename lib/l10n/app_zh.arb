@@ -193,5 +193,9 @@
   "courseContentLoading": "正在加载课程内容",
   "coursePreviewLoading": "正在加载文档",
   "exportDiagnostics": "导出诊断日志",
-  "exportDiagnosticsError": "日志导出失败，请重试"
+  "exportDiagnosticsError": "日志导出失败，请重试",
+  "deviceTrustLimitTitle": "信任设备数量已达上限",
+  "deviceTrustLimitDescription": "本次可以继续登录，但不会记住此设备。请到 id.tsinghua.edu.cn 管理旧的信任浏览器后重试",
+  "continueSignInAction": "继续登录",
+  "deviceTrustRegistrationError": "无法信任此设备，请重新登录并选择“暂不”，或导出诊断日志"
 }
