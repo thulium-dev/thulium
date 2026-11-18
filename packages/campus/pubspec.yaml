@@ -7,6 +7,7 @@ environment:
   sdk: ^3.12.2
 
 dependencies:
+  html: ^0.15.7
   http: ^1.4.0
   thulium_auth:
     path: ../auth

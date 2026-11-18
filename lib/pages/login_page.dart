@@ -8,11 +8,27 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 import '../auth/secure_auth_session_store.dart';
 
+/// Configures a transport while retaining the real page's verification dialogs.
+typedef LoginAuthClientBuilder =
+    TsinghuaAuthClient Function({
+      required AuthSessionStore sessionStore,
+      required AuthCredentialStore credentialStore,
+      required TwoFactorMethodHandler twoFactorMethodHandler,
+      required TwoFactorCodeHandler twoFactorCodeHandler,
+      required TwoFactorTrustHandler twoFactorTrustHandler,
+      required AuthTraceHandler trace,
+    });
+
 /// Collects credentials and performs the shared Tsinghua authentication flow.
 final class LoginPage extends StatefulWidget {
-  const LoginPage({required this.onLoginSuccess, super.key});
+  const LoginPage({
+    required this.onLoginSuccess,
+    this.authClientBuilder,
+    super.key,
+  });
 
   final VoidCallback onLoginSuccess;
+  final LoginAuthClientBuilder? authClientBuilder;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -56,6 +72,9 @@ final class _VerificationCodeDialogState
   }
 
   Future<void> _verify() async {
+    if (!mounted || _isVerifying || ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final code = _controller.text.trim();
     if (code.isEmpty) {
       setState(() => _isInvalid = true);
@@ -65,14 +84,18 @@ final class _VerificationCodeDialogState
     setState(() => _isVerifying = true);
     try {
       if (await widget.verifyCode(code)) {
-        if (mounted) Navigator.of(context).pop(true);
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          Navigator.of(context).pop(true);
+        }
       } else if (mounted) {
         setState(() => _isInvalid = true);
       }
     } catch (_) {
       // A transport failure is not a bad code; end this dialog so the outer
       // login flow can report its normal sign-in error instead of hanging.
-      if (mounted) Navigator.of(context).pop(false);
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        Navigator.of(context).pop(false);
+      }
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
@@ -120,7 +143,14 @@ final class _VerificationCodeDialogState
       ),
       FButton(
         variant: FButtonVariant.outline,
-        onPress: _isVerifying ? null : () => Navigator.of(context).pop(false),
+        onPress: _isVerifying
+            ? null
+            : () {
+                if (!_isVerifying &&
+                    ModalRoute.of(context)?.isCurrent == true) {
+                  Navigator.of(context).pop(false);
+                }
+              },
         child: Text(widget.cancelLabel),
       ),
     ],
@@ -132,17 +162,21 @@ final class _LoginPageState extends State<LoginPage> {
   final _studentIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _sessionStore = SecureAuthSessionStore();
-  late final TsinghuaAuthClient _authClient = TsinghuaAuthClient(
-    sessionStore: _sessionStore,
-    credentialStore: _sessionStore,
-    twoFactorMethodHandler: _selectTwoFactorMethod,
-    twoFactorCodeHandler: _readTwoFactorCode,
-    twoFactorTrustHandler: _askToTrustDevice,
-    trace: (message) => debugPrint('[auth] $message'),
-  );
+  late final TsinghuaAuthClient _authClient =
+      (widget.authClientBuilder ?? TsinghuaAuthClient.new)(
+        sessionStore: _sessionStore,
+        credentialStore: _sessionStore,
+        twoFactorMethodHandler: _selectTwoFactorMethod,
+        twoFactorCodeHandler: _readTwoFactorCode,
+        twoFactorTrustHandler: _askToTrustDevice,
+        trace: (message) => debugPrint('[auth][signin=$_attemptId] $message'),
+      );
 
   bool _isSubmitting = false;
   String? _errorMessage;
+  Future<bool>? _trustChoice;
+  static int _nextAttemptId = 0;
+  int _attemptId = 0;
 
   @override
   void dispose() {
@@ -152,26 +186,39 @@ final class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
+    if (!mounted) return;
+    if (_isSubmitting) {
+      debugPrint('[signin] attempt=$_attemptId stage=duplicate_submit_ignored');
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final userId = _studentIdController.text.trim();
+    final password = _passwordController.text;
     FocusScope.of(context).unfocus();
     setState(() {
+      _attemptId = ++_nextAttemptId;
+      _trustChoice = null;
       _errorMessage = null;
       _isSubmitting = true;
     });
+    debugPrint('[signin] attempt=$_attemptId stage=start');
 
     try {
       await AuthSessionRunner.exclusive(_sessionStore, () async {
         await _authClient.login(
-          userId: _studentIdController.text.trim(),
-          password: _passwordController.text,
+          userId: userId,
+          password: password,
           fingerprint: await _sessionStore.getOrCreateFingerprint(),
         );
       });
+      debugPrint('[signin] attempt=$_attemptId stage=success');
       if (mounted) widget.onLoginSuccess();
     } catch (error) {
       // Do not expose server internals or distinguish which credential was
       // incorrect. The same localized message also covers network failures.
-      debugPrint('Thulium login failed: $error');
+      debugPrint(
+        '[signin] attempt=$_attemptId stage=failed type=${error.runtimeType}',
+      );
       if (mounted) {
         setState(
           () => _errorMessage = AppLocalizations.of(context)!.loginError,
@@ -186,6 +233,13 @@ final class _LoginPageState extends State<LoginPage> {
     TwoFactorOptions options,
   ) async {
     final l10n = AppLocalizations.of(context)!;
+    var answered = false;
+    void answer(BuildContext dialogContext, TwoFactorMethod? method) {
+      if (answered || ModalRoute.of(dialogContext)?.isCurrent != true) return;
+      answered = true;
+      Navigator.of(dialogContext).pop(method);
+    }
+
     final methods = <({TwoFactorMethod method, String label})>[];
     if (options.hasWeChat) {
       methods.add((method: TwoFactorMethod.wechat, label: l10n.wechatMethod));
@@ -214,7 +268,7 @@ final class _LoginPageState extends State<LoginPage> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: FButton(
                   variant: FButtonVariant.outline,
-                  onPress: () => Navigator.of(context).pop(option.method),
+                  onPress: () => answer(context, option.method),
                   child: Text(option.label),
                 ),
               ),
@@ -223,7 +277,7 @@ final class _LoginPageState extends State<LoginPage> {
         actions: [
           FButton(
             variant: FButtonVariant.outline,
-            onPress: () => Navigator.of(context).pop(),
+            onPress: () => answer(context, null),
             child: Text(l10n.cancelAction),
           ),
         ],
@@ -254,9 +308,27 @@ final class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<bool> _askToTrustDevice() async {
+  Future<bool> _askToTrustDevice() {
+    final existing = _trustChoice;
+    if (existing != null) {
+      debugPrint('[signin] attempt=$_attemptId stage=trust_choice_reused');
+      return existing;
+    }
+    return _trustChoice = _showTrustDeviceDialog();
+  }
+
+  Future<bool> _showTrustDeviceDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    return await showFDialog<bool>(
+    var answered = false;
+    void answer(BuildContext dialogContext, bool choice) {
+      if (answered || ModalRoute.of(dialogContext)?.isCurrent != true) return;
+      answered = true;
+      Navigator.of(dialogContext).pop(choice);
+    }
+
+    debugPrint('[signin] attempt=$_attemptId stage=trust_dialog_shown');
+    final choice =
+        await showFDialog<bool>(
           context: context,
           builder: (context, _, animation) => FDialog.adaptive(
             animation: animation,
@@ -265,17 +337,19 @@ final class _LoginPageState extends State<LoginPage> {
             actions: [
               FButton(
                 variant: FButtonVariant.outline,
-                onPress: () => Navigator.of(context).pop(false),
+                onPress: () => answer(context, false),
                 child: Text(l10n.notNowAction),
               ),
               FButton(
-                onPress: () => Navigator.of(context).pop(true),
+                onPress: () => answer(context, true),
                 child: Text(l10n.trustDeviceAction),
               ),
             ],
           ),
         ) ??
         false;
+    debugPrint('[signin] attempt=$_attemptId stage=trust_dialog_resolved');
+    return choice;
   }
 
   @override

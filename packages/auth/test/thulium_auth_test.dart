@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:dart_sm/dart_sm.dart';
 import 'package:fast_gbk/fast_gbk.dart' as gbk_codec;
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import 'package:thulium_auth/thulium_auth.dart';
+
+import 'support/fake_auth_http_client.dart';
 
 void main() {
   group('TsinghuaWebVpnRedirect', () {
@@ -158,7 +159,7 @@ void main() {
     final sessionStore = MemoryAuthSessionStore();
     final credentialStore = _MemoryCredentialStore();
     final auth = TsinghuaAuthClient(
-      httpClient: _FakeAuthClient(),
+      httpClient: FakeAuthHttpClient(),
       sessionStore: sessionStore,
       credentialStore: credentialStore,
       twoFactorMethodHandler: (_) async => TwoFactorMethod.wechat,
@@ -435,7 +436,7 @@ void main() {
         ],
       ),
     );
-    final client = _FakeAuthClient();
+    final client = FakeAuthHttpClient();
     final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
 
     expect(await auth.restore(), isNotNull);
@@ -469,7 +470,7 @@ void main() {
   );
 
   test('signals when reconnect needs interactive two-factor input', () async {
-    final auth = TsinghuaAuthClient(httpClient: _FakeAuthClient());
+    final auth = TsinghuaAuthClient(httpClient: FakeAuthHttpClient());
 
     await expectLater(
       auth.login(
@@ -556,7 +557,7 @@ void main() {
   test(
     'retries a rejected two-factor code without sending another code',
     () async {
-      final client = _FakeAuthClient();
+      final client = FakeAuthHttpClient();
       final events = <String>[];
       var rejectedEmptyCode = false;
       var rejectedIncorrectCode = false;
@@ -714,7 +715,7 @@ void main() {
   test(
     'registers a trusted device and reuses finger3 during portal roaming',
     () async {
-      final client = _FakeAuthClient();
+      final client = FakeAuthHttpClient();
       final store = MemoryAuthSessionStore();
       final auth = TsinghuaAuthClient(
         httpClient: client,
@@ -758,7 +759,7 @@ void main() {
   test(
     'trust registration without a token prevents a second code and survives relaunch',
     () async {
-      final client = _FakeAuthClient(
+      final client = FakeAuthHttpClient(
         trustWithoutToken: true,
         honorTrustedBrowser: true,
       );
@@ -808,7 +809,7 @@ void main() {
       expect(initial.bodyFields['singleLogin'], 'on');
       expect(portal.bodyFields['deviceName'], 'Thulium');
 
-      final nextTransport = _FakeAuthClient(
+      final nextTransport = FakeAuthHttpClient(
         honorTrustedBrowser: true,
         previouslyRegistered: true,
       );
@@ -834,7 +835,7 @@ void main() {
   test(
     'portal trusted-browser form reuses verified identity without requesting another code',
     () async {
-      final client = _FakeAuthClient(
+      final client = FakeAuthHttpClient(
         trustWithoutToken: true,
         trustedPortalForm: true,
       );
@@ -878,7 +879,7 @@ void main() {
   );
 
   test('rejected browser SSO falls back to credentials once', () async {
-    final client = _FakeAuthClient(
+    final client = FakeAuthHttpClient(
       trustedPortalForm: true,
       denySingleLogin: true,
     );
@@ -922,7 +923,7 @@ void main() {
         'http://id.tsinghua.edu.cn/do/off/ui/auth/login/checkSingle',
         '/unexpected',
       ]) {
-        final client = _FakeAuthClient(
+        final client = FakeAuthHttpClient(
           trustedPortalForm: true,
           singleLoginAction: action,
         );
@@ -956,7 +957,7 @@ void main() {
   test(
     'declining trust does not enable browser SSO or register a device',
     () async {
-      final client = _FakeAuthClient(
+      final client = FakeAuthHttpClient(
         trustWithoutToken: true,
         honorTrustedBrowser: true,
       );
@@ -999,7 +1000,7 @@ void main() {
   test(
     'a genuine second server challenge is honored without registering trust twice',
     () async {
-      final client = _FakeAuthClient(trustWithoutToken: true);
+      final client = FakeAuthHttpClient(trustWithoutToken: true);
       var codePrompts = 0;
       var trustPrompts = 0;
       final auth = TsinghuaAuthClient(
@@ -1046,7 +1047,7 @@ void main() {
             trustedBrowser: true,
           ),
         );
-        final client = _FakeAuthClient(honorTrustedBrowser: true);
+        final client = FakeAuthHttpClient(honorTrustedBrowser: true);
         final auth = TsinghuaAuthClient(
           httpClient: client,
           sessionStore: store,
@@ -1102,11 +1103,127 @@ void main() {
     },
   );
 
+  test(
+    'expired portal cookie recovers through live trusted SSO without a password or code',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(
+        AuthSession.fromJson({
+          ..._savedSession().toJson(),
+          'trustedBrowser': true,
+        }),
+      );
+      final client = _SessionValidationClient(
+        studentId: '1234567890',
+        trustedEntry: true,
+        rejectExpiredCookie: true,
+      );
+      final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
+      await auth.restore();
+      expect(await auth.validateSession(), isTrue);
+      expect(
+        client.requests.where(
+          (r) => r.url.path == '/do/off/ui/auth/login/checkSingle',
+        ),
+        hasLength(1),
+      );
+      expect(
+        client.requests.where(
+          (r) => r.url.path == '/do/off/ui/auth/login/check',
+        ),
+        isEmpty,
+      );
+      expect(
+        client.requests.where((r) => r.url.path == '/b/doubleAuth/login'),
+        isEmpty,
+      );
+      expect((await store.read())!.trustedBrowser, isTrue);
+    },
+  );
+
+  test(
+    'invalidated cookies retain cookie-free device identity for credential recovery',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(
+        AuthSession.fromJson({
+          ..._savedSession().toJson(),
+          'trustedBrowser': true,
+        }),
+      );
+      final client = FakeAuthHttpClient(
+        expireCookieBeforeLogin: true,
+        honorTrustedBrowser: true,
+        previouslyRegistered: true,
+      );
+      final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
+      await auth.restore();
+      expect(await auth.validateSession(), isFalse);
+      expect(await store.read(), isNull);
+      // The expired cookies are gone, but this client can still request browser
+      // SSO for the same account/device during its one credential recovery.
+      final session = await auth.login(
+        userId: '1234567890',
+        password: 'password',
+        fingerprint: 'saved-device',
+      );
+      expect(session.trustedBrowser, isTrue);
+      expect(
+        client.requests.where((r) => r.url.path == '/b/doubleAuth/login'),
+        isEmpty,
+      );
+      final post =
+          client.requests.firstWhere(
+                (r) => r.url.path == '/do/off/ui/auth/login/check',
+              )
+              as http.Request;
+      expect(post.bodyFields['singleLogin'], 'on');
+      expect(
+        post.headers['Cookie'] ?? '',
+        isNot(contains('SESSION=webvpn-session')),
+      );
+    },
+  );
+
+  test(
+    'explicit logout removes the reconnect identity as well as cookies',
+    () async {
+      final store = MemoryAuthSessionStore();
+      await store.write(
+        AuthSession.fromJson({
+          ..._savedSession().toJson(),
+          'trustedBrowser': true,
+        }),
+      );
+      final client = FakeAuthHttpClient(
+        honorTrustedBrowser: true,
+        previouslyRegistered: true,
+      );
+      final auth = TsinghuaAuthClient(httpClient: client, sessionStore: store);
+      await auth.restore();
+      await auth.logout();
+      await expectLater(
+        auth.login(
+          userId: '1234567890',
+          password: 'password',
+          fingerprint: 'saved-device',
+        ),
+        throwsA(isA<TwoFactorInteractionRequired>()),
+      );
+      final post =
+          client.requests.singleWhere(
+                (r) => r.url.path == '/do/off/ui/auth/login/check',
+              )
+              as http.Request;
+      expect(post.bodyFields.containsKey('singleLogin'), isFalse);
+    },
+  );
+
   test('does not save a login when WebVPN rejects the portal ticket', () async {
     final store = MemoryAuthSessionStore();
     final credentialStore = _MemoryCredentialStore();
     final auth = TsinghuaAuthClient(
-      httpClient: _FakeAuthClient(failInformationRedirect: true),
+      httpClient: FakeAuthHttpClient(failInformationRedirect: true),
       sessionStore: store,
       credentialStore: credentialStore,
       twoFactorMethodHandler: (_) async => TwoFactorMethod.wechat,
@@ -1165,9 +1282,11 @@ final class _SessionValidationClient extends http.BaseClient {
     required this.studentId,
     this.emptyCookieResponses = 0,
     this.trustedEntry = false,
+    this.rejectExpiredCookie = false,
   });
 
   final bool trustedEntry;
+  final bool rejectExpiredCookie;
   bool _singleCompleted = false;
   final String studentId;
   final int emptyCookieResponses;
@@ -1188,9 +1307,10 @@ final class _SessionValidationClient extends http.BaseClient {
       body = '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>';
     } else if (request.url.path == '/wengine-vpn/cookie') {
       cookieRequests++;
-      body =
-          (trustedEntry && !_singleCompleted) ||
-              cookieRequests <= emptyCookieResponses
+      body = trustedEntry && !_singleCompleted && rejectExpiredCookie
+          ? '<html><span id="sm2publicKey">expired</span></html>'
+          : (trustedEntry && !_singleCompleted) ||
+                cookieRequests <= emptyCookieResponses
           ? ''
           : 'XSRF-TOKEN=csrf-value; JSESSIONID=portal-session;';
     } else {
@@ -1247,112 +1367,4 @@ final class _StalledClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) =>
       Completer<http.StreamedResponse>().future;
-}
-
-final class _FakeAuthClient extends http.BaseClient {
-  _FakeAuthClient({
-    this.failInformationRedirect = false,
-    this.trustWithoutToken = false,
-    this.trustedPortalForm = false,
-    this.honorTrustedBrowser = false,
-    this.denySingleLogin = false,
-    this.singleLoginAction = '/do/off/ui/auth/login/checkSingle',
-    bool previouslyRegistered = false,
-  }) : _registered = previouslyRegistered;
-
-  final bool failInformationRedirect;
-  bool _registered;
-  final bool trustWithoutToken;
-  final bool trustedPortalForm;
-  final bool honorTrustedBrowser;
-  final bool denySingleLogin;
-  final String singleLoginAction;
-  final requests = <http.BaseRequest>[];
-  var _verificationAttempts = 0;
-  var _identityLoginAttempts = 0;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    requests.add(request);
-    final requestBody = request is http.Request ? request.body : '';
-    if (request.url.path == '/b/doubleAuth/personal/saveFinger') {
-      _registered = true;
-    }
-    final body = switch (request.url.path) {
-      '/login' => '',
-      '/login-form' =>
-        '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
-      _
-          when trustedPortalForm &&
-              request.url.path.startsWith('/do/off/ui/auth/login/form/') =>
-        '<form action="$singleLoginAction" method="post">'
-            '<input type="hidden" name="fingerPrint" value="">'
-            '<input type="hidden" name="i_rememberme" value="on">'
-            '<input type="hidden" name="execution" value="one&amp;two">'
-            '<input disabled name="disabled-field" value="ignored">'
-            '</form>',
-      _ when request.url.path.startsWith('/do/off/ui/auth/login/form/') =>
-        '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
-      '/do/off/ui/auth/login/checkSingle' when denySingleLogin =>
-        '<span id="sm2publicKey">${SM2.generateKeyPair().publicKey}</span>',
-      '/do/off/ui/auth/login/checkSingle' =>
-        '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>',
-      '/do/off/ui/auth/login/check'
-          when honorTrustedBrowser &&
-              _registered &&
-              requestBody.contains('singleLogin=on') =>
-        '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>',
-      '/do/off/ui/auth/login/check' when ++_identityLoginAttempts == 1 =>
-        '二次认证',
-      '/do/off/ui/auth/login/check'
-          when requestBody.contains('fingerGenPrint=trusted-device-token') =>
-        '<a href="https://id.tsinghua.edu.cn/f/j_spring_security_thauth_roaming_entry?atOnce=atOnce&&ticket=test-ticket">登录成功。正在重定向到</a>',
-      '/do/off/ui/auth/login/check' => '二次认证',
-      '/b/doubleAuth/login' when requestBody.contains('FIND_APPROACHES') =>
-        '{"result":"success","object":{"hasWeChatBool":true,"phone":null,"hasTotp":false}}',
-      '/b/doubleAuth/login' when requestBody.contains('SEND_CODE') =>
-        '{"result":"success"}',
-      '/b/doubleAuth/login'
-          when requestBody.contains('VERITY_CODE') &&
-              ++_verificationAttempts == 1 =>
-        '{"result":"error","msg":"invalid code"}',
-      '/b/doubleAuth/login' =>
-        '{"result":"success","object":{"redirectUrl":"http://id.tsinghua.edu.cn/two-factor-redirect"}}',
-      '/b/doubleAuth/personal/saveFinger' when trustWithoutToken =>
-        '{"result":"success"}',
-      '/b/doubleAuth/personal/saveFinger' =>
-        '{"result":"success","object":"trusted-device-token"}',
-      '/two-factor-redirect' => '<a href="/callback">登录成功。正在重定向到</a>',
-      '/callback' => '',
-      '/lb-auth/lbredirect' => '',
-      '/wengine-vpn/failed' => '<html>WebVPN service failed</html>',
-      '/wengine-vpn/cookie' =>
-        'XSRF-TOKEN=csrf-value; JSESSIONID=portal-session;',
-      _ when request.url.path.endsWith('/b/info/gxfw_fg/common/grjbxx') =>
-        '{"result":"success","object":{"ryh":"1234567890"}}',
-      _ => '{}',
-    };
-    return http.StreamedResponse(
-      Stream<List<int>>.value(utf8.encode(body)),
-      request.url.path == '/login'
-          ? 302
-          : request.url.path == '/lb-auth/lbredirect' && failInformationRedirect
-          ? 307
-          : 200,
-      headers: switch (request.url.path) {
-        '/login' => const {
-          'location': '/login-form',
-          'set-cookie':
-              'JSESSIONID=webvpn-session; Path=/; Secure, PATH_ONLY=portal-value; Path=/https; Secure, EXPIRED=old; Path=/; Expires=Wed, 21 Oct 2015 07:28:00 GMT, SESSION=session-value; Path=/, SHARED=shared-value; Domain=.tsinghua.edu.cn; Path=/; Secure',
-        },
-        '/do/off/ui/auth/login/check' => const {
-          'set-cookie': 'JSESSIONID=identity-session; Path=/; Secure',
-        },
-        '/lb-auth/lbredirect' when failInformationRedirect => const {
-          'location': 'https://webvpn.tsinghua.edu.cn/wengine-vpn/failed',
-        },
-        _ => const {},
-      },
-    );
-  }
 }

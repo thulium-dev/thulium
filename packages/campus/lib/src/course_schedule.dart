@@ -244,6 +244,16 @@ final class CourseScheduleService {
       lastSource = CourseScheduleSource.network;
       return schedule;
     } on Exception catch (error) {
+      // Cached data must not hide a failure that the caller can recover by
+      // logging in with saved credentials.
+      if (error is CourseScheduleSessionExpired ||
+          error is PortalSessionRejected ||
+          error is PortalCsrfUnavailable ||
+          (error is CourseScheduleException &&
+              (error.cause is PortalSessionRejected ||
+                  error.cause is PortalCsrfUnavailable))) {
+        rethrow;
+      }
       if (cached == null || forceRefresh) rethrow;
       trace?.call('Calendar using stale cache after ${error.runtimeType}');
       lastSource = CourseScheduleSource.staleCache;

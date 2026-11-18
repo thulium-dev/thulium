@@ -242,7 +242,6 @@ class _CourseResourcePageState<T> extends State<_CourseResourcePage<T>> {
     final l10n = AppLocalizations.of(context)!;
     final expired =
         _error is PortalSessionRejected ||
-        _error is PortalCsrfUnavailable ||
         _error is TwoFactorInteractionRequired;
     final errorText = expired
         ? l10n.courseSessionExpired

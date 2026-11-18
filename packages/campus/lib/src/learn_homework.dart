@@ -96,52 +96,53 @@ final class LearnHomeworkService {
     if (catalog.courses.isEmpty) {
       return LearnHomeworkSnapshot(counts: counts, assignments: assignments);
     }
-    final csrf = await LearnPlatformSession(_authClient).open();
-    for (final course in catalog.courses) {
-      var data = await _fetchData(course.id, endpoint, csrf);
-      var total = _readTotal(data);
-      if (total > 5) {
-        data = await _fetchData(course.id, endpoint, csrf, size: total);
-        total = _readTotal(data);
-      }
-      final rows = data['aaData'];
-      if (rows is! List || rows.length != total) {
-        throw const FormatException(
-          'Learn returned an incomplete homework list.',
-        );
-      }
-      final ids = <String>{};
-      for (final row in rows) {
-        if (row is! Map ||
-            (row['wlkcid'] != null && row['wlkcid'] != course.id) ||
-            (row['xh'] != null && row['xh'] != catalog.userId)) {
+    return LearnPlatformSession(_authClient).run((csrf) async {
+      for (final course in catalog.courses) {
+        var data = await _fetchData(course.id, endpoint, csrf);
+        var total = _readTotal(data);
+        if (total > 5) {
+          data = await _fetchData(course.id, endpoint, csrf, size: total);
+          total = _readTotal(data);
+        }
+        final rows = data['aaData'];
+        if (rows is! List || rows.length != total) {
           throw const FormatException(
-            'Learn returned homework for another course or account.',
+            'Learn returned an incomplete homework list.',
           );
         }
-        final id = row['xszyid'] ?? row['zyid'];
-        final title = row['bt'];
-        if (id is! String ||
-            id.isEmpty ||
-            !ids.add(id) ||
-            title is! String ||
-            title.trim().isEmpty) {
-          throw const FormatException(
-            'Learn returned invalid homework details.',
+        final ids = <String>{};
+        for (final row in rows) {
+          if (row is! Map ||
+              (row['wlkcid'] != null && row['wlkcid'] != course.id) ||
+              (row['xh'] != null && row['xh'] != catalog.userId)) {
+            throw const FormatException(
+              'Learn returned homework for another course or account.',
+            );
+          }
+          final id = row['xszyid'] ?? row['zyid'];
+          final title = row['bt'];
+          if (id is! String ||
+              id.isEmpty ||
+              !ids.add(id) ||
+              title is! String ||
+              title.trim().isEmpty) {
+            throw const FormatException(
+              'Learn returned invalid homework details.',
+            );
+          }
+          assignments.add(
+            LearnHomework(
+              id: id,
+              course: course,
+              title: title,
+              deadline: _homeworkDeadline(row),
+            ),
           );
         }
-        assignments.add(
-          LearnHomework(
-            id: id,
-            course: course,
-            title: title,
-            deadline: _homeworkDeadline(row),
-          ),
-        );
+        counts[course.id] = total;
       }
-      counts[course.id] = total;
-    }
-    return LearnHomeworkSnapshot(counts: counts, assignments: assignments);
+      return LearnHomeworkSnapshot(counts: counts, assignments: assignments);
+    });
   }
 
   /// Fetches only Wj totals for course reminders, without graded-list requests.
@@ -150,12 +151,13 @@ final class LearnHomeworkService {
   ) async {
     _validateCatalog(catalog);
     if (catalog.courses.isEmpty) return const {};
-    final csrf = await LearnPlatformSession(_authClient).open();
-    final counts = <String, int>{};
-    for (final course in catalog.courses) {
-      counts[course.id] = await _fetchCount(course.id, 'zyListWj', csrf);
-    }
-    return Map.unmodifiable(counts);
+    return LearnPlatformSession(_authClient).run((csrf) async {
+      final counts = <String, int>{};
+      for (final course in catalog.courses) {
+        counts[course.id] = await _fetchCount(course.id, 'zyListWj', csrf);
+      }
+      return Map.unmodifiable(counts);
+    });
   }
 
   Future<List<LearnCourseHomework>> fetchCourses(
@@ -163,26 +165,27 @@ final class LearnHomeworkService {
   ) async {
     _validateCatalog(catalog);
     if (catalog.courses.isEmpty) return const [];
-    final csrf = await LearnPlatformSession(_authClient).open();
-    final result = <LearnCourseHomework>[];
-    // Keep requests sequential to avoid overwhelming Learn or racing its
-    // shared authentication cookies. One roaming session serves all courses.
-    for (final course in catalog.courses) {
-      final unsubmitted = await _fetchCount(course.id, 'zyListWj', csrf);
-      final submitted = await _fetchCount(course.id, 'zyListYjwg', csrf);
-      final graded = await _fetchCount(course.id, 'zyListYpg', csrf);
-      result.add(
-        LearnCourseHomework(
-          course: course,
-          counts: LearnHomeworkCounts(
-            unsubmitted: unsubmitted,
-            submittedUngraded: submitted,
-            graded: graded,
+    return LearnPlatformSession(_authClient).run((csrf) async {
+      final result = <LearnCourseHomework>[];
+      // Keep requests sequential to avoid overwhelming Learn or racing its
+      // shared authentication cookies. One roaming session serves all courses.
+      for (final course in catalog.courses) {
+        final unsubmitted = await _fetchCount(course.id, 'zyListWj', csrf);
+        final submitted = await _fetchCount(course.id, 'zyListYjwg', csrf);
+        final graded = await _fetchCount(course.id, 'zyListYpg', csrf);
+        result.add(
+          LearnCourseHomework(
+            course: course,
+            counts: LearnHomeworkCounts(
+              unsubmitted: unsubmitted,
+              submittedUngraded: submitted,
+              graded: graded,
+            ),
           ),
-        ),
-      );
-    }
-    return result;
+        );
+      }
+      return result;
+    });
   }
 
   void _validateCatalog(LearnCourseCatalog catalog) {
@@ -225,7 +228,7 @@ final class LearnHomeworkService {
       response.body,
     )) {
       _authClient.traceUnexpectedResponse('learning-homework', response);
-      throw const PortalSessionRejected();
+      throw const _LearnSessionExpired();
     }
     if (response.statusCode != 200) {
       throw StateError(

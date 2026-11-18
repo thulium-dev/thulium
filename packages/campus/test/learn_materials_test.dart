@@ -25,6 +25,7 @@ void main() {
           ),
         );
         expect(request.url.host, TsinghuaWebVpnRedirect.WEBVPN_HOST);
+        expect(request.url.queryParameters['_csrf'], 'learn-csrf');
         final referer = Uri.parse(request.headers['referer']!);
         expect(referer.path, endsWith('/f/wlxt/kc/wj_wjb/student/beforePlay'));
         expect(referer.queryParameters, {
@@ -33,6 +34,7 @@ void main() {
           'mk': 'mk_kcwj',
           'pageType': 'all',
           'browser': '-1',
+          '_csrf': 'learn-csrf',
         });
         expect(request.headers['cookie'], contains('JSESSIONID=learn-session'));
         return http.Response.bytes(
@@ -86,11 +88,12 @@ void main() {
       for (final status in [200, 401, 403]) {
         final auth = await _auth(
           (request) => http.Response(
-            '<html>sm2publickey</html>',
+            '<html><input id="sm2publicKey" value="test"></html>',
             status,
             headers: {'content-type': 'text/html'},
             request: request,
           ),
+          mainExpired: true,
         );
         await expectLater(
           LearnMaterialService(
@@ -278,17 +281,19 @@ void main() {
       for (final status in [401, 403, 500]) {
         final auth = await _auth(
           (request) => http.Response('', status, request: request),
+          mainExpired: true,
         );
         await expectLater(
           LearnMaterialService(auth).fetchCourses(_catalog),
-          status == 500
+          status != 401
               ? throwsStateError
               : throwsA(isA<PortalSessionRejected>()),
         );
       }
       final auth = await _auth(
         (request) =>
-            http.Response('<html>sm2publickey</html>', 200, request: request),
+            http.Response('<input id="sm2publicKey">', 200, request: request),
+        mainExpired: true,
       );
       await expectLater(
         LearnMaterialService(auth).fetchCourses(_catalog),
@@ -403,8 +408,18 @@ final _catalog = LearnCourseCatalog(
 Future<TsinghuaAuthClient> _auth(
   http.Response Function(http.Request) respond, {
   void Function()? onLanding,
+  bool mainExpired = false,
 }) async {
   final transport = MockClient((request) async {
+    if (request.url.path.endsWith('/grjbxx')) {
+      return http.Response(
+        jsonEncode({
+          'object': {'ryh': 'student'},
+        }),
+        mainExpired ? 401 : 200,
+        request: request,
+      );
+    }
     if (request.url.path == '/wengine-vpn/cookie') {
       return http.Response(
         'XSRF-TOKEN=portal-csrf; Path=/;',

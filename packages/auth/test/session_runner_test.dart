@@ -26,6 +26,135 @@ const _session = AuthSession(
 
 void main() {
   test(
+    'exhausted CSRF recovery falls back to saved credentials once',
+    () async {
+      final store = _Store();
+      final transport = _Transport();
+      const error = PortalCsrfUnavailable('temporary cookie service failure');
+      final result = await _runner(store, transport).run(
+        request: (client, isRetry) async {
+          if (!isRetry) throw error;
+          return _load(client, isRetry);
+        },
+      );
+      expect(result, 'content');
+      expect(transport.logins, 1);
+      expect(store.credentialReads, 1);
+      expect(transport.identityForms.first['i_user'], _session.userId);
+      expect(
+        transport.identityForms.first['fingerPrint'],
+        _session.fingerprint,
+      );
+    },
+  );
+
+  test(
+    'an empty cookie endpoint attempts silent SSO before credential recovery',
+    () async {
+      final store = _Store();
+      final transport = _Transport()..emptyCookieUntilPassword = true;
+      final events = <String>[];
+      final runner = AuthSessionRunner(
+        store,
+        trace: events.add,
+        createClient: () => TsinghuaAuthClient(
+          sessionStore: store,
+          credentialStore: store,
+          httpClient: transport,
+          trace: events.add,
+        ),
+      );
+      var attempts = 0;
+      expect(
+        await runner.run(
+          request: (client, _) async {
+            attempts++;
+            expect(await client.validateSession(), isTrue);
+            return 'refreshed';
+          },
+        ),
+        'refreshed',
+      );
+      expect(attempts, 2);
+      expect(store.credentialReads, 1);
+      expect(
+        transport.logins,
+        2,
+      ); // One silent SSO GET, one password login GET.
+      expect(
+        events,
+        contains('Trying portal reconnection with the saved SSO cookies.'),
+      );
+      expect(
+        events.where(
+          (event) => event.startsWith('Reconnecting with saved credentials'),
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'a sign-in response from roaming triggers saved-credential recovery',
+    () async {
+      final store = _Store();
+      final transport = _Transport()..rejectRoamingUntilPassword = true;
+      final response = await _runner(
+        store,
+        transport,
+      ).run(request: (client, _) => client.roamToPortalApp('abc123'));
+      expect(response.statusCode, 200);
+      expect(transport.logins, 1);
+      expect(store.credentialReads, 1);
+      expect(transport.roamingRequests, 2);
+    },
+  );
+
+  test('a repeated CSRF failure does not loop credential recovery', () async {
+    final store = _Store();
+    final transport = _Transport();
+    const error = PortalCsrfUnavailable('still unavailable');
+    var attempts = 0;
+    await expectLater(
+      _runner(store, transport).run<void>(
+        request: (_, _) async {
+          attempts++;
+          throw error;
+        },
+      ),
+      throwsA(same(error)),
+    );
+    expect(attempts, 2);
+    expect(transport.logins, 1);
+  });
+
+  test(
+    'cleared cookies and failed recovery retain identity for a later refresh',
+    () async {
+      final store = _Store();
+      final transport = _Transport()..needsVerification = true;
+      await expectLater(
+        _runner(store, transport).run<void>(
+          request: (_, _) async {
+            await store.clear(); // A service has rejected the restored cookies.
+            throw const PortalSessionRejected();
+          },
+        ),
+        throwsA(isA<TwoFactorInteractionRequired>()),
+      );
+      expect(store.saved!.userId, _session.userId);
+      expect(store.saved!.fingerprint, _session.fingerprint);
+      expect(store.saved!.fingerGenPrint, _session.fingerGenPrint);
+      expect(store.saved!.cookies, isEmpty);
+      expect(store.saved!.scopedCookies, isEmpty);
+      expect(store.credentials!.password, 'saved-password');
+      transport.needsVerification = false;
+      expect(await _runner(store, transport).run(request: _load), 'content');
+      expect(transport.logins, 2);
+    },
+  );
+
+  test(
     'service-specific authentication errors can recover through the same queue',
     () async {
       final store = _Store();
@@ -228,6 +357,9 @@ class _Transport extends http.BaseClient {
   int logins = 0;
   bool rejectRetry = false;
   bool needsVerification = false;
+  bool emptyCookieUntilPassword = false;
+  bool rejectRoamingUntilPassword = false;
+  int roamingRequests = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -259,7 +391,17 @@ class _Transport extends http.BaseClient {
             ? '二次认证'
             : '<a href="https://id.tsinghua.edu.cn/callback">登录成功。正在重定向到</a>';
       case '/wengine-vpn/cookie':
-        body = 'XSRF-TOKEN=new-csrf; JSESSIONID=new;';
+        body = emptyCookieUntilPassword && identityForms.isEmpty
+            ? ''
+            : 'XSRF-TOKEN=new-csrf; JSESSIONID=new;';
+      case final path when path.endsWith('onlineAppRedirect'):
+        roamingRequests++;
+        if (rejectRoamingUntilPassword && identityForms.isEmpty) {
+          body = '<span id="sm2publicKey">$publicKey</span>';
+        } else {
+          body =
+              '{"object":{"roamingurl":"https://info.tsinghua.edu.cn/landing"}}';
+        }
       case final path when path.endsWith('/b/info/gxfw_fg/common/grjbxx'):
         body = '{"result":"success","object":{"ryh":"1234567890"}}';
     }

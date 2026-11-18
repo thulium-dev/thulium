@@ -35,11 +35,13 @@ class FakeContent extends CourseContentSource {
         ),
       );
   bool fail = false;
+  Object? materialError;
   int documentRequests = 0;
   int fileLimit = 1;
   Completer<LearnCourseMaterials>? pendingMaterials;
   @override
   Future<LearnCourseMaterials> materials(LearnCourse course) async {
+    if (materialError != null) throw materialError!;
     if (fail) throw const PortalSessionRejected();
     if (pendingMaterials != null) return pendingMaterials!.future;
     return LearnCourseMaterials(
@@ -275,6 +277,27 @@ void main() {
     }
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'unavailable portal offers retry without discarding the signed-in screen',
+    (tester) async {
+      final source = FakeContent()
+        ..materialError = const PortalCsrfUnavailable(
+          'temporarily unavailable',
+        );
+      var expired = false;
+      await show(tester, source, expired: () => expired = true);
+      await tester.tap(find.text('Course files'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in'), findsNothing);
+      expect(find.text('Retry'), findsOneWidget);
+      source.materialError = null;
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lecture.docx'), findsOneWidget);
+      expect(expired, isFalse);
+    },
+  );
 
   testWidgets('expired session offers sign in', (tester) async {
     var expired = false;

@@ -56,6 +56,47 @@ void main() {
     expect(transport.courseRequest!.url.queryParameters['_csrf'], 'learn-csrf');
   });
 
+  for (final csrfUnavailable in [false, true]) {
+    test(
+      'stale course cache propagates ${csrfUnavailable ? 'CSRF' : 'sign-in'} failures for recovery',
+      () async {
+        final transport = _LearnHttpClient();
+        final store = MemoryAuthSessionStore();
+        await store.write(_session);
+        final auth = TsinghuaAuthClient(
+          httpClient: transport,
+          sessionStore: store,
+        );
+        await auth.restore();
+        final cache = LearnCourseCache(_LearnCacheStore());
+        final fetchedAt = DateTime(2026, 9, 28);
+        await LearnCourseCatalogService(
+          auth,
+          cache: cache,
+          now: () => fetchedAt,
+        ).loadSemester('2026-2027-1');
+        transport.courseStatusCode = 401;
+        transport.mainExpired = true;
+        transport.cookieUnavailable = csrfUnavailable;
+        final service = LearnCourseCatalogService(
+          auth,
+          cache: cache,
+          now: () => fetchedAt.add(const Duration(days: 2)),
+        );
+        await expectLater(
+          service.loadSemester('2026-2027-1'),
+          throwsA(
+            csrfUnavailable
+                ? isA<PortalCsrfUnavailable>()
+                : isA<PortalSessionRejected>(),
+          ),
+        );
+        expect(service.lastSource, isNull);
+        expect(await cache.readFor(_session.userId, '2026-2027-1'), isNotNull);
+      },
+    );
+  }
+
   test('rejects unsafe semester paths before making a request', () async {
     final transport = _LearnHttpClient();
     final auth = TsinghuaAuthClient(httpClient: transport);
@@ -80,7 +121,8 @@ void main() {
   });
 
   test('reports an authentication response as a reconnectable error', () async {
-    final transport = _LearnHttpClient(courseStatusCode: 401);
+    final transport = _LearnHttpClient(courseStatusCode: 401)
+      ..mainExpired = true;
     final store = MemoryAuthSessionStore();
     await store.write(_session);
     final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
@@ -193,18 +235,27 @@ final class _LearnHttpClient extends http.BaseClient {
   final bool omitPageCsrf;
   final String currentUser;
   int courseStatusCode;
+  bool cookieUnavailable = false;
+  bool mainExpired = false;
   http.BaseRequest? courseRequest;
   int courseRequestCount = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final path = request.url.path;
+    if (path.endsWith('/grjbxx')) {
+      return http.StreamedResponse(
+        Stream.value(utf8.encode('{"object":{"ryh":"2024012050"}}')),
+        mainExpired ? 401 : 200,
+        request: request,
+      );
+    }
     late final String body;
     final headers = <String, String>{
       'content-type': 'text/html; charset=utf-8',
     };
     if (path == '/wengine-vpn/cookie') {
-      body = 'XSRF-TOKEN=portal-csrf; Path=/;';
+      body = cookieUnavailable ? '' : 'XSRF-TOKEN=portal-csrf; Path=/;';
     } else if (path.endsWith('onlineAppRedirect')) {
       body = jsonEncode({
         'object': {

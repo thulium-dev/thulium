@@ -15,8 +15,44 @@ final class LearnPlatformSession {
 
   final TsinghuaAuthClient _authClient;
 
-  Future<String> open() async {
-    final landing = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
+  Future<String> open() => run((csrf) async => csrf);
+
+  /// A failed Learn session does not establish that the university login died.
+  /// Verify the main account, then re-roam Learn and retry the read once.
+  Future<T> run<T>(Future<T> Function(String csrf) read) async {
+    try {
+      return await read(await _open());
+    } on _LearnSessionExpired {
+      _authClient.trace?.call(
+        'Learn session rejected; verifying the main session.',
+      );
+      if (!await _authClient.validateSession()) {
+        throw const PortalSessionRejected();
+      }
+      _authClient.trace?.call(
+        'Main session verified; rebuilding Learn without a password.',
+      );
+      try {
+        return await read(await _open());
+      } on _LearnSessionExpired {
+        throw StateError(
+          'The learning platform session could not be established.',
+        );
+      }
+    }
+  }
+
+  Future<String> _open() async {
+    var landing = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
+    if (landing.statusCode == 404) {
+      // Older roaming links can still point at the removed /student/index
+      // route. OneTHU checks the current course page to establish readiness.
+      landing = await _authClient.getAuthenticated(
+        TsinghuaWebVpnRedirect.forTarget(
+          Uri.https(_LEARN_HOST, '/f/wlxt/index/course/student/'),
+        ),
+      );
+    }
     final body = landing.body;
     if (_isLearnSignInResponse(
       landing.statusCode,
@@ -24,7 +60,7 @@ final class LearnPlatformSession {
       body,
     )) {
       _authClient.traceUnexpectedResponse('learning-landing', landing);
-      throw const PortalSessionRejected();
+      throw const _LearnSessionExpired();
     }
     if (landing.statusCode < 200 || landing.statusCode >= 300) {
       _authClient.traceUnexpectedResponse('learning-landing', landing);
@@ -33,11 +69,16 @@ final class LearnPlatformSession {
       );
     }
 
+    final document = html.parse(body);
+    final field = document.querySelector('input[name="_csrf"]');
     final match = RegExp(
-      r"""_csrf=([\w-]+)|name=["']_csrf["'][^>]*value=["']([\w-]+)""",
-      caseSensitive: false,
+      r"""_csrf=([^&"'\s<>]+)|["']?_csrf["']?\s*[:=]\s*["']([^"'\s]+)["']|["']csrfToken["']\s*:\s*["']([^"']+)["']""",
     ).firstMatch(body);
-    final pageToken = match?.group(1) ?? match?.group(2);
+    final pageToken =
+        field?.attributes['value'] ??
+        match?.group(1) ??
+        match?.group(2) ??
+        match?.group(3);
     if (pageToken != null && pageToken.isNotEmpty) return pageToken;
 
     // A successful roaming page can omit the token while setting the cookie.
@@ -52,9 +93,7 @@ final class LearnPlatformSession {
       }
     }
     _authClient.traceUnexpectedResponse('learning-landing', landing);
-    throw const FormatException(
-      'The learning platform did not return a CSRF token.',
-    );
+    throw const _LearnSessionExpired();
   }
 }
 
@@ -80,61 +119,99 @@ final class LearnCourseService {
     if (session == null) {
       throw StateError('Restore an authenticated session first.');
     }
-    final csrf = await LearnPlatformSession(_authClient).open();
-    final target =
-        Uri.https(_LEARN_HOST, '$_LEARN_COURSES_PATH/$semesterId/zh', {
-          'timestamp': '${(now ?? DateTime.now)().millisecondsSinceEpoch}',
-          '_csrf': csrf,
-        });
-    final response = await _authClient.getAuthenticated(
-      TsinghuaWebVpnRedirect.forTarget(target),
-    );
-    if (_isLearnSignInResponse(
-      response.statusCode,
-      response.request?.url,
-      response.body,
-    )) {
-      _authClient.traceUnexpectedResponse('learning-courses', response);
-      throw const PortalSessionRejected();
-    }
-    if (response.statusCode != 200) {
-      _authClient.traceUnexpectedResponse('learning-courses', response);
-      throw StateError(
-        'The learning platform returned HTTP ${response.statusCode}.',
+    return LearnPlatformSession(_authClient).run((csrf) async {
+      final target =
+          Uri.https(_LEARN_HOST, '$_LEARN_COURSES_PATH/$semesterId/zh', {
+            'timestamp': '${(now ?? DateTime.now)().millisecondsSinceEpoch}',
+            '_csrf': csrf,
+          });
+      final response = await _authClient.getAuthenticated(
+        TsinghuaWebVpnRedirect.forTarget(target),
       );
-    }
+      if (_isLearnSignInResponse(
+        response.statusCode,
+        response.request?.url,
+        response.body,
+      )) {
+        _authClient.traceUnexpectedResponse('learning-courses', response);
+        throw const _LearnSessionExpired();
+      }
+      if (response.statusCode != 200) {
+        _authClient.traceUnexpectedResponse('learning-courses', response);
+        throw StateError(
+          'The learning platform returned HTTP ${response.statusCode}.',
+        );
+      }
 
-    Object? decoded;
-    try {
-      decoded = jsonDecode(response.body);
-    } on FormatException {
-      _authClient.traceUnexpectedResponse('learning-courses', response);
-      throw const FormatException(
-        'The learning platform did not return course-list JSON.',
-      );
-    }
-    if (decoded is! Map<String, dynamic> ||
-        decoded['message'] != 'success' ||
-        decoded['resultList'] is! List ||
-        (decoded['resultList'] as List).any((row) => row is! Map)) {
-      _authClient.traceUnexpectedResponse('learning-courses', response);
-      throw StateError(
-        'The learning platform returned an unexpected course list.',
-      );
-    }
-    if (decoded['currentUser'] != session.userId) {
-      throw StateError('The learning platform returned a different account.');
-    }
-    return decoded;
+      Object? decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        _authClient.traceUnexpectedResponse('learning-courses', response);
+        throw const FormatException(
+          'The learning platform did not return course-list JSON.',
+        );
+      }
+      if (decoded is! Map<String, dynamic> ||
+          decoded['message'] != 'success' ||
+          decoded['resultList'] is! List ||
+          (decoded['resultList'] as List).any((row) => row is! Map)) {
+        _authClient.traceUnexpectedResponse('learning-courses', response);
+        throw StateError(
+          'The learning platform returned an unexpected course list.',
+        );
+      }
+      if (decoded['currentUser'] != session.userId) {
+        throw StateError('The learning platform returned a different account.');
+      }
+      return decoded;
+    });
   }
 }
 
+final class _LearnSessionExpired implements Exception {
+  const _LearnSessionExpired();
+}
+
 bool _isLearnSignInResponse(int statusCode, Uri? uri, String body) {
-  return statusCode == 401 ||
-      statusCode == 403 ||
+  if (statusCode == 401 ||
       uri?.host == 'id.tsinghua.edu.cn' ||
       (uri?.host == TsinghuaWebVpnRedirect.WEBVPN_HOST &&
           uri?.path == '/login') ||
-      uri?.path.startsWith('/wengine-vpn/failed') == true ||
-      body.toLowerCase().contains('sm2publickey');
+      uri?.path.endsWith('/f/login') == true) {
+    return true;
+  }
+  // Course JSON and gateway scripts can quote authentication markup without
+  // being a login page. A bare 403 is a service/permission failure, not logout.
+  try {
+    jsonDecode(body);
+    return false;
+  } on FormatException {
+    // Inspect actual HTML controls rather than document text or script strings.
+  }
+  final document = html.parse(body);
+  for (final node in document.querySelectorAll(
+    'script, style, template, noscript',
+  )) {
+    node.remove();
+  }
+  if (document.querySelector('#sm2publicKey, input[name="i_pass"]') != null) {
+    return true;
+  }
+  return document
+          .querySelectorAll('form')
+          .any(
+            (form) =>
+                form.attributes['action']?.contains(
+                  'j_spring_security_check',
+                ) ==
+                true,
+          ) ||
+      document.querySelectorAll('a, form').any((node) {
+        final target =
+            node.attributes['href'] ?? node.attributes['action'] ?? '';
+        return target.contains('/f/login') ||
+            target.contains('/do/off/ui/auth/login/') ||
+            target.contains('oauth.tsinghua.edu.cn/thu-oauth/auth');
+      });
 }

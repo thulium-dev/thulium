@@ -3,6 +3,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:html/parser.dart' as html;
 import 'package:thulium_auth/thulium_auth.dart';
 
 part 'src/course_schedule.dart';

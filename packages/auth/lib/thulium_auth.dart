@@ -550,6 +550,19 @@ final class TsinghuaAuthClient {
   bool _trustedBrowser = false;
   bool? _trustDecision;
   bool _registeredDuringLogin = false;
+  // Keep device trust separate from invalidated cookies for a bounded reconnect.
+  // This snapshot contains no cookies and is cleared by explicit logout.
+  AuthSession? _reconnectIdentity;
+
+  void _rememberIdentity(AuthSession session) {
+    _reconnectIdentity = AuthSession(
+      userId: session.userId,
+      fingerprint: session.fingerprint,
+      cookies: const {},
+      fingerGenPrint: session.fingerGenPrint,
+      trustedBrowser: session.trustedBrowser,
+    );
+  }
 
   /// Restores the last session without asking for the password.
   Future<AuthSession?> restore() async {
@@ -567,6 +580,7 @@ final class TsinghuaAuthClient {
     }
 
     _session = restored;
+    _rememberIdentity(restored);
     _trustedBrowser =
         restored.trustedBrowser || restored.fingerGenPrint?.isNotEmpty == true;
     _cookieJar.restore(restored.scopedCookies);
@@ -608,6 +622,18 @@ final class TsinghuaAuthClient {
     } on FormatException {
       _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
       rethrow;
+    }
+    if (decoded is Map) {
+      final message = decoded['msg'] ?? decoded['message'];
+      if (decoded['status'] == 401 ||
+          decoded['code'] == 401 ||
+          (message is String &&
+              RegExp(
+                r'^(?:未登录|请先登录|登录已失效|登录状态已失效|login required|not authenticated)[。.!]?$',
+                caseSensitive: false,
+              ).hasMatch(message.trim()))) {
+        return null;
+      }
     }
     if (decoded is! Map<String, dynamic> || decoded['object'] is! Map) {
       _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
@@ -704,6 +730,9 @@ final class TsinghuaAuthClient {
         },
       ),
     );
+    if (_isLoginRequired(roamingResponse)) {
+      throw const PortalSessionRejected();
+    }
     Object? roamingJson;
     try {
       roamingJson = jsonDecode(roamingResponse.body);
@@ -811,7 +840,13 @@ final class TsinghuaAuthClient {
     PortalCsrfUnavailable? lastFailure;
     for (var attempt = 0; attempt < _CSRF_FETCH_ATTEMPTS; attempt++) {
       final response = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
-      if (_isLoginRequired(response)) throw const PortalSessionRejected();
+      if (_isLoginRequired(response)) {
+        // An expired portal cookie does not prove that the ID/SSO session has
+        // expired too. Attempt the silent recovery below before asking for a
+        // new credential login. There is no restored SSO during initial login.
+        if (_session == null) throw const PortalSessionRejected();
+        break;
+      }
       try {
         return _readInformationPortalCsrf(response);
       } on PortalCsrfUnavailable catch (error) {
@@ -992,7 +1027,8 @@ final class TsinghuaAuthClient {
 
     // Reuse a trusted-device credential only when both its account and stable
     // fingerprint match this login.
-    final previousSession = _session ?? await _sessionStore?.read();
+    final previousSession =
+        _session ?? await _sessionStore?.read() ?? _reconnectIdentity;
     _fingerGenPrint =
         previousSession != null &&
             previousSession.userId == userId &&
@@ -1052,6 +1088,7 @@ final class TsinghuaAuthClient {
       trustedBrowser: _trustedBrowser || _trustDecision == true,
     );
     _session = result;
+    _rememberIdentity(result);
     await _sessionStore?.write(result);
     await credentialStore?.writeCredentials(
       AuthCredentials(userId: userId, password: password),
@@ -1067,6 +1104,7 @@ final class TsinghuaAuthClient {
       _session = null;
       _fingerGenPrint = null;
       _trustedBrowser = false;
+      _reconnectIdentity = null;
       try {
         await _sessionStore?.clear();
       } finally {
@@ -1153,7 +1191,9 @@ final class TsinghuaAuthClient {
       // Only a well-formed server rejection reaches this branch. A caller can
       // keep its input surface open without treating network failures as a
       // rejected code.
-      trace?.call('2FA code verification was rejected; awaiting corrected input.');
+      trace?.call(
+        '2FA code verification was rejected; awaiting corrected input.',
+      );
       return false;
     });
     if (verified == null) {
@@ -1163,9 +1203,7 @@ final class TsinghuaAuthClient {
 
     // Register only after verified 2FA and explicit consent. A legacy token is
     // optional; browser SSO can be established without one.
-    _trustDecision ??=
-        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
-    if (_trustDecision! && !_registeredDuringLogin) {
+    if (_trustDecision == true && !_registeredDuringLogin) {
       await _saveTrustedDevice(fingerprint);
     }
 

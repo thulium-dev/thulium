@@ -184,6 +184,10 @@ final class LearnCourseCatalogService {
       lastSource = LearnCourseSource.network;
       return catalog;
     } on Object catch (error) {
+      // Let the caller renew authentication before falling back to old data.
+      if (error is PortalSessionRejected || error is PortalCsrfUnavailable) {
+        rethrow;
+      }
       if (error is! Exception && error is! StateError) rethrow;
       if (cached == null || forceRefresh) rethrow;
       lastSource = LearnCourseSource.staleCache;

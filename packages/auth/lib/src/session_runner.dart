@@ -29,6 +29,10 @@ final class AuthSessionRunner {
       return await operation();
     } finally {
       released.complete();
+      if (identical(gate.tail, released.future)) {
+        // An idle store needs no completed future retained from an older zone.
+        _gates[store] = null;
+      }
     }
   }
 
@@ -65,11 +69,29 @@ final class AuthSessionRunner {
       final saved = await credentials?.readCredentials();
       if (saved == null || saved.userId != session.userId) rethrow;
       trace?.call('Reconnecting with saved credentials; retrying once.');
-      await client.login(
-        userId: session.userId,
-        password: saved.password,
-        fingerprint: session.fingerprint,
-      );
+      try {
+        await client.login(
+          userId: session.userId,
+          password: saved.password,
+          fingerprint: session.fingerprint,
+        );
+      } on Object {
+        // Validation may have cleared rejected cookies before this attempt.
+        // Retain only the account/device identity so the next refresh can still
+        // recover with saved credentials instead of failing at restore().
+        if (await store.read() == null) {
+          await store.write(
+            AuthSession(
+              userId: session.userId,
+              fingerprint: session.fingerprint,
+              cookies: const {},
+              fingerGenPrint: session.fingerGenPrint,
+              trustedBrowser: session.trustedBrowser,
+            ),
+          );
+        }
+        rethrow;
+      }
       // Keep this outside the first attempt's catch: a failed retry must not
       // launch a second login. login() retains the restored trusted-device token.
       return request(client, true);

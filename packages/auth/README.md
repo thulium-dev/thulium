@@ -27,6 +27,31 @@ authentication errors with `shouldReconnect`. Network and parsing errors do not
 trigger a credential login. A server-required second factor is propagated for
 the caller's verification flow; it does not clear saved credentials.
 
+A login page from the portal cookie endpoint first triggers silent SSO renewal;
+it does not immediately prove the identity session has expired. If bounded
+cookie retries, account probes, and silent SSO still end in
+`PortalCsrfUnavailable`, the runner attempts one saved-credential login without
+declaring the account signed out. Network failures do not trigger this fallback.
+Course and calendar caches propagate recoverable auth failures to the runner
+instead of hiding them behind stale data. When validation does invalidate
+cookies, the client retains a cookie-free snapshot of
+device trust for its credential recovery, restricted to the same account and
+fingerprint. Explicit logout also clears this snapshot.
+
+If validation cleared rejected cookies and credential recovery fails, the runner
+persists only the original account/device identity, without cookies. This keeps a
+later refresh eligible for recovery while preserving separately saved passwords.
+
+Learn follows the service-first recovery policy used by OneTHU: a confirmed
+Learn login page or HTTP 401 first verifies the main account. If that account is
+still authenticated, rebuild only Learn through roaming and retry the read once.
+Confirmed main-session rejection is escalated to credential recovery; the
+runner's bounded portal-CSRF fallback remains available as described above.
+Bare file HTTP 403/404/5xx responses and unsupported PDF conversions remain
+service errors. JSON content and injected scripts mentioning login controls do
+not prove logout. PDF reads carry the current Learn CSRF token, and temporary
+service failures offer retry rather than sending users back to sign-in.
+
 Device trust records browser consent separately from the optional legacy
 `fingerGenPrint` token. Sign-in asks once before the first credential submission,
 so trusted-browser `singleLogin` fields are present from the WebVPN stage onward.
@@ -39,3 +64,9 @@ requesting another code. A genuine server challenge is still verified.
 Coordinate explicit sign-in and sign-out with `AuthSessionRunner.exclusive` as
 well. Apply any UI timeout outside `run`, so a timed-out caller does not release
 the queue while its underlying request can still persist cookies.
+
+Serialization orders separate operations; it does not deduplicate interactive
+sign-in submissions. The login page guards button and keyboard callbacks before
+enqueueing work, snapshots the submitted credentials, and caches one trust
+choice for that attempt. Verification and dialog completion also reject repeat
+callbacks. Diagnostic attempt IDs and phase names contain no credential values.

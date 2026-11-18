@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
@@ -10,7 +11,10 @@ class CourseContentSource {
   final LearnCourseCatalog catalog;
 
   Future<T> _request<T>(Future<T> Function(TsinghuaAuthClient) operation) =>
-      AuthSessionRunner(store).run(
+      AuthSessionRunner(
+        store,
+        trace: (message) => debugPrint('[auth][course-content] $message'),
+      ).run(
         expectedUserId: catalog.userId,
         request: (client, _) => operation(client),
       );

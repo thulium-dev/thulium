@@ -322,10 +322,7 @@ void main() {
     final store = MemoryAuthSessionStore();
     final session = _testSession(isGraduate: true);
     await store.write(session);
-    final transport = _ScheduleHttpClient(
-      isGraduate: true,
-      emptyCookieBody: true,
-    );
+    final transport = _ScheduleHttpClient(isGraduate: true, offline: true);
     final cache = CourseScheduleCache(_MemoryCacheStore());
     final fetchedAt = DateTime.utc(2026, 9, 25, 10);
     await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
@@ -343,6 +340,36 @@ void main() {
     expect(service.lastSource, CourseScheduleSource.staleCache);
     expect(traces, contains(startsWith('Calendar using stale cache')));
     expect(transport.requestedUris, isNotEmpty);
+  });
+
+  test('stale calendar cache does not suppress credential recovery', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(
+      isGraduate: true,
+      emptyCookieBody: true,
+    );
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final fetchedAt = DateTime.utc(2026, 9, 25, 10);
+    await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
+    final service = CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      now: () => fetchedAt.add(const Duration(days: 2)),
+    );
+    await expectLater(
+      service.loadCurrentTerm(),
+      throwsA(
+        isA<CourseScheduleException>().having(
+          (error) => error.cause,
+          'cause',
+          isA<PortalCsrfUnavailable>(),
+        ),
+      ),
+    );
+    expect(service.lastSource, isNull);
+    expect(await cache.readFor(session.userId), isNotNull);
   });
 
   test('ignores corrupt schedule cache data', () async {
@@ -574,6 +601,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
     this.malformedPrimary = false,
     this.invalidUserData = false,
     this.emptyCookieBody = false,
+    this.offline = false,
   });
 
   final bool isGraduate;
@@ -581,6 +609,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
   final bool malformedPrimary;
   final bool invalidUserData;
   final bool emptyCookieBody;
+  final bool offline;
   final requestedUris = <Uri>[];
   final requestCookieHeaders = <Uri, String?>{};
 
@@ -588,6 +617,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final uri = request.url;
     requestedUris.add(uri);
+    if (offline) throw http.ClientException('offline');
     requestCookieHeaders[uri] = request.headers['cookie'];
     final body = switch (uri.path) {
       '/wengine-vpn/cookie' =>
