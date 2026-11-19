@@ -322,10 +322,7 @@ void main() {
     final store = MemoryAuthSessionStore();
     final session = _testSession(isGraduate: true);
     await store.write(session);
-    final transport = _ScheduleHttpClient(
-      isGraduate: true,
-      emptyCookieBody: true,
-    );
+    final transport = _ScheduleHttpClient(isGraduate: true, offline: true);
     final cache = CourseScheduleCache(_MemoryCacheStore());
     final fetchedAt = DateTime.utc(2026, 9, 25, 10);
     await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
@@ -343,6 +340,36 @@ void main() {
     expect(service.lastSource, CourseScheduleSource.staleCache);
     expect(traces, contains(startsWith('Calendar using stale cache')));
     expect(transport.requestedUris, isNotEmpty);
+  });
+
+  test('stale calendar cache does not suppress credential recovery', () async {
+    final store = MemoryAuthSessionStore();
+    final session = _testSession(isGraduate: true);
+    await store.write(session);
+    final transport = _ScheduleHttpClient(
+      isGraduate: true,
+      emptyCookieBody: true,
+    );
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final fetchedAt = DateTime.utc(2026, 9, 25, 10);
+    await cache.writeFor(session.userId, _cachedSchedule(), fetchedAt);
+    final service = CourseScheduleService(
+      TsinghuaAuthClient(httpClient: transport, sessionStore: store),
+      cache: cache,
+      now: () => fetchedAt.add(const Duration(days: 2)),
+    );
+    await expectLater(
+      service.loadCurrentTerm(),
+      throwsA(
+        isA<CourseScheduleException>().having(
+          (error) => error.cause,
+          'cause',
+          isA<PortalCsrfUnavailable>(),
+        ),
+      ),
+    );
+    expect(service.lastSource, isNull);
+    expect(await cache.readFor(session.userId), isNotNull);
   });
 
   test('ignores corrupt schedule cache data', () async {
@@ -408,6 +435,60 @@ void main() {
       restored.schedule.occurrences.map((entry) => entry.category),
       everyElement('fitness'),
     );
+  });
+
+  test('retains translated lesson names in a calendar snapshot', () async {
+    final cache = CourseScheduleCache(_MemoryCacheStore());
+    final translated = CourseSchedule(
+      term: _cachedSchedule().term,
+      occurrences: [
+        _cachedSchedule().occurrences.single.copyWith(
+          coursesPlanEnglishName: 'English Course',
+        ),
+      ],
+    );
+    await cache.writeFor('2024222050', translated, DateTime.utc(2026, 9, 25));
+
+    final cached = await cache.readFor('2024222050');
+    expect(
+      cached?.schedule.occurrences.single.nameForLanguage('en'),
+      'English Course',
+    );
+  });
+
+  test('reads older snapshots without an English lesson title', () async {
+    final store = _MemoryCacheStore();
+    final current = _cachedSchedule();
+    final occurrence = current.occurrences.single;
+    store.value = base64Encode(
+      gzip.encode(
+        utf8.encode(
+          jsonEncode({
+            'version': 2,
+            'userId': '2024222050',
+            'fetchedAt': '2026-09-25T10:00:00.000Z',
+            'term': {
+              'id': current.term.id,
+              'name': current.term.name,
+              'firstMonday': current.term.firstMonday.toIso8601String(),
+              'weekCount': current.term.weekCount,
+            },
+            'occurrences': [
+              {
+                'name': occurrence.name,
+                'location': occurrence.location,
+                'category': occurrence.category,
+                'startsAt': occurrence.startsAt.toIso8601String(),
+                'endsAt': occurrence.endsAt.toIso8601String(),
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+
+    final cached = await CourseScheduleCache(store).readFor('2024222050');
+    expect(cached?.schedule.occurrences.single.coursesPlanEnglishName, isEmpty);
   });
 
   test('does not use a cache from an ended academic term', () async {
@@ -520,6 +601,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
     this.malformedPrimary = false,
     this.invalidUserData = false,
     this.emptyCookieBody = false,
+    this.offline = false,
   });
 
   final bool isGraduate;
@@ -527,6 +609,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
   final bool malformedPrimary;
   final bool invalidUserData;
   final bool emptyCookieBody;
+  final bool offline;
   final requestedUris = <Uri>[];
   final requestCookieHeaders = <Uri, String?>{};
 
@@ -534,6 +617,7 @@ final class _ScheduleHttpClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final uri = request.url;
     requestedUris.add(uri);
+    if (offline) throw http.ClientException('offline');
     requestCookieHeaders[uri] = request.headers['cookie'];
     final body = switch (uri.path) {
       '/wengine-vpn/cookie' =>

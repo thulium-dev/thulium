@@ -1,6 +1,5 @@
 part of '../thulium_campus.dart';
 
-const _LEARN_ROAMING_ID = '3E401364BDD7AEA7EBF1EDE3F15ED4B7';
 const _UNDERGRADUATE_ACADEMIC_CALENDAR_ROAMING_ID =
     '287C0C6D90ABB364CD5FDF1495199962';
 const _GRADUATE_ACADEMIC_CALENDAR_ROAMING_ID =
@@ -70,6 +69,7 @@ final class CourseOccurrence {
     required this.startsAt,
     required this.endsAt,
     required this.category,
+    this.coursesPlanEnglishName = '',
   });
 
   final String name;
@@ -77,6 +77,27 @@ final class CourseOccurrence {
   final DateTime startsAt;
   final DateTime endsAt;
   final String category;
+
+  /// An optional Learn title for fetched lessons; user plans leave it empty.
+  final String coursesPlanEnglishName;
+
+  String nameForLanguage(String languageCode) =>
+      category == PlanCategories.LESSON &&
+          languageCode == 'en' &&
+          coursesPlanEnglishName.isNotEmpty
+      ? coursesPlanEnglishName
+      : name;
+
+  CourseOccurrence copyWith({String? coursesPlanEnglishName}) =>
+      CourseOccurrence(
+        name: name,
+        location: location,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        category: category,
+        coursesPlanEnglishName:
+            coursesPlanEnglishName ?? this.coursesPlanEnglishName,
+      );
 }
 
 /// A term and its combined actual-date course occurrences.
@@ -127,6 +148,9 @@ final class CourseSchedule {
             startsAt: current.startsAt,
             endsAt: next.endsAt,
             category: current.category,
+            coursesPlanEnglishName: current.coursesPlanEnglishName.isNotEmpty
+                ? current.coursesPlanEnglishName
+                : next.coursesPlanEnglishName,
           );
         } else {
           merged.add(current);
@@ -220,6 +244,16 @@ final class CourseScheduleService {
       lastSource = CourseScheduleSource.network;
       return schedule;
     } on Exception catch (error) {
+      // Cached data must not hide a failure that the caller can recover by
+      // logging in with saved credentials.
+      if (error is CourseScheduleSessionExpired ||
+          error is PortalSessionRejected ||
+          error is PortalCsrfUnavailable ||
+          (error is CourseScheduleException &&
+              (error.cause is PortalSessionRejected ||
+                  error.cause is PortalCsrfUnavailable))) {
+        rethrow;
+      }
       if (cached == null || forceRefresh) rethrow;
       trace?.call('Calendar using stale cache after ${error.runtimeType}');
       lastSource = CourseScheduleSource.staleCache;
@@ -231,15 +265,7 @@ final class CourseScheduleService {
     var stage = 'roaming to the learning platform';
     try {
       trace?.call('Calendar stage=$stage');
-      final landingPage = await _authClient.roamToPortalApp(_LEARN_ROAMING_ID);
-      late final String csrf;
-      try {
-        _ensurePortalResponse(landingPage.body, landingPage.statusCode);
-        csrf = _readCsrf(landingPage.body);
-      } catch (_) {
-        _authClient.traceUnexpectedResponse('learning-landing', landingPage);
-        rethrow;
-      }
+      final csrf = await LearnPlatformSession(_authClient).open();
       stage = 'fetching the current academic term';
       trace?.call('Calendar stage=$stage');
       final semesterResponse = await _authClient.getAuthenticated(
@@ -602,20 +628,6 @@ final class CourseScheduleService {
         'The campus service returned HTTP $statusCode.',
       );
     }
-  }
-
-  String _readCsrf(String body) {
-    final match = RegExp(
-      r"""_csrf=([\w-]+)|name=["']_csrf["'][^>]*value=["']([\w-]+)""",
-      caseSensitive: false,
-    ).firstMatch(body);
-    final token = match?.group(1) ?? match?.group(2);
-    if (token == null || token.isEmpty) {
-      throw const FormatException(
-        'The campus service did not return a CSRF token.',
-      );
-    }
-    return token;
   }
 
   String _formatDate(DateTime date) =>

@@ -54,10 +54,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get signInAction => '登录';
 
   @override
-  String get requiredField => '此字段为必填项。';
+  String get requiredField => '此字段为必填项';
 
   @override
-  String get loginError => '登录失败，请检查学号和密码后重试。';
+  String get loginError => '登录失败，请检查学号和密码后重试';
 
   @override
   String get showPassword => '显示密码';
@@ -86,14 +86,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verificationCodeHint => '请输入验证码';
 
   @override
-  String get verificationCodeInvalid => '验证码不正确，请重试。';
+  String get verificationCodeInvalid => '验证码不正确，请重试';
 
   @override
   String get trustDeviceTitle => '信任此设备？';
 
   @override
   String get trustDeviceDescription =>
-      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任。';
+      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任';
 
   @override
   String get trustDeviceAction => '信任设备';
@@ -117,7 +117,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logoutAction => '退出登录';
 
   @override
-  String get logoutError => '无法清除已保存的登录状态，请重试。';
+  String get logoutError => '无法清除已保存的登录状态，请重试';
 
   @override
   String get eventsTab => '事件';
@@ -135,13 +135,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventsTitle => '学生事件';
 
   @override
-  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示。';
+  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示';
 
   @override
   String get plansTitle => '学生计划';
 
   @override
-  String get plansDescription => '你的教学日历和自定义计划将在这里显示。';
+  String get plansDescription => '你的教学日历和自定义计划将在这里显示';
 
   @override
   String calendarWeek(int week) {
@@ -179,7 +179,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarExportFormatPng => '图片 (.png)';
 
   @override
-  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周。';
+  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周';
 
   @override
   String get calendarExportDateColumn => '日期';
@@ -221,28 +221,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarExportAction => '导出';
 
   @override
-  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程。';
+  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程';
 
   @override
-  String get calendarExportFailed => '无法导出日历，请重试。';
+  String get calendarExportFailed => '无法导出日历，请重试';
 
   @override
-  String get calendarExportSaved => '日历文件已保存。';
+  String get calendarExportSaved => '日历文件已保存';
 
   @override
   String get calendarLoading => '正在加载日历…';
 
   @override
-  String get calendarLoadError => '无法加载教学日历。';
+  String get calendarLoadError => '无法加载教学日历';
 
   @override
-  String get calendarStaleCache => '更新失败，当前显示已保存的日历。';
+  String get calendarStaleCache => '更新失败，当前显示已保存的日历';
 
   @override
   String get calendarRetry => '重试';
 
   @override
-  String get calendarNoCourses => '本周没有计划。';
+  String get calendarNoCourses => '本周没有计划';
 
   @override
   String get calendarOverlappingPlans => '重叠的计划';
@@ -281,7 +281,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planCategoryColor => '分类颜色';
 
   @override
-  String get planCategoryDuplicate => '已有同名分类。';
+  String get planCategoryDuplicate => '已有同名分类';
 
   @override
   String get planRepeat => '重复方式';
@@ -307,19 +307,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planIntervalDays => '间隔天数';
 
   @override
-  String get planIntervalInvalid => '请输入大于零的天数。';
+  String get planIntervalInvalid => '请输入大于零的天数';
 
   @override
-  String get planTimeRequired => '请选择日期、开始时间和结束时间。';
+  String get planTimeRequired => '请选择日期、开始时间和结束时间';
 
   @override
-  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间。';
+  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间';
 
   @override
   String get planSave => '保存计划';
 
   @override
-  String get planSaveError => '无法保存计划，请重试。';
+  String get planSaveError => '无法保存计划，请重试';
 
   @override
   String get planEditTitle => '编辑计划';
@@ -358,13 +358,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planConfirmCancelTitle => '确认取消本次计划？';
 
   @override
-  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据。';
+  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据';
 
   @override
-  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改。';
+  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改';
 
   @override
-  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留。';
+  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留';
 
   @override
   String get planDontAskAgain => '此操作下次不再提醒';
@@ -379,13 +379,225 @@ class AppLocalizationsZh extends AppLocalizations {
   String get studyTitle => '学习';
 
   @override
-  String get studyDescription => '学习工具和学习资源将在这里显示。';
+  String get studyDescription => '学习工具和学习资源将在这里显示';
+
+  @override
+  String get studyToolsTitle => '学习快捷入口';
+
+  @override
+  String get studyToolsPlaceholder => '这里将显示常用学习功能';
+
+  @override
+  String get studyCoursesTitle => '我的课程';
+
+  @override
+  String get studyRefresh => '刷新课程';
+
+  @override
+  String get studyLoadError => '无法加载课程，请尝试刷新';
+
+  @override
+  String get studyStaleCourses => '更新失败，正在显示已保存的课程';
+
+  @override
+  String get studyNoCourses => '本学期暂无课程';
+
+  @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作业：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试';
+
+  @override
+  String get homeworkTitle => '近期作业';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作业更新失败，正在显示已保存的数据';
+
+  @override
+  String get homeworkLoadError => '作业加载失败，请刷新重试';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止时间未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京时间）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩余 $days 天 $hours 小时';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩余 $minutes 分钟';
+  }
 
   @override
   String get lifeTitle => '生活';
 
   @override
-  String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
+  String get lifeDescription => '校园生活服务和日常工具将在这里显示';
+
+  @override
+  String get homeworkTimezone => '截止时间均为北京时间（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '刷新作业';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '刚刚更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新于 $minutes 分钟前';
+  }
+
+  @override
+  String get homeworkLoading => '正在加载作业';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本周';
+
+  @override
+  String get homeworkGroupLater => '之后';
+
+  @override
+  String get homeworkWithinHour => '1 小时内';
+
+  @override
+  String get homeworkWithinDay => '24 小时内';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天内';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京时间';
+
+  @override
+  String get homeworkNoGrade => '不计分';
+
+  @override
+  String get homeworkDetails => '作业详情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作业操作';
+
+  @override
+  String get homeworkOpenWeb => '打开网页';
+
+  @override
+  String get homeworkRemindLater => '稍后提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '标记已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作当前不可用';
+
+  @override
+  String get homeworkActionFailed => '操作失败，请重试';
+
+  @override
+  String get courseFiles => '课程文件';
+
+  @override
+  String get courseAssignments => '课程作业';
+
+  @override
+  String get courseFilesEmpty => '暂无课程文件';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多显示 $count 个文件，教学平台上可能还有更多文件';
+  }
+
+  @override
+  String get courseContentError => '无法加载课程内容，请重试';
+
+  @override
+  String get coursePreviewError => '无法预览，教学平台可能尚未提供此文件的 PDF 预览。请重试或前往教学平台查看';
+
+  @override
+  String get courseSessionExpired => '登录已过期，请重新登录';
+
+  @override
+  String get courseUnsubmitted => '未提交';
+
+  @override
+  String get courseSubmitted => '已提交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分类暂无作业';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暂不支持文档预览';
+
+  @override
+  String get sessionVerificationRequired => '更新校园数据需要重新验证，已保存的信息仍可查看';
+
+  @override
+  String get courseContentLoading => '正在加载课程内容';
+
+  @override
+  String get coursePreviewLoading => '正在加载文档';
+
+  @override
+  String get exportDiagnostics => '导出诊断日志';
+
+  @override
+  String get exportDiagnosticsError => '日志导出失败，请重试';
+
+  @override
+  String get deviceTrustLimitTitle => '信任设备数量已达上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以继续登录，但不会记住此设备。请到 id.tsinghua.edu.cn 管理旧的信任浏览器后重试';
+
+  @override
+  String get continueSignInAction => '继续登录';
+
+  @override
+  String get deviceTrustRegistrationError => '无法信任此设备，请重新登录并选择“暂不”，或导出诊断日志';
 }
 
 /// The translations for Chinese, as used in China (`zh_CN`).
@@ -438,10 +650,10 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get signInAction => '登录';
 
   @override
-  String get requiredField => '此字段为必填项。';
+  String get requiredField => '此字段为必填项';
 
   @override
-  String get loginError => '登录失败，请检查学号和密码后重试。';
+  String get loginError => '登录失败，请检查学号和密码后重试';
 
   @override
   String get showPassword => '显示密码';
@@ -470,14 +682,14 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get verificationCodeHint => '请输入验证码';
 
   @override
-  String get verificationCodeInvalid => '验证码不正确，请重试。';
+  String get verificationCodeInvalid => '验证码不正确，请重试';
 
   @override
   String get trustDeviceTitle => '信任此设备？';
 
   @override
   String get trustDeviceDescription =>
-      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任。';
+      '清华身份认证服务可能会记住此设备，减少后续验证码验证。请仅在你本人控制的设备上选择信任';
 
   @override
   String get trustDeviceAction => '信任设备';
@@ -501,7 +713,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get logoutAction => '退出登录';
 
   @override
-  String get logoutError => '无法清除已保存的登录状态，请重试。';
+  String get logoutError => '无法清除已保存的登录状态，请重试';
 
   @override
   String get eventsTab => '事件';
@@ -519,13 +731,13 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get eventsTitle => '学生事件';
 
   @override
-  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示。';
+  String get eventsDescription => '即将开始的课程、校历提醒和其他与学生相关的事件将在这里显示';
 
   @override
   String get plansTitle => '学生计划';
 
   @override
-  String get plansDescription => '你的教学日历和自定义计划将在这里显示。';
+  String get plansDescription => '你的教学日历和自定义计划将在这里显示';
 
   @override
   String calendarWeek(int week) {
@@ -563,7 +775,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarExportFormatPng => '图片 (.png)';
 
   @override
-  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周。';
+  String get calendarExportPngCurrentWeekOnly => 'PNG 仅导出当前周';
 
   @override
   String get calendarExportDateColumn => '日期';
@@ -605,28 +817,28 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get calendarExportAction => '导出';
 
   @override
-  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程。';
+  String get calendarExportNoEvents => '所选范围和内容没有可导出的日程';
 
   @override
-  String get calendarExportFailed => '无法导出日历，请重试。';
+  String get calendarExportFailed => '无法导出日历，请重试';
 
   @override
-  String get calendarExportSaved => '日历文件已保存。';
+  String get calendarExportSaved => '日历文件已保存';
 
   @override
   String get calendarLoading => '正在加载日历…';
 
   @override
-  String get calendarLoadError => '无法加载教学日历。';
+  String get calendarLoadError => '无法加载教学日历';
 
   @override
-  String get calendarStaleCache => '更新失败，当前显示已保存的日历。';
+  String get calendarStaleCache => '更新失败，当前显示已保存的日历';
 
   @override
   String get calendarRetry => '重试';
 
   @override
-  String get calendarNoCourses => '本周没有计划。';
+  String get calendarNoCourses => '本周没有计划';
 
   @override
   String get calendarOverlappingPlans => '重叠的计划';
@@ -665,7 +877,7 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get planCategoryColor => '分类颜色';
 
   @override
-  String get planCategoryDuplicate => '已有同名分类。';
+  String get planCategoryDuplicate => '已有同名分类';
 
   @override
   String get planRepeat => '重复方式';
@@ -691,19 +903,19 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get planIntervalDays => '间隔天数';
 
   @override
-  String get planIntervalInvalid => '请输入大于零的天数。';
+  String get planIntervalInvalid => '请输入大于零的天数';
 
   @override
-  String get planTimeRequired => '请选择日期、开始时间和结束时间。';
+  String get planTimeRequired => '请选择日期、开始时间和结束时间';
 
   @override
-  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间。';
+  String get planEndAfterStart => '结束时间必须晚于同一天的开始时间';
 
   @override
   String get planSave => '保存计划';
 
   @override
-  String get planSaveError => '无法保存计划，请重试。';
+  String get planSaveError => '无法保存计划，请重试';
 
   @override
   String get planEditTitle => '编辑计划';
@@ -742,13 +954,13 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get planConfirmCancelTitle => '确认取消本次计划？';
 
   @override
-  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据。';
+  String get planConfirmFetchedLesson => '这节课只会在 Thulium 中隐藏，不会修改学校教学日历的数据';
 
   @override
-  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改。';
+  String get planConfirmDeleteSeries => '将删除此重复计划的所有次数，包括单次修改';
 
   @override
-  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留。';
+  String get planConfirmOneOccurrence => '只移除本次计划，其他次数仍会保留';
 
   @override
   String get planDontAskAgain => '此操作下次不再提醒';
@@ -763,13 +975,225 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get studyTitle => '学习';
 
   @override
-  String get studyDescription => '学习工具和学习资源将在这里显示。';
+  String get studyDescription => '学习工具和学习资源将在这里显示';
+
+  @override
+  String get studyToolsTitle => '学习快捷入口';
+
+  @override
+  String get studyToolsPlaceholder => '这里将显示常用学习功能';
+
+  @override
+  String get studyCoursesTitle => '我的课程';
+
+  @override
+  String get studyRefresh => '刷新课程';
+
+  @override
+  String get studyLoadError => '无法加载课程，请尝试刷新';
+
+  @override
+  String get studyStaleCourses => '更新失败，正在显示已保存的课程';
+
+  @override
+  String get studyNoCourses => '本学期暂无课程';
+
+  @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作业：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作业数量加载失败，请刷新重试';
+
+  @override
+  String get homeworkTitle => '近期作业';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作业更新失败，正在显示已保存的数据';
+
+  @override
+  String get homeworkLoadError => '作业加载失败，请刷新重试';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止时间未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京时间）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩余 $days 天 $hours 小时';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩余 $minutes 分钟';
+  }
 
   @override
   String get lifeTitle => '生活';
 
   @override
-  String get lifeDescription => '校园生活服务和日常工具将在这里显示。';
+  String get lifeDescription => '校园生活服务和日常工具将在这里显示';
+
+  @override
+  String get homeworkTimezone => '截止时间均为北京时间（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '刷新作业';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '刚刚更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新于 $minutes 分钟前';
+  }
+
+  @override
+  String get homeworkLoading => '正在加载作业';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本周';
+
+  @override
+  String get homeworkGroupLater => '之后';
+
+  @override
+  String get homeworkWithinHour => '1 小时内';
+
+  @override
+  String get homeworkWithinDay => '24 小时内';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天内';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京时间';
+
+  @override
+  String get homeworkNoGrade => '不计分';
+
+  @override
+  String get homeworkDetails => '作业详情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作业操作';
+
+  @override
+  String get homeworkOpenWeb => '打开网页';
+
+  @override
+  String get homeworkRemindLater => '稍后提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '标记已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作当前不可用';
+
+  @override
+  String get homeworkActionFailed => '操作失败，请重试';
+
+  @override
+  String get courseFiles => '课程文件';
+
+  @override
+  String get courseAssignments => '课程作业';
+
+  @override
+  String get courseFilesEmpty => '暂无课程文件';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多显示 $count 个文件，教学平台上可能还有更多文件';
+  }
+
+  @override
+  String get courseContentError => '无法加载课程内容，请重试';
+
+  @override
+  String get coursePreviewError => '无法预览，教学平台可能尚未提供此文件的 PDF 预览。请重试或前往教学平台查看';
+
+  @override
+  String get courseSessionExpired => '登录已过期，请重新登录';
+
+  @override
+  String get courseUnsubmitted => '未提交';
+
+  @override
+  String get courseSubmitted => '已提交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分类暂无作业';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暂不支持文档预览';
+
+  @override
+  String get sessionVerificationRequired => '更新校园数据需要重新验证，已保存的信息仍可查看';
+
+  @override
+  String get courseContentLoading => '正在加载课程内容';
+
+  @override
+  String get coursePreviewLoading => '正在加载文档';
+
+  @override
+  String get exportDiagnostics => '导出诊断日志';
+
+  @override
+  String get exportDiagnosticsError => '日志导出失败，请重试';
+
+  @override
+  String get deviceTrustLimitTitle => '信任设备数量已达上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以继续登录，但不会记住此设备。请到 id.tsinghua.edu.cn 管理旧的信任浏览器后重试';
+
+  @override
+  String get continueSignInAction => '继续登录';
+
+  @override
+  String get deviceTrustRegistrationError => '无法信任此设备，请重新登录并选择“暂不”，或导出诊断日志';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -822,10 +1246,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get signInAction => '登入';
 
   @override
-  String get requiredField => '此欄位為必填項目。';
+  String get requiredField => '此欄位為必填項目';
 
   @override
-  String get loginError => '登入失敗，請檢查學號和密碼後重試。';
+  String get loginError => '登入失敗，請檢查學號和密碼後重試';
 
   @override
   String get showPassword => '顯示密碼';
@@ -854,14 +1278,14 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get verificationCodeHint => '請輸入驗證碼';
 
   @override
-  String get verificationCodeInvalid => '驗證碼不正確，請重試。';
+  String get verificationCodeInvalid => '驗證碼不正確，請重試';
 
   @override
   String get trustDeviceTitle => '信任此裝置？';
 
   @override
   String get trustDeviceDescription =>
-      '清華身分驗證服務可能會記住此裝置，減少後續驗證碼驗證。請僅在你本人控制的裝置上選擇信任。';
+      '清華身分驗證服務可能會記住此裝置，減少後續驗證碼驗證。請僅在你本人控制的裝置上選擇信任';
 
   @override
   String get trustDeviceAction => '信任裝置';
@@ -885,7 +1309,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get logoutAction => '登出';
 
   @override
-  String get logoutError => '無法清除已儲存的登入狀態，請重試。';
+  String get logoutError => '無法清除已儲存的登入狀態，請重試';
 
   @override
   String get eventsTab => '事件';
@@ -903,13 +1327,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get eventsTitle => '學生事件';
 
   @override
-  String get eventsDescription => '即將開始的課程、校曆提醒和其他與學生相關的事件將在這裡顯示。';
+  String get eventsDescription => '即將開始的課程、校曆提醒和其他與學生相關的事件將在這裡顯示';
 
   @override
   String get plansTitle => '學生計畫';
 
   @override
-  String get plansDescription => '你的教學日曆和自訂計畫將在這裡顯示。';
+  String get plansDescription => '你的教學日曆和自訂計畫將在這裡顯示';
 
   @override
   String calendarWeek(int week) {
@@ -947,7 +1371,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get calendarExportFormatPng => '圖片 (.png)';
 
   @override
-  String get calendarExportPngCurrentWeekOnly => 'PNG 僅匯出目前週。';
+  String get calendarExportPngCurrentWeekOnly => 'PNG 僅匯出目前週';
 
   @override
   String get calendarExportDateColumn => '日期';
@@ -989,28 +1413,28 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get calendarExportAction => '匯出';
 
   @override
-  String get calendarExportNoEvents => '所選範圍和內容沒有可匯出的行程。';
+  String get calendarExportNoEvents => '所選範圍和內容沒有可匯出的行程';
 
   @override
-  String get calendarExportFailed => '無法匯出日曆，請重試。';
+  String get calendarExportFailed => '無法匯出日曆，請重試';
 
   @override
-  String get calendarExportSaved => '日曆檔案已儲存。';
+  String get calendarExportSaved => '日曆檔案已儲存';
 
   @override
   String get calendarLoading => '正在載入日曆…';
 
   @override
-  String get calendarLoadError => '無法載入教學日曆。';
+  String get calendarLoadError => '無法載入教學日曆';
 
   @override
-  String get calendarStaleCache => '更新失敗，目前顯示已儲存的日曆。';
+  String get calendarStaleCache => '更新失敗，目前顯示已儲存的日曆';
 
   @override
   String get calendarRetry => '重試';
 
   @override
-  String get calendarNoCourses => '本週沒有計畫。';
+  String get calendarNoCourses => '本週沒有計畫';
 
   @override
   String get calendarOverlappingPlans => '重疊的計劃';
@@ -1049,7 +1473,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get planCategoryColor => '分類顏色';
 
   @override
-  String get planCategoryDuplicate => '已有同名分類。';
+  String get planCategoryDuplicate => '已有同名分類';
 
   @override
   String get planRepeat => '重複方式';
@@ -1075,19 +1499,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get planIntervalDays => '間隔天數';
 
   @override
-  String get planIntervalInvalid => '請輸入大於零的天數。';
+  String get planIntervalInvalid => '請輸入大於零的天數';
 
   @override
-  String get planTimeRequired => '請選擇日期、開始時間和結束時間。';
+  String get planTimeRequired => '請選擇日期、開始時間和結束時間';
 
   @override
-  String get planEndAfterStart => '結束時間必須晚於同一天的開始時間。';
+  String get planEndAfterStart => '結束時間必須晚於同一天的開始時間';
 
   @override
   String get planSave => '儲存計畫';
 
   @override
-  String get planSaveError => '無法儲存計畫，請重試。';
+  String get planSaveError => '無法儲存計畫，請重試';
 
   @override
   String get planEditTitle => '編輯計畫';
@@ -1126,13 +1550,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get planConfirmCancelTitle => '確認取消本次計畫？';
 
   @override
-  String get planConfirmFetchedLesson => '這堂課只會在 Thulium 中隱藏，不會修改學校教學日曆的資料。';
+  String get planConfirmFetchedLesson => '這堂課只會在 Thulium 中隱藏，不會修改學校教學日曆的資料';
 
   @override
-  String get planConfirmDeleteSeries => '將刪除此重複計畫的所有次數，包括單次修改。';
+  String get planConfirmDeleteSeries => '將刪除此重複計畫的所有次數，包括單次修改';
 
   @override
-  String get planConfirmOneOccurrence => '只移除本次計畫，其他次數仍會保留。';
+  String get planConfirmOneOccurrence => '只移除本次計畫，其他次數仍會保留';
 
   @override
   String get planDontAskAgain => '此操作下次不再提醒';
@@ -1147,11 +1571,223 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get studyTitle => '學習';
 
   @override
-  String get studyDescription => '學習工具和學習資源將在這裡顯示。';
+  String get studyDescription => '學習工具和學習資源將在這裡顯示';
+
+  @override
+  String get studyToolsTitle => '學習快速入口';
+
+  @override
+  String get studyToolsPlaceholder => '這裡將顯示常用學習功能';
+
+  @override
+  String get studyCoursesTitle => '我的課程';
+
+  @override
+  String get studyRefresh => '重新整理課程';
+
+  @override
+  String get studyLoadError => '無法載入課程，請嘗試重新整理';
+
+  @override
+  String get studyStaleCourses => '更新失敗，正在顯示已儲存的課程';
+
+  @override
+  String get studyNoCourses => '本學期暫無課程';
+
+  @override
+  String studyUnsubmittedHomework(int count) {
+    return '未交作業：$count 份';
+  }
+
+  @override
+  String get studyHomeworkLoadError => '未交作業數量載入失敗，請重新整理';
+
+  @override
+  String get homeworkTitle => '近期作業';
+
+  @override
+  String get homeworkEmpty => '全部完成';
+
+  @override
+  String get homeworkStale => '作業更新失敗，正在顯示已儲存的資料';
+
+  @override
+  String get homeworkLoadError => '作業載入失敗，請重新整理';
+
+  @override
+  String get homeworkExpired => '已逾期';
+
+  @override
+  String get homeworkUnknownDeadline => '截止時間未知';
+
+  @override
+  String homeworkDueAt(String deadline) {
+    return '截止：$deadline（北京時間）';
+  }
+
+  @override
+  String homeworkRemainingDays(int days, int hours) {
+    return '剩餘 $days 天 $hours 小時';
+  }
+
+  @override
+  String homeworkRemainingHours(int hours, int minutes) {
+    return '剩餘 $hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String homeworkRemainingMinutes(int minutes) {
+    return '剩餘 $minutes 分鐘';
+  }
 
   @override
   String get lifeTitle => '生活';
 
   @override
-  String get lifeDescription => '校園生活服務和日常工具將在這裡顯示。';
+  String get lifeDescription => '校園生活服務和日常工具將在這裡顯示';
+
+  @override
+  String get homeworkTimezone => '截止時間均為北京時間（UTC+8）';
+
+  @override
+  String get homeworkRefresh => '重新整理作業';
+
+  @override
+  String get homeworkNeverUpdated => '尚未更新';
+
+  @override
+  String get homeworkUpdatedNow => '剛剛更新';
+
+  @override
+  String homeworkUpdatedMinutes(int minutes) {
+    return '更新於 $minutes 分鐘前';
+  }
+
+  @override
+  String get homeworkLoading => '正在載入作業';
+
+  @override
+  String get homeworkGroupOverdue => '已逾期';
+
+  @override
+  String get homeworkGroupToday => '今天';
+
+  @override
+  String get homeworkGroupThisWeek => '本週';
+
+  @override
+  String get homeworkGroupLater => '之後';
+
+  @override
+  String get homeworkWithinHour => '1 小時內';
+
+  @override
+  String get homeworkWithinDay => '24 小時內';
+
+  @override
+  String get homeworkWithinThreeDays => '3 天內';
+
+  @override
+  String get homeworkLater => '更晚';
+
+  @override
+  String homeworkDeadline(String deadline) {
+    return '截止 $deadline';
+  }
+
+  @override
+  String get homeworkRowTimezone => '北京時間';
+
+  @override
+  String get homeworkNoGrade => '不計分';
+
+  @override
+  String get homeworkDetails => '作業詳情';
+
+  @override
+  String get homeworkBack => '返回';
+
+  @override
+  String get homeworkActions => '作業操作';
+
+  @override
+  String get homeworkOpenWeb => '開啟網頁';
+
+  @override
+  String get homeworkRemindLater => '稍後提醒';
+
+  @override
+  String get homeworkMarkSubmitted => '標記已提交';
+
+  @override
+  String get homeworkActionsUnavailable => '未接入的操作目前無法使用';
+
+  @override
+  String get homeworkActionFailed => '操作失敗，請重試';
+
+  @override
+  String get courseFiles => '課程檔案';
+
+  @override
+  String get courseAssignments => '課程作業';
+
+  @override
+  String get courseFilesEmpty => '暫無課程檔案';
+
+  @override
+  String courseFilesLimited(int count) {
+    return '最多顯示 $count 個檔案，教學平台上可能還有更多檔案';
+  }
+
+  @override
+  String get courseContentError => '無法載入課程內容，請重試';
+
+  @override
+  String get coursePreviewError => '無法預覽，教學平台可能尚未提供此檔案的 PDF 預覽。請重試或前往教學平台查看';
+
+  @override
+  String get courseSessionExpired => '登入已過期，請重新登入';
+
+  @override
+  String get courseUnsubmitted => '未繳交';
+
+  @override
+  String get courseSubmitted => '已繳交，待批改';
+
+  @override
+  String get courseGraded => '已批改';
+
+  @override
+  String get courseAssignmentsEmpty => '此分類暫無作業';
+
+  @override
+  String get coursePreviewUnsupported => 'Linux 暫不支援文件預覽';
+
+  @override
+  String get sessionVerificationRequired => '更新校園資料需要重新驗證，已儲存的資訊仍可查看';
+
+  @override
+  String get courseContentLoading => '正在載入課程內容';
+
+  @override
+  String get coursePreviewLoading => '正在載入文件';
+
+  @override
+  String get exportDiagnostics => '匯出診斷日誌';
+
+  @override
+  String get exportDiagnosticsError => '日誌匯出失敗，請重試';
+
+  @override
+  String get deviceTrustLimitTitle => '信任裝置數量已達上限';
+
+  @override
+  String get deviceTrustLimitDescription =>
+      '本次可以繼續登入，但不會記住此裝置。請到 id.tsinghua.edu.cn 管理舊的信任瀏覽器後重試';
+
+  @override
+  String get continueSignInAction => '繼續登入';
+
+  @override
+  String get deviceTrustRegistrationError => '無法信任此裝置，請重新登入並選擇「暫不」，或匯出診斷日誌';
 }

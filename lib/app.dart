@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
@@ -5,15 +7,20 @@ import 'package:thulium_auth/thulium_auth.dart';
 
 import 'auth/secure_auth_session_store.dart';
 import 'auth/secure_course_schedule_cache_store.dart';
+import 'auth/secure_learn_course_cache_store.dart';
+import 'auth/secure_learn_homework_cache_store.dart';
 import 'pages/home_page.dart';
+import 'homework/homework_theme.dart';
 import 'pages/welcome_page.dart';
+import 'preferences/app_preferences_store.dart';
 
 /// The root application widget owns global locale and theme state.
 final class ThuliumApp extends StatefulWidget {
-  const ThuliumApp({this.sessionStore, super.key});
+  const ThuliumApp({this.sessionStore, this.preferencesStore, super.key});
 
   /// Allows tests and alternate clients to provide their own session storage.
   final AuthSessionStore? sessionStore;
+  final AppPreferencesStore? preferencesStore;
 
   @override
   State<ThuliumApp> createState() => _ThuliumAppState();
@@ -24,13 +31,32 @@ final class _ThuliumAppState extends State<ThuliumApp> {
   // the theme button, the app switches to an explicit light or dark mode.
   ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale('en');
-  bool _isRestoringSession = true;
+  bool _isRestoringState = true;
   bool _hasSession = false;
+  late final AppPreferencesStore _preferencesStore =
+      widget.preferencesStore ?? LocalAppPreferencesStore();
+  Future<void> _preferenceWrites = Future<void>.value();
 
   @override
   void initState() {
     super.initState();
-    _restoreSession();
+    unawaited(_restoreState());
+  }
+
+  Future<void> _restoreState() async {
+    await Future.wait([_restoreSession(), _restorePreferences()]);
+    if (mounted) setState(() => _isRestoringState = false);
+  }
+
+  Future<void> _restorePreferences() async {
+    try {
+      final preferences = await _preferencesStore.read();
+      if (!mounted) return;
+      _themeMode = preferences.themeMode;
+      _locale = preferences.locale;
+    } catch (error) {
+      debugPrint('Thulium preference restoration failed: ${error.runtimeType}');
+    }
   }
 
   Future<void> _restoreSession() async {
@@ -45,24 +71,30 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       // A secure-storage failure must not block access to the sign-in page.
       // Keep the failure visible in diagnostic logs without exposing secrets.
       debugPrint('Thulium session restoration failed: $error');
-    } finally {
-      if (mounted) setState(() => _isRestoringSession = false);
     }
   }
 
   Future<bool> _logout() async {
     final sessionStore = widget.sessionStore ?? SecureAuthSessionStore();
+    return AuthSessionRunner.exclusive(
+      sessionStore,
+      () => _logoutStoredSession(sessionStore),
+    );
+  }
+
+  Future<bool> _logoutStoredSession(AuthSessionStore sessionStore) async {
     try {
       // Restore the persisted cookies before calling logout so the identity
       // service can invalidate the active remote session as well.
       final client = TsinghuaAuthClient(
         sessionStore: sessionStore,
+        requestTimeout: const Duration(seconds: 8),
         credentialStore: sessionStore is AuthCredentialStore
             ? sessionStore as AuthCredentialStore
             : null,
       );
       await client.restore();
-      await client.logout().timeout(const Duration(seconds: 8));
+      await client.logout();
     } catch (error) {
       // Logout should still work offline: the auth client's finally block
       // clears local data, and this fallback covers failures during restore.
@@ -87,6 +119,16 @@ final class _ThuliumAppState extends State<ThuliumApp> {
       } catch (error) {
         debugPrint('Thulium calendar cache removal failed: $error');
       }
+      try {
+        await SecureLearnCourseCacheStore().clear();
+      } catch (error) {
+        debugPrint('Thulium course cache removal failed: $error');
+      }
+      try {
+        await SecureLearnHomeworkCacheStore().clear();
+      } catch (error) {
+        debugPrint('Thulium homework cache removal failed: $error');
+      }
     }
 
     if (mounted) setState(() => _hasSession = false);
@@ -95,8 +137,8 @@ final class _ThuliumAppState extends State<ThuliumApp> {
 
   @override
   Widget build(BuildContext context) {
-    final lightTheme = FThemes.neutral.light.touch;
-    final darkTheme = FThemes.neutral.dark.touch;
+    final lightTheme = withHomeworkTheme(FThemes.neutral.light.touch);
+    final darkTheme = withHomeworkTheme(FThemes.neutral.dark.touch);
 
     return MaterialApp(
       title: 'Thulium',
@@ -133,8 +175,8 @@ final class _ThuliumAppState extends State<ThuliumApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: _isRestoringSession
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+      home: _isRestoringState
+          ? const FScaffold(child: Center(child: FCircularProgress()))
           : _hasSession
           ? HomePage(
               onLocaleSelected: _setLocale,
@@ -155,6 +197,7 @@ final class _ThuliumAppState extends State<ThuliumApp> {
 
   void _setLocale(Locale locale) {
     setState(() => _locale = locale);
+    _savePreferences();
   }
 
   void _toggleTheme() {
@@ -165,6 +208,22 @@ final class _ThuliumAppState extends State<ThuliumApp> {
               WidgetsBinding.instance.platformDispatcher.platformBrightness ==
                   Brightness.dark);
       _themeMode = isDark ? ThemeMode.light : ThemeMode.dark;
+    });
+    _savePreferences();
+  }
+
+  void _savePreferences() {
+    final preferences = AppPreferences(themeMode: _themeMode, locale: _locale);
+    // Serialize snapshots so a slower earlier write cannot replace the user's
+    // latest language or theme choice. A failed write must not block later ones.
+    _preferenceWrites = _preferenceWrites.then((_) async {
+      try {
+        await _preferencesStore.write(preferences);
+      } catch (error) {
+        debugPrint(
+          'Thulium preference persistence failed: ${error.runtimeType}',
+        );
+      }
     });
   }
 }

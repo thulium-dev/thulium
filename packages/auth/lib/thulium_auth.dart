@@ -14,9 +14,12 @@ import 'dart:io' show HttpDate, HttpException;
 import 'package:dart_sm/dart_sm.dart';
 import 'package:fast_gbk/fast_gbk.dart' as gbk_codec;
 import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as html;
 
 import 'src/response_diagnostics.dart';
 import 'tsinghua_webvpn_redirect.dart';
+
+part 'src/session_runner.dart';
 
 // Entry point that starts the WebVPN OAuth flow and redirects to the identity
 // provider. Keeping these endpoints in one place makes protocol updates easier
@@ -138,6 +141,7 @@ final class AuthSession {
     required this.cookies,
     this.scopedCookies = const [],
     this.fingerGenPrint,
+    this.trustedBrowser = false,
   });
 
   /// The numeric Tsinghua account identifier used during sign-in.
@@ -164,6 +168,11 @@ final class AuthSession {
   /// This value is sensitive and must be persisted only through a secure store.
   final String? fingerGenPrint;
 
+  /// Whether the user allowed device registration on this installation.
+  /// This is independent of an optional legacy token; the server still decides
+  /// whether the browser is trusted and whether verification is necessary.
+  final bool trustedBrowser;
+
   /// Converts the session to a JSON-compatible map for secure persistence.
   Map<String, Object?> toJson() => {
     'userId': userId,
@@ -171,6 +180,7 @@ final class AuthSession {
     'cookies': cookies,
     'scopedCookies': scopedCookies.map((cookie) => cookie.toJson()).toList(),
     if (fingerGenPrint != null) 'fingerGenPrint': fingerGenPrint,
+    if (trustedBrowser) 'trustedBrowser': true,
   };
 
   /// Reconstructs a session previously produced by [toJson].
@@ -185,6 +195,10 @@ final class AuthSession {
         )
         .toList(growable: false),
     fingerGenPrint: json['fingerGenPrint'] as String?,
+    trustedBrowser:
+        json['trustedBrowser'] as bool? ??
+        (json['fingerGenPrint'] is String &&
+            (json['fingerGenPrint'] as String).isNotEmpty),
   );
 
   /// Encodes this session as a single string for key-value secure stores.
@@ -461,6 +475,38 @@ typedef TwoFactorCodeHandler =
 /// Asks whether the user wants this installation registered as a trusted device.
 typedef TwoFactorTrustHandler = Future<bool> Function();
 
+/// Reports the server's trusted-device quota while allowing sign-in to continue.
+typedef TwoFactorAuthLimitHandler = Future<void> Function();
+
+enum DeviceTrustFailureReason {
+  limitReached,
+  sessionRejected,
+  accessRestricted,
+  invalidFingerprint,
+  invalidResponse,
+  networkError,
+  rejected;
+
+  String get diagnosticCode => switch (this) {
+    limitReached => 'limit-reached',
+    sessionRejected => 'session-rejected',
+    accessRestricted => 'access-restricted',
+    invalidFingerprint => 'invalid-fingerprint',
+    invalidResponse => 'invalid-response',
+    networkError => 'network-error',
+    rejected => 'rejected',
+  };
+}
+
+/// Contains only a classified reason; provider messages can contain private data.
+final class DeviceTrustRegistrationException implements Exception {
+  const DeviceTrustRegistrationException(this.reason);
+  final DeviceTrustFailureReason reason;
+  @override
+  String toString() =>
+      'DeviceTrustRegistrationException: ${reason.diagnosticCode}';
+}
+
 /// Receives safe authentication diagnostics without credential values.
 typedef AuthTraceHandler = void Function(String message);
 
@@ -473,6 +519,7 @@ final class TsinghuaAuthClient {
     this.twoFactorMethodHandler,
     this.twoFactorCodeHandler,
     this.twoFactorTrustHandler,
+    this.twoFactorAuthLimitHandler,
     this.trace,
     this.requestTimeout = _DEFAULT_REQUEST_TIMEOUT,
   }) : _http = httpClient ?? http.Client(),
@@ -497,8 +544,10 @@ final class TsinghuaAuthClient {
   /// Called only after the selected second-factor code has been requested.
   final TwoFactorCodeHandler? twoFactorCodeHandler;
 
-  /// Called after code verification to obtain explicit consent for device trust.
+  /// Called once after successful code verification to request device trust.
   final TwoFactorTrustHandler? twoFactorTrustHandler;
+
+  final TwoFactorAuthLimitHandler? twoFactorAuthLimitHandler;
 
   /// Optional diagnostic callback. Messages contain no passwords, codes, or
   /// cookie values and are disabled by default.
@@ -533,6 +582,22 @@ final class TsinghuaAuthClient {
   AuthSession? get session => _session;
   AuthSession? _session;
   String? _fingerGenPrint;
+  bool _trustedBrowser = false;
+  bool? _trustDecision;
+  bool _registeredDuringLogin = false;
+  // Keep device trust separate from invalidated cookies for a bounded reconnect.
+  // This snapshot contains no cookies and is cleared by explicit logout.
+  AuthSession? _reconnectIdentity;
+
+  void _rememberIdentity(AuthSession session) {
+    _reconnectIdentity = AuthSession(
+      userId: session.userId,
+      fingerprint: session.fingerprint,
+      cookies: const {},
+      fingerGenPrint: session.fingerGenPrint,
+      trustedBrowser: session.trustedBrowser,
+    );
+  }
 
   /// Restores the last session without asking for the password.
   Future<AuthSession?> restore() async {
@@ -550,7 +615,15 @@ final class TsinghuaAuthClient {
     }
 
     _session = restored;
+    _rememberIdentity(restored);
+    _fingerGenPrint = restored.fingerGenPrint;
+    _trustedBrowser =
+        restored.trustedBrowser || restored.fingerGenPrint?.isNotEmpty == true;
     _cookieJar.restore(restored.scopedCookies);
+    trace?.call(
+      'Session restored: trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true} '
+      'deviceTrustConsent=${restored.trustedBrowser}.',
+    );
     return restored;
   }
 
@@ -589,6 +662,18 @@ final class TsinghuaAuthClient {
     } on FormatException {
       _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
       rethrow;
+    }
+    if (decoded is Map) {
+      final message = decoded['msg'] ?? decoded['message'];
+      if (decoded['status'] == 401 ||
+          decoded['code'] == 401 ||
+          (message is String &&
+              RegExp(
+                r'^(?:未登录|请先登录|登录已失效|登录状态已失效|login required|not authenticated)[。.!]?$',
+                caseSensitive: false,
+              ).hasMatch(message.trim()))) {
+        return null;
+      }
     }
     if (decoded is! Map<String, dynamic> || decoded['object'] is! Map) {
       _traceUnexpectedRawResponse('portal-user-data', userDataResponse);
@@ -630,6 +715,37 @@ final class TsinghuaAuthClient {
     return _asTextResponse(response);
   }
 
+  /// Sends an authenticated GET without decoding or re-encoding file bytes.
+  /// Redirect cookies and timeout behavior match [getAuthenticated].
+  Future<http.Response> getAuthenticatedBytes(Uri uri, {Uri? referer}) async {
+    if (_session == null) {
+      throw StateError(
+        'Restore an authenticated session before making requests.',
+      );
+    }
+    if (!_isTsinghuaHost(uri.host) ||
+        (referer != null && !_isTsinghuaHost(referer.host))) {
+      throw ArgumentError('Only Tsinghua hosts are allowed.');
+    }
+    final requestUri =
+        uri.host.toLowerCase() == TsinghuaWebVpnRedirect.ACADEMIC_CALENDAR_HOST
+        ? TsinghuaWebVpnRedirect.forTarget(uri)
+        : uri;
+    final response = await _request(
+      requestUri,
+      decodeBody: false,
+      tsinghuaRedirectsOnly: true,
+      referer: referer,
+    );
+    await _persistSession();
+    return http.Response.bytes(
+      response.bytes,
+      response.statusCode,
+      headers: response.headers,
+      request: http.Request('GET', response.uri),
+    );
+  }
+
   /// Establishes a WebVPN session for a campus service using its roaming ID.
   ///
   /// The returned response is the target service's landing page. Only the
@@ -654,6 +770,9 @@ final class TsinghuaAuthClient {
         },
       ),
     );
+    if (_isLoginRequired(roamingResponse)) {
+      throw const PortalSessionRejected();
+    }
     Object? roamingJson;
     try {
       roamingJson = jsonDecode(roamingResponse.body);
@@ -702,9 +821,9 @@ final class TsinghuaAuthClient {
 
   String _readInformationPortalCsrf(_Response response) {
     // The WebVPN cookie endpoint returns a cookie string in its response body,
-    // not in Set-Cookie. OneTHU imports that string into its jar before using
-    // the target service. Keep each imported cookie scoped to the service that
-    // owns it; WebVPN infrastructure cookies remain with the proxy host.
+    // not in Set-Cookie. Import that string before using the target service.
+    // Keep imported cookies scoped to their owning service; WebVPN
+    // infrastructure cookies remain with the proxy host.
     final pairs = <String, String>{};
     if (response.statusCode == 200 && !response.body.contains('<')) {
       for (final part in response.body.split(RegExp(r'[;\r\n]'))) {
@@ -761,7 +880,13 @@ final class TsinghuaAuthClient {
     PortalCsrfUnavailable? lastFailure;
     for (var attempt = 0; attempt < _CSRF_FETCH_ATTEMPTS; attempt++) {
       final response = await _request(Uri.parse(_INFO_CSRF_COOKIE_URL));
-      if (_isLoginRequired(response)) throw const PortalSessionRejected();
+      if (_isLoginRequired(response)) {
+        // An expired portal cookie does not prove that the ID/SSO session has
+        // expired too. Attempt the silent recovery below before asking for a
+        // new credential login. There is no restored SSO during initial login.
+        if (_session == null) throw const PortalSessionRejected();
+        break;
+      }
       try {
         return _readInformationPortalCsrf(response);
       } on PortalCsrfUnavailable catch (error) {
@@ -831,13 +956,20 @@ final class TsinghuaAuthClient {
   }
 
   Future<void> _trySilentPortalReconnect() async {
-    if (_session == null) return;
+    final session = _session;
+    if (session == null) return;
     try {
       trace?.call('Trying portal reconnection with the saved SSO cookies.');
       await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
-      final portal = await _request(
+      var portal = await _request(
         Uri.parse('$_ID_LOGIN_FORM_URL$_INFO_ROAMING_ID'),
       );
+      portal =
+          await _trustedIdentityEntry(
+            portal,
+            fingerprint: session.fingerprint,
+          ) ??
+          portal;
       if (portal.body.contains('登录成功。正在重定向到')) {
         await _finishIdentityRedirect(portal.body, throughWebVpnOAuth: true);
       }
@@ -901,6 +1033,7 @@ final class TsinghuaAuthClient {
       cookies: Map<String, String>.unmodifiable(_cookieJar.legacyValues),
       scopedCookies: _cookieJar.cookies,
       fingerGenPrint: current.fingerGenPrint,
+      trustedBrowser: current.trustedBrowser || _trustedBrowser,
     );
     _session = updated;
     await _sessionStore?.write(updated);
@@ -917,6 +1050,7 @@ final class TsinghuaAuthClient {
     _cookieJar.clear();
     _session = null;
     _fingerGenPrint = null;
+    _trustedBrowser = false;
     await _sessionStore?.clear();
     return false;
   }
@@ -933,40 +1067,42 @@ final class TsinghuaAuthClient {
 
     // Reuse a trusted-device credential only when both its account and stable
     // fingerprint match this login.
-    final previousSession = _session ?? await _sessionStore?.read();
+    final previousSession =
+        _session ?? await _sessionStore?.read() ?? _reconnectIdentity;
     _fingerGenPrint =
         previousSession != null &&
             previousSession.userId == userId &&
             previousSession.fingerprint == fingerprint
         ? previousSession.fingerGenPrint
         : null;
+    _trustedBrowser =
+        previousSession != null &&
+        previousSession.userId == userId &&
+        previousSession.fingerprint == fingerprint &&
+        (previousSession.trustedBrowser ||
+            previousSession.fingerGenPrint?.isNotEmpty == true);
+    // Ask about registration only after a code is verified, and
+    // reuse that one choice across the WebVPN and portal stages.
+    _trustDecision = null;
+    _registeredDuringLogin = false;
     // The old account must not be used to probe or silently renew the portal
     // while a new credential-based login is establishing its own session.
     _session = null;
     _cookieJar.clear();
 
     final loginPage = await _request(Uri.parse(_WEB_VPN_OAUTH_LOGIN_URL));
-    final publicKey = _extract(
-      loginPage.body,
-      'id="sm2publicKey"[^>]*>([^<]+)',
-    );
-    if (publicKey == null || publicKey.isEmpty) {
-      throw StateError('The identity login public key was not found.');
-    }
-
-    var response = await _request(
-      Uri.parse(_ID_LOGIN_URL),
-      method: 'POST',
-      form: {
-        'i_user': userId,
-        'i_pass': '04${SM2.encrypt(password, publicKey)}',
-        'fingerPrint': fingerprint,
-        'fingerGenPrint': _fingerGenPrint ?? '',
-        'i_captcha': '',
-      },
+    var response = await _identityEntry(
+      loginPage,
+      userId: userId,
+      password: password,
+      fingerprint: fingerprint,
     );
 
     if (response.body.contains('二次认证')) {
+      trace?.call(
+        'Second-factor challenge: stage=webvpn '
+        'trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true}.',
+      );
       response = await _completeTwoFactor(fingerprint: fingerprint);
     }
     _ensureIdentityLoginSucceeded(response.body);
@@ -990,8 +1126,10 @@ final class TsinghuaAuthClient {
       cookies: Map<String, String>.unmodifiable(_cookieJar.legacyValues),
       scopedCookies: _cookieJar.cookies,
       fingerGenPrint: _fingerGenPrint,
+      trustedBrowser: _trustedBrowser || _trustDecision == true,
     );
     _session = result;
+    _rememberIdentity(result);
     await _sessionStore?.write(result);
     await credentialStore?.writeCredentials(
       AuthCredentials(userId: userId, password: password),
@@ -1006,6 +1144,8 @@ final class TsinghuaAuthClient {
       _cookieJar.clear();
       _session = null;
       _fingerGenPrint = null;
+      _trustedBrowser = false;
+      _reconnectIdentity = null;
       try {
         await _sessionStore?.clear();
       } finally {
@@ -1092,7 +1232,9 @@ final class TsinghuaAuthClient {
       // Only a well-formed server rejection reaches this branch. A caller can
       // keep its input surface open without treating network failures as a
       // rejected code.
-      trace?.call('2FA code verification was rejected; requesting another.');
+      trace?.call(
+        '2FA code verification was rejected; awaiting corrected input.',
+      );
       return false;
     });
     if (verified == null) {
@@ -1100,9 +1242,12 @@ final class TsinghuaAuthClient {
     }
     final verifiedResponse = verified!;
 
-    // Match the upstream trust-device flow: only register after explicit user
-    // consent, then retain the returned finger3 for the next CAS service stage.
-    if (await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false))) {
+    _trustDecision ??=
+        await (twoFactorTrustHandler?.call() ?? Future<bool>.value(false));
+
+    // Register only after verified 2FA and explicit consent. A legacy token is
+    // optional; browser SSO can be established without one.
+    if (_trustDecision == true && !_registeredDuringLogin) {
       await _saveTrustedDevice(fingerprint);
     }
 
@@ -1127,34 +1272,84 @@ final class TsinghuaAuthClient {
   }
 
   Future<void> _saveTrustedDevice(String fingerprint) async {
+    late final _Response raw;
     try {
-      final response = _decodeJsonObject(
-        (await _request(
-          Uri.parse(_SAVE_FINGER_URL),
-          method: 'POST',
-          form: {
-            'fingerprint': fingerprint,
-            'deviceName': 'Thulium',
-            'radioVal': '是',
-          },
-        )).body,
+      raw = await _request(
+        Uri.parse(_SAVE_FINGER_URL),
+        method: 'POST',
+        form: {
+          'fingerprint': fingerprint,
+          'deviceName': 'Thulium',
+          'radioVal': '是',
+        },
       );
-      if (response['result'] != _TWO_FACTOR_SUCCESS) {
-        trace?.call('Trusted-device registration was not accepted.');
+    } catch (_) {
+      _rejectDeviceTrust(DeviceTrustFailureReason.networkError, 0);
+      throw const DeviceTrustRegistrationException(
+        DeviceTrustFailureReason.networkError,
+      );
+    }
+    final Map<String, dynamic> response;
+    try {
+      response = _decodeJsonObject(raw.body);
+    } catch (_) {
+      final reason = raw.statusCode == 401
+          ? DeviceTrustFailureReason.sessionRejected
+          : raw.statusCode == 403 || raw.statusCode == 429
+          ? DeviceTrustFailureReason.accessRestricted
+          : DeviceTrustFailureReason.invalidResponse;
+      _rejectDeviceTrust(reason, raw.statusCode);
+      throw DeviceTrustRegistrationException(reason);
+    }
+    if (raw.statusCode < 200 ||
+        raw.statusCode >= 300 ||
+        response['result'] != _TWO_FACTOR_SUCCESS) {
+      final message = response['msg'] ?? response['message'];
+      final text = message is String ? message.toLowerCase() : '';
+      final reason =
+          raw.statusCode == 401 ||
+              RegExp(
+                r'未登录|登录.*(?:失效|过期)|not authenticated|login required',
+              ).hasMatch(text)
+          ? DeviceTrustFailureReason.sessionRejected
+          : raw.statusCode == 403 ||
+                raw.statusCode == 429 ||
+                RegExp(r'频繁|rate.?limit|access denied|访问受限').hasMatch(text)
+          ? DeviceTrustFailureReason.accessRestricted
+          : RegExp(r'上限|limit|too many.*(?:device|browser)').hasMatch(text)
+          ? DeviceTrustFailureReason.limitReached
+          : RegExp(
+              r'指纹.*(?:无效|错误|格式|长度)|invalid.*fingerprint|fingerprint.*(?:invalid|format|length)',
+            ).hasMatch(text)
+          ? DeviceTrustFailureReason.invalidFingerprint
+          : DeviceTrustFailureReason.rejected;
+      _rejectDeviceTrust(reason, raw.statusCode);
+      if (reason == DeviceTrustFailureReason.limitReached) {
+        await twoFactorAuthLimitHandler?.call();
         return;
       }
-      final token = response['object'];
-      if (token is String && token.isNotEmpty) {
-        _fingerGenPrint = token;
-        trace?.call('Trusted-device credential received.');
-      } else {
-        trace?.call('Trusted-device registration returned no credential.');
-      }
-    } catch (_) {
-      // Device trust is optional; its failure must not invalidate successful
-      // credential and second-factor verification.
-      trace?.call('Trusted-device registration failed; continuing login.');
+      throw DeviceTrustRegistrationException(reason);
     }
+    // Current deployments can acknowledge registration without an object.
+    // Browser SSO is not conditional on receiving a legacy token string.
+    _trustedBrowser = true;
+    _registeredDuringLogin = true;
+    trace?.call('Trusted-device registration accepted.');
+    final token = response['object'];
+    if (token is String && token.isNotEmpty) {
+      _fingerGenPrint = token;
+      trace?.call('Trusted-device credential received.');
+    } else {
+      trace?.call('Trusted-device registration needs no legacy credential.');
+    }
+  }
+
+  void _rejectDeviceTrust(DeviceTrustFailureReason reason, int status) {
+    _trustedBrowser = false;
+    _trustDecision = false;
+    trace?.call(
+      'Trusted-device registration rejected: reason=${reason.diagnosticCode} status=$status.',
+    );
   }
 
   Map<String, dynamic> _decodeJsonObject(String body) {
@@ -1223,17 +1418,47 @@ final class TsinghuaAuthClient {
     final loginPage = await _request(
       Uri.parse('$_ID_LOGIN_FORM_URL$_INFO_ROAMING_ID'),
     );
-    final publicKey = _extract(
-      loginPage.body,
-      'id="sm2publicKey"[^>]*>([^<]+)',
+    var response = await _identityEntry(
+      loginPage,
+      userId: userId,
+      password: password,
+      fingerprint: fingerprint,
     );
-    if (publicKey == null || publicKey.isEmpty) {
-      throw StateError(
-        'The information-portal identity public key was not found.',
+    if (response.body.contains('二次认证')) {
+      trace?.call(
+        'Second-factor challenge: stage=information-portal '
+        'trustedCredentialPresent=${_fingerGenPrint?.isNotEmpty == true}.',
       );
+      response = await _completeTwoFactor(fingerprint: fingerprint);
     }
+    _ensureIdentityLoginSucceeded(response.body);
+    await _finishIdentityRedirect(response.body, throughWebVpnOAuth: true);
+  }
 
-    var response = await _request(
+  /// Follow the server's trusted-browser entry before resubmitting a password.
+  /// Only the documented ID-origin actions may receive the supplied fields.
+  Future<_Response> _identityEntry(
+    _Response entry, {
+    required String userId,
+    required String password,
+    required String fingerprint,
+  }) async {
+    if (entry.body.contains('登录成功。正在重定向到')) return entry;
+    final trusted = await _trustedIdentityEntry(
+      entry,
+      fingerprint: fingerprint,
+    );
+    final document = html.parse(trusted?.body ?? entry.body);
+    final publicKey = document.getElementById('sm2publicKey')?.text.trim();
+    if (trusted != null && (publicKey == null || publicKey.isEmpty)) {
+      return trusted;
+    }
+    // A denied SSO entry can return a fresh credential form. Fall back once
+    // using that public key, retaining any server-required second factor.
+    if (publicKey == null || publicKey.isEmpty) {
+      throw StateError('The identity login public key was not found.');
+    }
+    return _request(
       Uri.parse(_ID_LOGIN_URL),
       method: 'POST',
       form: {
@@ -1244,11 +1469,66 @@ final class TsinghuaAuthClient {
         'i_captcha': '',
       },
     );
-    if (response.body.contains('二次认证')) {
-      response = await _completeTwoFactor(fingerprint: fingerprint);
+  }
+
+  Future<_Response?> _trustedIdentityEntry(
+    _Response entry, {
+    required String fingerprint,
+  }) async {
+    if (!_trustedBrowser && _trustDecision != true) return null;
+    final document = html.parse(entry.body);
+    if (document.getElementById('sm2publicKey') != null) return null;
+    final forms = document
+        .querySelectorAll('form')
+        .where(
+          (form) =>
+              form.querySelector('input[name="fingerPrint"]') != null ||
+              RegExp(
+                r'checkSingle|security_check',
+              ).hasMatch(form.attributes['action'] ?? ''),
+        );
+    if (forms.isEmpty) return null;
+    final form = forms.first;
+    final action = Uri.parse(
+      _ID_HOST_URL,
+    ).resolve(form.attributes['action'] ?? '');
+    if (action.scheme != 'https' ||
+        action.host != Uri.parse(_ID_HOST_URL).host ||
+        action.port != 443 ||
+        action.userInfo.isNotEmpty ||
+        !const [
+          '/do/off/ui/auth/login/checkSingle',
+          '/security_check',
+        ].contains(action.path)) {
+      throw StateError('The trusted-browser form has an unexpected action.');
     }
-    _ensureIdentityLoginSucceeded(response.body);
-    await _finishIdentityRedirect(response.body, throughWebVpnOAuth: true);
+    final fields = <String, String>{};
+    for (final input in form.querySelectorAll('input[name]')) {
+      final name = input.attributes['name']!;
+      final type = input.attributes['type']?.toLowerCase();
+      if (input.attributes.containsKey('disabled') ||
+          const [
+            'password',
+            'file',
+            'submit',
+            'button',
+            'reset',
+          ].contains(type) ||
+          (const ['checkbox', 'radio'].contains(type) &&
+              !input.attributes.containsKey('checked'))) {
+        continue;
+      }
+      fields[name] = name == 'fingerPrint'
+          ? fingerprint
+          : input.attributes['value'] ?? '';
+    }
+    // Server forms may omit these inputs or leave a token placeholder empty.
+    // The persisted device credential must survive process/session restoration.
+    fields['fingerPrint'] = fingerprint;
+    fields['fingerGenPrint'] = _fingerGenPrint ?? '';
+    if (action.path.endsWith('/checkSingle')) fields['i_rememberme'] = 'on';
+    trace?.call('Using the trusted-browser identity entry.');
+    return _request(action, method: 'POST', form: fields);
   }
 
   Uri _webVpnOAuthRedirectUri(Uri target) {
@@ -1275,6 +1555,9 @@ final class TsinghuaAuthClient {
     Uri uri, {
     String method = 'GET',
     Map<String, String>? form,
+    bool decodeBody = true,
+    bool tsinghuaRedirectsOnly = false,
+    Uri? referer,
   }) async {
     var current = uri;
     var currentMethod = method;
@@ -1291,6 +1574,7 @@ final class TsinghuaAuthClient {
         ..followRedirects = false
         ..headers['User-Agent'] = _USER_AGENT
         ..headers['Cookie'] = _cookieHeaderForRequest(current);
+      if (referer != null) request.headers['Referer'] = referer.toString();
       if (currentForm != null) {
         request.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         request.bodyFields = currentForm;
@@ -1316,11 +1600,13 @@ final class TsinghuaAuthClient {
         );
         rethrow;
       }
-      final body = _decodeResponseBody(
-        bytes,
-        response.headers['content-type'],
-        current,
-      );
+      final body = decodeBody
+          ? _decodeResponseBody(
+              bytes,
+              response.headers['content-type'],
+              current,
+            )
+          : '';
       _captureResponseCookies(current, response.headers['set-cookie']);
       final location = response.headers['location'];
       trace?.call(
@@ -1332,9 +1618,18 @@ final class TsinghuaAuthClient {
       if (location == null ||
           response.statusCode < 300 ||
           response.statusCode >= 400) {
-        return _Response(response.statusCode, response.headers, body, current);
+        return _Response(
+          response.statusCode,
+          response.headers,
+          body,
+          current,
+          bytes,
+        );
       }
       final redirected = current.resolveUri(Uri.parse(location));
+      if (tsinghuaRedirectsOnly && !_isTsinghuaHost(redirected.host)) {
+        throw StateError('The file download redirected outside Tsinghua.');
+      }
       // The academic calendar can redirect to an absolute origin URL. Keep
       // that hop in the same WebVPN session as the original calendar request.
       current =
@@ -1477,7 +1772,16 @@ final class TsinghuaAuthClient {
 }
 
 final class _Response {
-  const _Response(this.statusCode, this.headers, this.body, this.uri);
+  const _Response(
+    this.statusCode,
+    this.headers,
+    this.body,
+    this.uri,
+    this.bytes,
+  );
+
+  /// Unmodified bytes for authenticated binary downloads.
+  final List<int> bytes;
 
   /// HTTP status returned by the identity or WebVPN endpoint.
   final int statusCode;

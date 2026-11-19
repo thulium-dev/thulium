@@ -3,8 +3,15 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:html/parser.dart' as html;
 import 'package:thulium_auth/thulium_auth.dart';
 
 part 'src/course_schedule.dart';
 part 'src/course_schedule_cache.dart';
 part 'src/custom_plan.dart';
+part 'src/learn_courses.dart';
+part 'src/learn_homework.dart';
+part 'src/learn_materials.dart';
+part 'src/learn_homework_cache.dart';
+part 'src/learn_course_catalog.dart';
+part 'src/learn_course_cache.dart';

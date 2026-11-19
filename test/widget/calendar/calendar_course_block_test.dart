@@ -1,10 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forui/forui.dart';
+import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium/widgets/calendar_course_block.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 void main() {
+  testWidgets('switches fetched lesson names with the app language', (
+    tester,
+  ) async {
+    final course = CourseOccurrence(
+      name: '大学物理',
+      coursesPlanEnglishName: 'University Physics',
+      location: 'A101',
+      category: PlanCategories.LESSON,
+      startsAt: DateTime(2026, 9, 28, 8),
+      endsAt: DateTime(2026, 9, 28, 9),
+    );
+
+    Future<void> show(Locale locale) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: [
+            ...AppLocalizations.localizationsDelegates,
+            ...FLocalizations.localizationsDelegates,
+          ],
+          home: FTheme(
+            data: FThemes.neutral.light.touch,
+            child: Scaffold(
+              body: CalendarCourseBlock(course: course, width: 120, height: 90),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await show(const Locale('en'));
+    expect(find.text('University Physics'), findsOneWidget);
+    await show(const Locale('zh'));
+    expect(find.text('大学物理'), findsOneWidget);
+  });
+
   testWidgets('very short plans show a compact marker without text overflow', (
     tester,
   ) async {

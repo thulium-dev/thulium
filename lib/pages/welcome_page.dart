@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+
+import '../navigation/app_page_route.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../widgets/language_button.dart';
+import '../widgets/app_icon_button.dart';
 import 'login_page.dart';
+import 'settings_page.dart';
 
 /// The unauthenticated landing page shown before the student signs in.
 final class WelcomePage extends StatelessWidget {
@@ -48,7 +52,8 @@ final class WelcomePage extends StatelessWidget {
                       FButton(
                         onPress: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute<void>(
+                            AppPageRoute<void>(
+                              context: context,
                               builder: (_) => LoginPage(
                                 onLoginSuccess: () {
                                   Navigator.of(context).pop();
@@ -72,14 +77,22 @@ final class WelcomePage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   LanguageButton(onSelected: onLocaleSelected),
-                  IconButton(
-                    tooltip: l10n.theme,
-                    icon: Icon(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? Icons.light_mode_outlined
-                          : Icons.dark_mode_outlined,
+                  AppIconButton(
+                    label: l10n.theme,
+                    icon: Theme.of(context).brightness == Brightness.dark
+                        ? FLucideIcons.sun
+                        : FLucideIcons.moon,
+                    onPress: onThemeToggle,
+                  ),
+                  AppIconButton(
+                    label: l10n.settingsTitle,
+                    icon: FLucideIcons.settings,
+                    onPress: () => Navigator.of(context).push(
+                      AppPageRoute<void>(
+                        context: context,
+                        builder: (_) => const SettingsPage(),
+                      ),
                     ),
-                    onPressed: onThemeToggle,
                   ),
                 ],
               ),

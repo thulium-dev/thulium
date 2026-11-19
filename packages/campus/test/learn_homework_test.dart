@@ -1,0 +1,328 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:test/test.dart';
+import 'package:thulium_auth/thulium_auth.dart';
+import 'package:thulium_campus/thulium_campus.dart';
+
+void main() {
+  test(
+    'course assignment lists expand each status and keep statuses separate',
+    () async {
+      final requested = <String>[];
+      final auth = await _auth((request) {
+        final status = request.url.pathSegments.last;
+        requested.add(status);
+        final empty = request.url.queryParameters['wlkcid'] == 'empty-course';
+        final size = int.parse(request.url.queryParameters['size']!);
+        return http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {
+              'iTotalRecords': empty ? 0 : 6,
+              'aaData': empty
+                  ? []
+                  : List.generate(
+                      size < 6 ? size : 6,
+                      (i) => {
+                        'xszyid': '$status-$i',
+                        'bt': '$status assignment $i',
+                        'wlkcid': 'course-id',
+                        'xh': 'test-student',
+                      },
+                    ),
+            },
+          }),
+          200,
+          request: request,
+        );
+      });
+      final result = await LearnHomeworkService(
+        auth,
+      ).fetchCourseAssignments(_catalog);
+      expect(result.keys, LearnHomeworkStatus.values);
+      for (final status in LearnHomeworkStatus.values) {
+        expect(result[status], hasLength(6));
+        expect(result[status]!.first.id, '${status.endpoint}-0');
+        expect(
+          requested.where((path) => path == status.endpoint),
+          hasLength(3),
+        );
+      }
+    },
+  );
+
+  test(
+    'fetches complete reminder details and interprets deadlines in China time',
+    () async {
+      final sizes = <String>[];
+      final deadline = DateTime.utc(2026, 10, 21, 15, 59);
+      final auth = await _auth((request) {
+        final size = request.url.queryParameters['size']!;
+        sizes.add(size);
+        final empty = request.url.queryParameters['wlkcid'] == 'empty-course';
+        final count = empty ? 0 : 7;
+        final rows = empty
+            ? []
+            : List.generate(
+                size == '5' ? 5 : 7,
+                (index) => {
+                  'xszyid': 'assignment-$index',
+                  'bt': 'Assignment $index',
+                  'wlkcid': 'course-id',
+                  'xh': 'test-student',
+                  'jzsj': index == 0 ? deadline.millisecondsSinceEpoch : null,
+                  'jzsjStr': index == 1 ? '2026-10-21 23:59' : '',
+                },
+              );
+        return http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {'iTotalRecords': '$count', 'aaData': rows},
+          }),
+          200,
+          request: request,
+        );
+      });
+      final snapshot = await LearnHomeworkService(
+        auth,
+      ).fetchUnsubmittedHomework(_catalog);
+      expect(snapshot.counts, {'course-id': 7, 'empty-course': 0});
+      expect(snapshot.assignments, hasLength(7));
+      expect(snapshot.assignments[0].deadline, deadline);
+      expect(snapshot.assignments[1].deadline, deadline);
+      expect(snapshot.assignments[2].deadline, isNull);
+      expect(sizes, ['5', '7', '5']);
+    },
+  );
+
+  test(
+    'a still-truncated assignment response is not presented as complete',
+    () async {
+      final auth = await _auth(
+        (request) => http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {'iTotalRecords': '7', 'aaData': []},
+          }),
+          200,
+          request: request,
+        ),
+      );
+      await expectLater(
+        LearnHomeworkService(auth).fetchUnsubmittedHomework(_catalog),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test('course reminders request only unsubmitted totals', () async {
+    final requests = <http.Request>[];
+    final auth = await _auth((request) {
+      requests.add(request);
+      expect(request.url.path, endsWith('/index/zyListWj'));
+      final count = request.url.queryParameters['wlkcid'] == 'course-id'
+          ? 9
+          : 0;
+      return http.Response(
+        jsonEncode({
+          'result': 'success',
+          'object': {'iTotalRecords': '$count', 'aaData': []},
+        }),
+        200,
+        request: request,
+      );
+    });
+    expect(await LearnHomeworkService(auth).fetchUnsubmittedCounts(_catalog), {
+      'course-id': 9,
+      'empty-course': 0,
+    });
+    expect(requests, hasLength(2));
+  });
+
+  test(
+    'counts all courses and statuses from totals rather than page rows',
+    () async {
+      final requests = <http.Request>[];
+      var landings = 0;
+      final auth = await _auth((request) {
+        requests.add(request);
+        final endpoint = request.url.path.split('/').last;
+        final count = request.url.queryParameters['wlkcid'] == 'empty-course'
+            ? 0
+            : switch (endpoint) {
+                'zyListWj' => 12,
+                'zyListYjwg' => 3,
+                'zyListYpg' => 8,
+                _ => throw StateError('Unexpected endpoint: $endpoint'),
+              };
+        return http.Response(
+          jsonEncode({
+            'result': 'success',
+            'object': {
+              'iTotalRecords': endpoint == 'zyListYpg' ? count : '$count',
+              'iTotalDisplayRecords': '$count',
+              'aaData': [],
+            },
+          }),
+          200,
+          request: request,
+        );
+      }, onLanding: () => landings++);
+      final result = await LearnHomeworkService(auth).fetchCourses(_catalog);
+      expect(result, hasLength(2));
+      expect(result.first.counts.unsubmitted, 12);
+      expect(result.first.counts.submittedUngraded, 3);
+      expect(result.first.counts.graded, 8);
+      expect(result.first.counts.total, 23);
+      expect(result.last.counts.total, 0);
+      expect(landings, 1);
+      expect(requests, hasLength(6));
+      for (final request in requests) {
+        expect(request.method, 'GET');
+        expect(request.url.host, TsinghuaWebVpnRedirect.WEBVPN_HOST);
+        expect(request.url.path, contains('/b/wlxt/kczy/zy/student/index/'));
+        expect(request.url.queryParameters['_csrf'], 'learn-csrf');
+        expect(request.url.queryParameters['size'], '5');
+        expect(request.headers['cookie'], contains('JSESSIONID=learn-session'));
+      }
+    },
+  );
+
+  test(
+    'authentication failure is reconnectable and never a zero count',
+    () async {
+      final auth = await _auth(
+        (request) => http.Response('', 401, request: request),
+      );
+      await expectLater(
+        LearnHomeworkService(auth).fetchCourses(_catalog),
+        throwsA(isA<PortalSessionRejected>()),
+      );
+    },
+  );
+
+  test(
+    'invalid totals and provider failures do not produce partial summaries',
+    () async {
+      for (final body in [
+        '<html>not JSON</html>',
+        jsonEncode({
+          'result': 'error',
+          'object': {'iTotalRecords': '0'},
+        }),
+        jsonEncode({'result': 'success', 'object': {}}),
+        for (final value in ['bad', '-1', 1.5, null])
+          jsonEncode({
+            'result': 'success',
+            'object': {'iTotalRecords': value},
+          }),
+      ]) {
+        final auth = await _auth(
+          (request) => http.Response(body, 200, request: request),
+        );
+        await expectLater(
+          LearnHomeworkService(auth).fetchCourses(_catalog),
+          throwsFormatException,
+        );
+      }
+    },
+  );
+
+  test('an empty catalog needs no homework requests', () async {
+    final auth = await _auth((_) => throw StateError('Unexpected request'));
+    expect(
+      await LearnHomeworkService(auth).fetchCourses(
+        LearnCourseCatalog(
+          userId: 'test-student',
+          semester: '2026-2027-1',
+          courses: [],
+        ),
+      ),
+      isEmpty,
+    );
+  });
+
+  test(
+    'rejects a catalog from another account before requesting data',
+    () async {
+      final auth = await _auth((_) => throw StateError('Unexpected request'));
+      await expectLater(
+        LearnHomeworkService(auth).fetchCourses(
+          LearnCourseCatalog(
+            userId: 'other-student',
+            semester: '2026-2027-1',
+            courses: [],
+          ),
+        ),
+        throwsStateError,
+      );
+    },
+  );
+}
+
+final _catalog = LearnCourseCatalog(
+  userId: 'test-student',
+  semester: '2026-2027-1',
+  courses: const [
+    LearnCourse(
+      id: 'course-id',
+      name: 'Physics',
+      englishName: '',
+      teacherName: '',
+      schedule: '',
+    ),
+    LearnCourse(
+      id: 'empty-course',
+      name: 'Empty',
+      englishName: '',
+      teacherName: '',
+      schedule: '',
+    ),
+  ],
+);
+
+Future<TsinghuaAuthClient> _auth(
+  http.Response Function(http.Request) homeworkResponse, {
+  void Function()? onLanding,
+}) async {
+  final transport = MockClient((request) async {
+    if (request.url.path == '/wengine-vpn/cookie') {
+      return http.Response(
+        'XSRF-TOKEN=portal-csrf; Path=/;',
+        200,
+        request: request,
+      );
+    }
+    if (request.url.path.endsWith('onlineAppRedirect')) {
+      return http.Response(
+        jsonEncode({
+          'object': {
+            'roamingurl':
+                'https://learn.tsinghua.edu.cn/f/wlxt/index/course/student/index',
+          },
+        }),
+        200,
+        request: request,
+      );
+    }
+    if (request.url.path.contains('/f/wlxt/index/course/student/index')) {
+      onLanding?.call();
+      return http.Response(
+        '<html>_csrf=learn-csrf</html>',
+        200,
+        headers: {'set-cookie': 'JSESSIONID=learn-session; Path=/; Secure'},
+        request: request,
+      );
+    }
+    return homeworkResponse(request);
+  });
+  final store = MemoryAuthSessionStore();
+  await store.write(
+    const AuthSession(userId: 'test-student', fingerprint: 'test', cookies: {}),
+  );
+  final auth = TsinghuaAuthClient(httpClient: transport, sessionStore: store);
+  await auth.restore();
+  return auth;
+}

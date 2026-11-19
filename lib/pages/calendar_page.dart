@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:forui/forui.dart';
+
+import '../navigation/app_page_route.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:thulium_campus/thulium_campus.dart';
@@ -39,11 +41,13 @@ final class AcademicCalendarPage extends StatefulWidget {
   const AcademicCalendarPage({
     required this.onSessionExpired,
     this.sessionStore,
+    this.courseCatalog,
     super.key,
   });
 
   final VoidCallback onSessionExpired;
   final AuthSessionStore? sessionStore;
+  final LearnCourseCatalog? courseCatalog;
 
   @override
   State<AcademicCalendarPage> createState() => _AcademicCalendarPageState();
@@ -96,6 +100,18 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   }
 
   @override
+  void didUpdateWidget(covariant AcademicCalendarPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.courseCatalog == widget.courseCatalog || _schedule == null) {
+      return;
+    }
+    final catalog = widget.courseCatalog;
+    if (catalog != null && catalog.semester == _schedule!.term.id) {
+      setState(() => _schedule = catalog.applyEnglishNames(_schedule!));
+    }
+  }
+
+  @override
   void dispose() {
     _nowTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -113,59 +129,53 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
 
     try {
       final sessionStore = widget.sessionStore ?? SecureAuthSessionStore();
-      final credentialStore = sessionStore is AuthCredentialStore
-          ? sessionStore as AuthCredentialStore
-          : null;
-      final client = TsinghuaAuthClient(
-        sessionStore: sessionStore,
-        credentialStore: credentialStore,
-        trace: (message) => debugPrint('[auth] $message'),
-      );
-      final savedSession = await client.restore();
-      if (savedSession == null) throw const CourseScheduleSessionExpired();
-      final cache = widget.sessionStore == null
-          ? CourseScheduleCache(SecureCourseScheduleCacheStore())
-          : null;
-      final service = CourseScheduleService(
-        client,
-        cache: cache,
-        trace: (message) => debugPrint('[calendar] $message'),
-      );
-      CourseSchedule schedule;
-      try {
-        schedule = await service
-            .loadCurrentTerm(forceRefresh: forceRefresh)
-            .timeout(_LOAD_TIMEOUT);
-      } on CourseScheduleException catch (error) {
-        if (error.cause is! PortalCsrfUnavailable) rethrow;
-        // An empty WebVPN cookie response alone does not prove logout. Only
-        // after the bounded cookie/SSO recovery fails do we try one fresh
-        // password-based login, then repeat the calendar request once.
-        if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
-        debugPrint('[calendar] reconnect succeeded; retrying once');
-        schedule = await service
-            .loadCurrentTerm(forceRefresh: true)
-            .timeout(_LOAD_TIMEOUT);
-      } on CourseScheduleSessionExpired {
-        if (!await _reconnect(client, credentialStore, savedSession)) rethrow;
-        debugPrint('[calendar] reconnect succeeded; retrying once');
-        schedule = await service
-            .loadCurrentTerm(forceRefresh: true)
-            .timeout(_LOAD_TIMEOUT);
-      }
+      CourseScheduleSource? source;
+      String? userId;
+      final schedule =
+          await AuthSessionRunner(
+                sessionStore,
+                trace: (message) => debugPrint('[auth] $message'),
+              )
+              .run(
+                shouldReconnect: (error) =>
+                    error is CourseScheduleSessionExpired ||
+                    error is PortalSessionRejected ||
+                    error is PortalCsrfUnavailable ||
+                    (error is CourseScheduleException &&
+                        (error.cause is PortalCsrfUnavailable ||
+                            error.cause is PortalSessionRejected)),
+                request: (client, isRetry) async {
+                  userId = client.session!.userId;
+                  final service = CourseScheduleService(
+                    client,
+                    cache: widget.sessionStore == null
+                        ? CourseScheduleCache(SecureCourseScheduleCacheStore())
+                        : null,
+                    trace: (message) => debugPrint('[calendar] $message'),
+                  );
+                  final schedule = await service.loadCurrentTerm(
+                    forceRefresh: forceRefresh || isRetry,
+                  );
+                  source = service.lastSource;
+                  return schedule;
+                },
+              )
+              .timeout(_LOAD_TIMEOUT);
       if (!mounted) return;
-      final customPlans = await _customPlanStore.readFor(savedSession.userId);
+      final customPlans = await _customPlanStore.readFor(userId!);
       if (!mounted) return;
       debugPrint(
         '[calendar] loading completed occurrences=${schedule.occurrences.length}',
       );
       final todayWeek = schedule.term.weekFor(DateTime.now());
       setState(() {
-        _schedule = schedule;
+        final catalog = widget.courseCatalog;
+        _schedule = catalog != null && catalog.semester == schedule.term.id
+            ? catalog.applyEnglishNames(schedule)
+            : schedule;
         _customPlans = customPlans;
-        _userId = savedSession.userId;
-        _showingStaleCache =
-            service.lastSource == CourseScheduleSource.staleCache;
+        _userId = userId;
+        _showingStaleCache = source == CourseScheduleSource.staleCache;
         _selectedWeek = (_selectedWeek ?? todayWeek).clamp(
           1,
           schedule.term.weekCount,
@@ -186,37 +196,6 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         _isLoading = false;
         _showingStaleCache = false;
       });
-    }
-  }
-
-  Future<bool> _reconnect(
-    TsinghuaAuthClient client,
-    AuthCredentialStore? credentialStore,
-    AuthSession savedSession,
-  ) async {
-    final credentials = await credentialStore?.readCredentials();
-    if (credentials == null || credentials.userId != savedSession.userId) {
-      debugPrint('[calendar] no matching saved credentials for reconnect');
-      return false;
-    }
-
-    debugPrint('[calendar] reconnecting with saved credentials');
-    try {
-      await client
-          .login(
-            userId: savedSession.userId,
-            password: credentials.password,
-            fingerprint: savedSession.fingerprint,
-          )
-          .timeout(_LOAD_TIMEOUT);
-      return true;
-    } catch (error) {
-      // A trusted device may not need a second factor; otherwise the regular
-      // sign-in screen can collect one. Do not print secrets from the error.
-      debugPrint(
-        '[calendar] credential reconnect failed type=${error.runtimeType}',
-      );
-      rethrow;
     }
   }
 
@@ -247,7 +226,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         ? today
         : monday;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
+      AppPageRoute(
+        context: context,
         builder: (context) => AddPlanPage(
           initialDate: date,
           categories: _customPlans.categories,
@@ -488,7 +468,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   }) async {
     final initialRule = editSeries ? entry.rule! : null;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
+      AppPageRoute(
+        context: context,
         builder: (context) => AddPlanPage(
           initialDate: editSeries
               ? initialRule!.startsAt

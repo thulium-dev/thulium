@@ -1,13 +1,27 @@
 // ignore_for_file: constant_identifier_names
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
+
+import '../navigation/app_page_route.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
+import 'package:thulium_campus/thulium_campus.dart';
 
+import '../auth/secure_auth_session_store.dart';
+import '../auth/secure_learn_course_cache_store.dart';
+import '../auth/secure_learn_homework_cache_store.dart';
 import '../widgets/language_button.dart';
+import '../widgets/app_icon_button.dart';
+import '../widgets/app_bottom_navigation.dart';
+import '../widgets/homework_overview_card.dart';
 import 'settings_page.dart';
 import 'calendar_page.dart';
+import 'study_page.dart';
+import 'course_detail_page.dart';
+import '../study/course_content_source.dart';
 
 /// The authenticated application shell with the primary navigation sections.
 final class HomePage extends StatefulWidget {
@@ -17,6 +31,7 @@ final class HomePage extends StatefulWidget {
     required this.onLogout,
     required this.onSessionExpired,
     this.sessionStore,
+    this.homeworkCacheStore,
     super.key,
   });
 
@@ -25,18 +40,236 @@ final class HomePage extends StatefulWidget {
   final Future<bool> Function() onLogout;
   final VoidCallback onSessionExpired;
   final AuthSessionStore? sessionStore;
+  final LearnHomeworkCacheStore? homeworkCacheStore;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-final class _HomePageState extends State<HomePage> {
-  static const _HEADER_ICON_SIZE = 40.0;
-  static const _HEADER_TOP = 4.0;
-  static const _CALENDAR_TOP = _HEADER_TOP + _HEADER_ICON_SIZE + 4.0;
+final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
   int _selectedIndex = 0;
   bool _hasOpenedPlans = false;
+  bool _requiresSignIn = false;
+  late String _semester;
+  LearnCourseCatalog? _courseCatalog;
+  Object? _courseError;
+  bool _coursesLoading = true;
+  bool _coursesStale = false;
+  int _courseRequestGeneration = 0;
+  Map<String, int> _unsubmittedHomework = const {};
+  List<LearnHomework> _homeworkAssignments = const [];
+  bool _homeworkLoading = false;
+  bool _homeworkFailed = false;
+  bool _hasHomeworkSnapshot = false;
+  DateTime? _homeworkUpdatedAt;
+  String? _homeworkUserId;
+  late final LearnHomeworkCache? _homeworkCache =
+      widget.homeworkCacheStore != null
+      ? LearnHomeworkCache(widget.homeworkCacheStore!)
+      : widget.sessionStore == null
+      ? LearnHomeworkCache(SecureLearnHomeworkCacheStore())
+      : null;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _semester = AcademicSemester.forDate(DateTime.now());
+    // Start in the background on entering the authenticated shell so calendar
+    // translations can become available before the Study tab is opened.
+    unawaited(_loadCourses());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_loadCourses());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _loadCourses({bool forceRefresh = false}) async {
+    final semester = AcademicSemester.forDate(DateTime.now());
+    if (_courseRequestGeneration > 0 &&
+        (_coursesLoading || _homeworkLoading) &&
+        !forceRefresh &&
+        semester == _semester) {
+      return;
+    }
+    final generation = ++_courseRequestGeneration;
+    setState(() {
+      if (semester != _semester) {
+        _coursesStale = false;
+        _unsubmittedHomework = const {};
+        _homeworkAssignments = const [];
+        _hasHomeworkSnapshot = false;
+        _homeworkUpdatedAt = null;
+      }
+      _semester = semester;
+      _coursesLoading = true;
+      _courseError = null;
+      _homeworkLoading = false;
+      _homeworkFailed = false;
+    });
+    try {
+      final store = widget.sessionStore ?? SecureAuthSessionStore();
+      LearnCourseSource? source;
+      final catalog =
+          await AuthSessionRunner(
+                store,
+                trace: (message) => debugPrint('[auth] $message'),
+              )
+              .run(
+                request: (client, isRetry) async {
+                  final session = client.session!;
+                  await _restoreHomework(session.userId, semester, generation);
+                  if (!mounted || generation != _courseRequestGeneration) {
+                    throw StateError('Course refresh was superseded.');
+                  }
+                  final service = LearnCourseCatalogService(
+                    client,
+                    cache: widget.sessionStore == null
+                        ? LearnCourseCache(SecureLearnCourseCacheStore())
+                        : null,
+                  );
+                  final catalog = await service.loadSemester(
+                    semester,
+                    forceRefresh: forceRefresh || isRetry,
+                  );
+                  source = service.lastSource;
+                  return catalog;
+                },
+              )
+              .timeout(_LOAD_TIMEOUT);
+      if (!mounted || generation != _courseRequestGeneration) return;
+      setState(() {
+        _requiresSignIn = false;
+        _courseCatalog = catalog;
+        _coursesStale = source == LearnCourseSource.staleCache;
+        _coursesLoading = false;
+        _homeworkLoading = true;
+      });
+      await _loadHomework(store, catalog, generation);
+    } on TwoFactorInteractionRequired catch (error) {
+      if (mounted && generation == _courseRequestGeneration) {
+        setState(() {
+          _requiresSignIn = true;
+          _courseError = error;
+          _coursesStale = _courseCatalog?.semester == semester;
+          _coursesLoading = false;
+          _homeworkLoading = false;
+        });
+      }
+    } catch (error) {
+      debugPrint('[study] course loading failed type=${error.runtimeType}');
+      if (!mounted || generation != _courseRequestGeneration) return;
+      setState(() {
+        _courseError = error;
+        _coursesStale = _courseCatalog?.semester == semester;
+        _coursesLoading = false;
+      });
+    }
+  }
+
+  Future<void> _restoreHomework(
+    String userId,
+    String semester,
+    int generation,
+  ) async {
+    if (!mounted || generation != _courseRequestGeneration) return;
+    if (_homeworkUserId != userId) {
+      setState(() {
+        _homeworkUserId = userId;
+        _unsubmittedHomework = const {};
+        _homeworkAssignments = const [];
+        _hasHomeworkSnapshot = false;
+        _homeworkUpdatedAt = null;
+      });
+    }
+    if (_hasHomeworkSnapshot) return;
+    CachedLearnHomework? cached;
+    try {
+      cached = await _homeworkCache?.readFor(userId, semester);
+    } on Object catch (error) {
+      debugPrint(
+        '[study] homework cache read failed type=${error.runtimeType}',
+      );
+    }
+    if (cached == null || !mounted || generation != _courseRequestGeneration) {
+      return;
+    }
+    final snapshot = cached.snapshot;
+    setState(() {
+      _unsubmittedHomework = snapshot.counts;
+      _homeworkAssignments = snapshot.assignments;
+      _homeworkUpdatedAt = cached!.fetchedAt;
+      _hasHomeworkSnapshot = true;
+    });
+  }
+
+  Future<void> _loadHomework(
+    AuthSessionStore store,
+    LearnCourseCatalog catalog,
+    int generation,
+  ) async {
+    try {
+      final snapshot =
+          await AuthSessionRunner(
+                store,
+                trace: (message) => debugPrint('[auth] $message'),
+              )
+              .run(
+                expectedUserId: catalog.userId,
+                request: (client, _) => LearnHomeworkService(
+                  client,
+                ).fetchUnsubmittedHomework(catalog),
+              )
+              .timeout(_LOAD_TIMEOUT);
+      if (!mounted || generation != _courseRequestGeneration) return;
+      final fetchedAt = DateTime.now();
+      setState(() {
+        _requiresSignIn = false;
+        _homeworkUpdatedAt = fetchedAt;
+        _unsubmittedHomework = snapshot.counts;
+        _homeworkAssignments = snapshot.assignments;
+        _hasHomeworkSnapshot = true;
+        _homeworkLoading = false;
+      });
+      try {
+        await _homeworkCache?.writeFor(
+          catalog.userId,
+          catalog.semester,
+          snapshot,
+          fetchedAt,
+        );
+      } on Object catch (error) {
+        // Persistence failure cannot replace a successfully fetched result.
+        debugPrint(
+          '[study] homework cache write failed type=${error.runtimeType}',
+        );
+      }
+    } on TwoFactorInteractionRequired {
+      if (mounted && generation == _courseRequestGeneration) {
+        setState(() {
+          _requiresSignIn = true;
+          _homeworkLoading = false;
+          _homeworkFailed = true;
+        });
+      }
+    } on Object catch (error) {
+      debugPrint('[study] homework loading failed type=${error.runtimeType}');
+      if (!mounted || generation != _courseRequestGeneration) return;
+      setState(() {
+        _homeworkLoading = false;
+        _homeworkFailed = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,38 +280,63 @@ final class _HomePageState extends State<HomePage> {
       (title: l10n.studyTitle, description: l10n.studyDescription),
       (title: l10n.lifeTitle, description: l10n.lifeDescription),
     ];
-    final labels = [l10n.eventsTab, l10n.plansTab, l10n.studyTab, l10n.lifeTab];
-    final icons = [
-      Icons.event_outlined,
-      Icons.calendar_month_outlined,
-      Icons.menu_book_outlined,
-      Icons.home_outlined,
-    ];
+    final theme = context.theme;
+    final headerIconSize = theme.style.sizes.tile;
+    final headerTop = theme.style.pagePadding.top;
+    final calendarTop = headerTop + headerIconSize + headerTop;
 
     return FScaffold(
-      footer: FBottomNavigationBar(
+      header: _requiresSignIn
+          ? SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: theme.style.pagePadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.sessionVerificationRequired,
+                      style: theme.typography.sm,
+                    ),
+                    SizedBox(height: theme.style.pagePadding.top),
+                    FButton(
+                      onPress: widget.onSessionExpired,
+                      child: Text(l10n.signInAction),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
+      footer: AppBottomNavigation(
         index: _selectedIndex,
         onChange: (index) => setState(() {
           _selectedIndex = index;
           if (index == 1) _hasOpenedPlans = true;
         }),
-        children: [
-          for (var index = 0; index < labels.length; index++)
-            MergeSemantics(
-              child: Semantics(
-                label: labels[index],
-                button: true,
-                selected: index == _selectedIndex,
-                child: FBottomNavigationBarItem(icon: Icon(icons[index])),
-              ),
-            ),
-        ],
       ),
       child: SafeArea(
         bottom: false,
         child: Stack(
           children: [
-            if (_selectedIndex != 1)
+            if (_selectedIndex == 0)
+              Positioned.fill(
+                top: calendarTop,
+                child: HomeworkOverviewCard(
+                  assignments: _homeworkAssignments,
+                  isLoading: _coursesLoading || _homeworkLoading,
+                  hasSnapshot: _hasHomeworkSnapshot,
+                  updatedAt: _homeworkUpdatedAt,
+                  isStale:
+                      _hasHomeworkSnapshot &&
+                      (_homeworkFailed || _courseError != null),
+                  failed:
+                      !_hasHomeworkSnapshot &&
+                      (_homeworkFailed || _courseError != null),
+                  onRefresh: () => _loadCourses(forceRefresh: true),
+                ),
+              ),
+            if (_selectedIndex == 3)
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 640),
@@ -104,7 +362,7 @@ final class _HomePageState extends State<HomePage> {
               ),
             if (_hasOpenedPlans)
               Positioned.fill(
-                top: _CALENDAR_TOP,
+                top: calendarTop,
                 child: Offstage(
                   offstage: _selectedIndex != 1,
                   child: Padding(
@@ -112,51 +370,81 @@ final class _HomePageState extends State<HomePage> {
                     child: AcademicCalendarPage(
                       sessionStore: widget.sessionStore,
                       onSessionExpired: widget.onSessionExpired,
+                      courseCatalog: _courseCatalog,
                     ),
                   ),
                 ),
               ),
+            if (_selectedIndex == 2)
+              Positioned.fill(
+                top: calendarTop,
+                child: StudyPage(
+                  semester: _semester,
+                  catalog: _courseCatalog?.semester == _semester
+                      ? _courseCatalog
+                      : null,
+                  isLoading: _coursesLoading,
+                  isStale: _coursesStale,
+                  error: _courseError,
+                  unsubmittedHomework: _unsubmittedHomework,
+                  homeworkLoading: _homeworkLoading,
+                  homeworkFailed: _homeworkFailed && !_hasHomeworkSnapshot,
+                  homeworkStale:
+                      _hasHomeworkSnapshot &&
+                      (_homeworkFailed || _courseError != null),
+                  onRefresh: () => unawaited(_loadCourses(forceRefresh: true)),
+                  onCourseSelected: (course) {
+                    final catalog = _courseCatalog;
+                    if (catalog == null) return;
+                    Navigator.of(context).push<void>(
+                      AppPageRoute(
+                        context: context,
+                        builder: (_) => CourseDetailPage(
+                          course: course,
+                          source: CourseContentSource(
+                            store:
+                                widget.sessionStore ?? SecureAuthSessionStore(),
+                            catalog: catalog,
+                          ),
+                          onSessionExpired: widget.onSessionExpired,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             Positioned(
-              top: _HEADER_TOP,
-              left: 8,
+              top: headerTop,
+              left: theme.style.pagePadding.left,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   LanguageButton(
                     onSelected: widget.onLocaleSelected,
-                    buttonSize: _HEADER_ICON_SIZE,
+                    buttonSize: headerIconSize,
                   ),
-                  SizedBox.square(
-                    dimension: _HEADER_ICON_SIZE,
-                    child: IconButton(
-                      tooltip: l10n.theme,
-                      padding: EdgeInsets.zero,
-                      iconSize: 20,
-                      icon: Icon(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Icons.light_mode_outlined
-                            : Icons.dark_mode_outlined,
-                      ),
-                      onPressed: widget.onThemeToggle,
-                    ),
+                  AppIconButton(
+                    label: l10n.theme,
+                    size: headerIconSize,
+                    icon: Theme.of(context).brightness == Brightness.dark
+                        ? FLucideIcons.sun
+                        : FLucideIcons.moon,
+                    onPress: widget.onThemeToggle,
                   ),
                 ],
               ),
             ),
             Positioned(
-              top: _HEADER_TOP,
-              right: 8,
-              child: SizedBox.square(
-                dimension: _HEADER_ICON_SIZE,
-                child: IconButton(
-                  tooltip: l10n.settingsTitle,
-                  padding: EdgeInsets.zero,
-                  iconSize: 20,
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SettingsPage(onLogout: widget.onLogout),
-                    ),
+              top: headerTop,
+              right: theme.style.pagePadding.right,
+              child: AppIconButton(
+                label: l10n.settingsTitle,
+                size: headerIconSize,
+                icon: FLucideIcons.settings,
+                onPress: () => Navigator.of(context).push(
+                  AppPageRoute<void>(
+                    context: context,
+                    builder: (_) => SettingsPage(onLogout: widget.onLogout),
                   ),
                 ),
               ),

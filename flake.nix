@@ -16,7 +16,23 @@
     {
       devShells = forAllSystems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = import nixpkgs {
+            inherit system;
+            config = {
+              android_sdk.accept_license = true;
+              allowUnfreePredicate = pkg:
+                (pkg.meta.homepage or "") == "https://developer.android.com/tools";
+            };
+          };
+          androidSdk = pkgs.androidenv.composeAndroidPackages {
+            # jni_flutter compiles against API 35; the app uses API 36.
+            platformVersions = [ "35" "36" ];
+            buildToolsVersions = [ "36.0.0" ];
+            includeCmake = true;
+            cmakeVersions = [ "3.22.1" ];
+            includeNDK = true;
+            ndkVersions = [ "28.2.13676358" ];
+          };
         in
         {
           default = pkgs.mkShell {
@@ -24,10 +40,15 @@
               flutter
               git
               just
-            ];
+              jdk17
+              androidSdk.androidsdk
+            ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.libsecret ];
+
+            ANDROID_HOME = "${androidSdk.androidsdk}/libexec/android-sdk";
+            ANDROID_SDK_ROOT = "${androidSdk.androidsdk}/libexec/android-sdk";
 
             shellHook = ''
-              echo "Thulium development shell ready. Run 'flutter pub get' to fetch dependencies."
+              echo "Thulium Flutter and Android development shell ready."
             '';
           };
         });

@@ -66,7 +66,13 @@ Future<CalendarPlanAction?> showCalendarPlanDetailsDialog(
               ],
             ),
             const SizedBox(height: 16),
-            _detail(context, l10n.planName, occurrence.name),
+            _detail(
+              context,
+              l10n.planName,
+              occurrence.nameForLanguage(
+                Localizations.localeOf(context).languageCode,
+              ),
+            ),
             _detail(context, l10n.planLocation, occurrence.location),
             _detail(
               context,

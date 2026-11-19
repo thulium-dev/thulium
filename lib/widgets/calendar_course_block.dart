@@ -39,9 +39,12 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
     final colors = context.theme.colors;
     final surfaceColor = widget.categoryColor ?? colors.primary;
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final displayName = widget.course.nameForLanguage(
+      Localizations.localeOf(context).languageCode,
+    );
 
     return Semantics(
-      label: '${widget.course.name}, ${widget.course.location}',
+      label: '$displayName, ${widget.course.location}',
       child: SizedBox(
         key: const ValueKey('calendar-course-surface'),
         width: widget.width,
@@ -164,7 +167,9 @@ final class _CalendarCourseBlockState extends State<CalendarCourseBlock> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.course.name,
+            widget.course.nameForLanguage(
+              Localizations.localeOf(context).languageCode,
+            ),
             maxLines: 1,
             softWrap: false,
             overflow: TextOverflow.ellipsis,
