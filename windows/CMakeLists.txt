@@ -1,7 +1,6 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 project(thulium LANGUAGES CXX)
-set(PDFIUM_VERSION "4638" CACHE STRING "PDFium version used by pdfx")
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
