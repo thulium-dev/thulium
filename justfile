@@ -13,6 +13,9 @@ auth-deps:
 cli-deps:
     cd packages/cli && {{ DART }} pub get --enforce-lockfile
 
+format:
+    {{ DART }} format lib test packages/auth/lib packages/auth/test packages/cli/bin packages/cli/lib
+
 format-check:
     {{ DART }} format --output=none --set-exit-if-changed lib test packages/auth/lib packages/auth/test packages/cli/bin packages/cli/lib
 

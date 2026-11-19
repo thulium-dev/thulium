@@ -83,10 +83,7 @@ void main() {
       expect(find.text('Within 1h'), findsOneWidget);
       expect(find.text('Not graded'), findsOneWidget);
       expect(find.text('Updated 7 minutes ago'), findsOneWidget);
-      expect(
-        find.text('All deadlines use Beijing time (UTC+8)'),
-        findsNothing,
-      );
+      expect(find.text('All deadlines use Beijing time (UTC+8)'), findsNothing);
       expect(find.textContaining('Beijing time'), findsNothing);
       expect(
         tester.getTopLeft(find.text(previewAssignments[0].title)).dy,
