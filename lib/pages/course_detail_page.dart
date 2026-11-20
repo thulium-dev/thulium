@@ -7,6 +7,7 @@ import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
 import '../l10n/generated/app_localizations.dart';
+import '../study/course_document_cache.dart';
 import '../study/course_content_source.dart';
 import '../widgets/flat_tile_style.dart';
 import '../widgets/course_document_preview.dart';
@@ -96,13 +97,21 @@ class CourseDetailPage extends StatelessWidget {
                                 prefix: const Icon(FLucideIcons.fileText),
                                 onPress: () => _push(
                                   context,
-                                  _CourseResourcePage<List<int>>(
+                                  _CourseResourcePage<CourseDocument>(
                                     title: file.title,
                                     load: () => source.document(file),
                                     onSessionExpired: onSessionExpired,
                                     document: true,
-                                    builder: (context, bytes, refresh) =>
-                                        CourseDocumentPreview(bytes: bytes),
+                                    builder: (context, data, refresh) =>
+                                        CourseDocumentPreview(
+                                          bytes: data.bytes,
+                                          initialPage: data.page,
+                                          onPageChanged: (page) =>
+                                              source.saveReadingProgress(
+                                                file,
+                                                page: page,
+                                              ),
+                                        ),
                                   ),
                                 ),
                               ),

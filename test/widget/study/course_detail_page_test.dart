@@ -13,6 +13,7 @@ import 'package:thulium/pages/study_page.dart';
 import 'package:thulium/navigation/app_page_route.dart';
 import 'package:thulium/widgets/app_page_scaffold.dart';
 import 'package:thulium/study/course_content_source.dart';
+import 'package:thulium/study/course_document_cache.dart';
 import 'package:thulium_auth/thulium_auth.dart';
 import 'package:thulium_campus/thulium_campus.dart';
 
@@ -60,7 +61,10 @@ class FakeContent extends CourseContentSource {
   }
 
   @override
-  Future<List<int>> document(LearnMaterial material) async {
+  Future<CourseDocument> document(
+    LearnMaterial material, {
+    bool forceRefresh = false,
+  }) async {
     documentRequests++;
     throw const FormatException('No PDF conversion');
   }

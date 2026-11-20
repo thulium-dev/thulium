@@ -13,14 +13,23 @@ import 'pages/home_page.dart';
 import 'homework/homework_theme.dart';
 import 'pages/welcome_page.dart';
 import 'preferences/app_preferences_store.dart';
+import 'study/course_document_cache.dart';
 
 /// The root application widget owns global locale and theme state.
 final class ThuliumApp extends StatefulWidget {
-  const ThuliumApp({this.sessionStore, this.preferencesStore, super.key});
+  const ThuliumApp({
+    this.sessionStore,
+    this.preferencesStore,
+    this.documentCache,
+    super.key,
+  });
 
   /// Allows tests and alternate clients to provide their own session storage.
   final AuthSessionStore? sessionStore;
   final AppPreferencesStore? preferencesStore;
+
+  /// Offline course documents default to the on-disk cache when omitted.
+  final CourseDocumentCache? documentCache;
 
   @override
   State<ThuliumApp> createState() => _ThuliumAppState();
@@ -183,6 +192,7 @@ final class _ThuliumAppState extends State<ThuliumApp> {
               onThemeToggle: _toggleTheme,
               onLogout: _logout,
               sessionStore: widget.sessionStore,
+              documentCache: widget.documentCache ?? CourseDocumentCache.shared,
               onSessionExpired: () {
                 if (mounted) setState(() => _hasSession = false);
               },

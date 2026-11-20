@@ -24,6 +24,7 @@ import '../plans/personal_plan_repository.dart';
 import 'study_page.dart';
 import 'course_detail_page.dart';
 import '../study/course_content_source.dart';
+import '../study/course_document_cache.dart';
 
 /// The authenticated application shell with the primary navigation sections.
 final class HomePage extends StatefulWidget {
@@ -34,6 +35,7 @@ final class HomePage extends StatefulWidget {
     required this.onSessionExpired,
     this.sessionStore,
     this.homeworkCacheStore,
+    this.documentCache,
     super.key,
   });
 
@@ -43,6 +45,10 @@ final class HomePage extends StatefulWidget {
   final VoidCallback onSessionExpired;
   final AuthSessionStore? sessionStore;
   final LearnHomeworkCacheStore? homeworkCacheStore;
+
+  /// Owns offline course documents and reading positions; null keeps them
+  /// disabled for previews and tests.
+  final CourseDocumentCache? documentCache;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -468,6 +474,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             store:
                                 widget.sessionStore ?? SecureAuthSessionStore(),
                             catalog: catalog,
+                            documentCache: widget.documentCache,
                           ),
                           onSessionExpired: widget.onSessionExpired,
                         ),
