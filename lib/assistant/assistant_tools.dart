@@ -7,7 +7,7 @@ import '../plans/personal_plan_repository.dart';
 
 enum AssistantActivity { calendar, assignments, plans, categories }
 
-/// What a confirmed draft changes.
+/// What one tool call changed in the stored calendar.
 enum PlanChangeKind {
   create,
   update,
@@ -19,58 +19,38 @@ enum PlanChangeKind {
   categoryDelete,
 }
 
-/// A turn can read campus data and prepare one draft. Only the UI can commit.
-///
-/// [next] is computed while drafting, so the confirmation card and the stored
-/// result describe the same change. [expected] still guards the commit against
-/// concurrent calendar edits.
-final class PlanProposal {
-  const PlanProposal({
+/// One applied change, structured for the confirmation-free summary in the UI.
+final class PlanChange {
+  const PlanChange({
     required this.kind,
-    required this.expected,
-    required this.next,
-    this.entry,
-    this.before,
-    this.after,
-    this.rule,
-    this.category,
+    this.title,
+    this.start,
+    this.end,
+    this.location,
     this.categoryName,
+    this.repeat,
+    this.intervalDays,
     this.series = false,
   });
 
   final PlanChangeKind kind;
-  final CustomPlanCollection expected;
-  final CustomPlanCollection next;
-
-  /// The stored entry being edited, moved, cancelled, or deleted. Fetched
-  /// lessons are addressed by their synthetic identity as well.
-  final CalendarPlanEntry? entry;
-
-  /// The occurrence as it is now; null for category changes and creates.
-  final CourseOccurrence? before;
-
-  /// The occurrence visible after confirmation; null when it disappears.
-  final CourseOccurrence? after;
-
-  /// The whole rule for creates and series edits.
-  final CustomPlan? rule;
-
-  /// A category that confirmation creates or updates.
-  final CustomPlanCategory? category;
-
-  /// Display name of the draft category; null means the built-in Lesson.
+  final String? title;
+  final DateTime? start;
+  final DateTime? end;
+  final String? location;
   final String? categoryName;
-
-  /// Whether the change rewrites or removes a stored rule instead of one
-  /// occurrence.
+  final PlanRepeat? repeat;
+  final int? intervalDays;
   final bool series;
+}
 
-  bool get isCategory => switch (kind) {
-    PlanChangeKind.categoryCreate ||
-    PlanChangeKind.categoryUpdate ||
-    PlanChangeKind.categoryDelete => true,
-    _ => false,
-  };
+/// One step of the model's own plan for this turn. Steps are presentation only;
+/// they never gate a tool call.
+final class PlanStep {
+  const PlanStep({required this.text, this.done = false});
+
+  final String text;
+  final bool done;
 }
 
 /// Palette shared with the plan editor. Values are ARGB colors.
@@ -83,23 +63,29 @@ const _categoryPalette = <int>[
   0xFFAA63BD,
 ];
 
-/// A model turn may inspect more data than before, but the ceiling stays low
-/// enough that one turn cannot flood a provider with requests.
-const _maxCalls = 24;
+/// A model turn may inspect plenty of data, but writes stay bounded so one turn
+/// cannot rewrite an entire term unattended.
+const _maxCalls = 32;
+const _maxWrites = 12;
 const _maxWindowDays = 92;
-const _maxEntries = 300;
+const _maxEntries = 400;
 
-/// Reads campus and local plan data and prepares at most one calendar draft per
-/// turn. Nothing is written before the user confirms it in the app.
+/// Reads campus and local plan data and applies calendar changes directly.
+///
+/// Overlapping plans are allowed: the calendar lays them out side by side, so a
+/// draft never fails because another entry occupies the same time. Writes are
+/// still serialized through [PersonalPlanRepository] so a concurrent edit in the
+/// calendar is never overwritten silently.
 final class AssistantTools {
   AssistantTools({
     required this.account,
     required this.session,
     required this.plans,
     required this.homework,
-    required this.onProposal,
     required this.onActivity,
     required this.isActive,
+    this.onChanged,
+    this.onSteps,
     this.loadSchedule,
   });
 
@@ -107,24 +93,41 @@ final class AssistantTools {
   final AuthSessionStore session;
   final PersonalPlanRepository plans;
   final Map<String, Object?> Function() homework;
-  final void Function(PlanProposal) onProposal;
   final void Function(AssistantActivity?) onActivity;
   final bool Function() isActive;
+  final void Function(PlanChange)? onChanged;
+  final void Function(List<PlanStep>)? onSteps;
   final Future<({CourseSchedule schedule, bool stale})> Function()?
   loadSchedule;
   final _entries = <String, CalendarPlanEntry>{};
   final _rules = <String, CustomPlan>{};
   final _categories = <String, CustomPlanCategory>{};
   int _calls = 0;
-  bool _drafted = false;
+  int _writes = 0;
 
   List<Tool> get tools => [
+    _tool(
+      'plan_steps',
+      'Show the user your ordered plan for this turn before acting. Send the '
+          'full list again whenever progress changes, with done set to how many '
+          'leading steps are finished. Steps never block tool calls.',
+      {
+        'steps': {
+          'type': 'array',
+          'items': _text('One short step.'),
+          'description': 'Ordered steps, most important first.',
+        },
+        'done': _text('How many leading steps are finished.'),
+      },
+      const {'steps'},
+      _steps,
+    ),
     _tool(
       'list_calendar',
       'Read calendar entries for a range of at most $_maxWindowDays local days. '
           'Use YYYY-MM-DD dates; end is exclusive. Every entry exposes an '
           'edit_reference; personal rules also expose series_reference, repeat, '
-          'and category.',
+          'and category. Overlapping entries are normal and all are returned.',
       {
         'start': _text('First local date, inclusive.'),
         'end': _text('Last local date, exclusive.'),
@@ -161,12 +164,12 @@ final class AssistantTools {
       activity: AssistantActivity.assignments,
     ),
     _tool(
-      'propose_plan',
-      'Draft a new personal plan. Use local ISO date-times with minutes and no '
-          'offset; start and end must be on the same day. category accepts an '
-          'existing id or name from list_categories, or a new name that '
-          'confirmation also creates. repeat is none, daily, weekly, or '
-          'interval_days; interval_days defaults to 2. Requires app confirmation.',
+      'create_plan',
+      'Create a personal plan and save it immediately. Use local ISO date-times '
+          'with minutes and no offset; start and end must be on the same day. '
+          'category accepts an existing id or name from list_categories, or a '
+          'new name that is created too. repeat is none, daily, weekly, or '
+          'interval_days; interval_days defaults to 2. Overlaps are allowed.',
       {
         'title': _text('Plan title.'),
         'location': _text('Place shown on the calendar.'),
@@ -183,11 +186,11 @@ final class AssistantTools {
       _create,
     ),
     _tool(
-      'propose_plan_update',
-      'Draft an edit of one occurrence or of the whole stored rule. Use the '
-          'edit_reference from list_calendar or the reference from list_plans. '
-          'Omit fields that should stay unchanged. Fetched lessons only accept '
-          'occurrence scope. Requires app confirmation.',
+      'update_plan',
+      'Edit one occurrence or the whole stored rule and save it immediately. '
+          'Use the edit_reference from list_calendar or the reference from '
+          'list_plans. Omit fields that should stay unchanged. Fetched lessons '
+          'only accept occurrence scope.',
       {
         'reference': _text('Edit reference from list_calendar or list_plans.'),
         'scope': _text('occurrence or series.'),
@@ -206,10 +209,10 @@ final class AssistantTools {
       _update,
     ),
     _tool(
-      'propose_plan_move',
-      'Draft moving a single occurrence. Use its edit reference from '
-          'list_calendar and local ISO start/end times with no offset. This '
-          'never moves the whole series.',
+      'move_plan',
+      'Move a single occurrence and save it immediately. Use its edit reference '
+          'from list_calendar and local ISO start/end times with no offset. '
+          'This never moves the whole series.',
       {
         'reference': _text('Edit reference from list_calendar.'),
         'start': _text('New local ISO start date-time.'),
@@ -219,11 +222,11 @@ final class AssistantTools {
       _move,
     ),
     _tool(
-      'propose_plan_remove',
-      'Draft cancelling one occurrence or deleting a stored rule. scope is '
-          'occurrence or series; repeating rules default to occurrence and '
-          'single plans default to series. A fetched lesson can only be hidden '
-          'locally. Requires app confirmation.',
+      'remove_plan',
+      'Cancel one occurrence or delete a stored rule and save it immediately. '
+          'scope is occurrence or series; repeating rules default to occurrence '
+          'and single plans default to series. A fetched lesson can only be '
+          'hidden locally.',
       {
         'reference': _text('Edit reference from list_calendar or list_plans.'),
         'scope': _text('occurrence or series.'),
@@ -232,9 +235,9 @@ final class AssistantTools {
       _remove,
     ),
     _tool(
-      'propose_category_create',
-      'Draft a new plan category with a name and optional #RRGGBB color. '
-          'Requires app confirmation.',
+      'create_category',
+      'Create a plan category with a name and optional #RRGGBB color and save '
+          'it immediately.',
       {
         'name': _text('Category name.'),
         'color': _text('Optional #RRGGBB color.'),
@@ -243,9 +246,9 @@ final class AssistantTools {
       _createCategory,
     ),
     _tool(
-      'propose_category_update',
-      'Draft renaming or recoloring a category. Use the reference from '
-          'list_categories. Requires app confirmation.',
+      'update_category',
+      'Rename or recolor a category and save it immediately. Use the reference '
+          'from list_categories.',
       {
         'reference': _text('Category reference from list_categories.'),
         'name': _text('New category name.'),
@@ -255,9 +258,9 @@ final class AssistantTools {
       _updateCategory,
     ),
     _tool(
-      'propose_category_delete',
-      'Draft deleting an unused category. Reassign its plans before deleting '
-          'it. Requires app confirmation.',
+      'delete_category',
+      'Delete an unused category and save it immediately. Reassign its plans '
+          'before deleting it.',
       {'reference': _text('Category reference from list_categories.')},
       const {'reference'},
       _deleteCategory,
@@ -310,6 +313,34 @@ final class AssistantTools {
     if ((await session.read())?.userId != account || !isActive()) {
       throw StateError('Assistant account or turn changed.');
     }
+  }
+
+  Future<Object> _steps(Map<String, dynamic> args) async {
+    final raw = args['steps'];
+    if (raw is! List || raw.isEmpty || raw.length > 12) {
+      throw const FormatException('Expected between one and twelve steps.');
+    }
+    final texts = <String>[];
+    for (final item in raw) {
+      if (item is! String) throw const FormatException('Expected text steps.');
+      final text = item.trim();
+      if (text.isEmpty || text.length > 200) {
+        throw const FormatException('Invalid step.');
+      }
+      texts.add(text);
+    }
+    final done = switch (_optional(args, 'done', max: 4)) {
+      null => 0,
+      final value => int.tryParse(value) ?? 0,
+    };
+    if (done < 0 || done > texts.length) {
+      throw const FormatException('Invalid completed step count.');
+    }
+    onSteps?.call([
+      for (var index = 0; index < texts.length; index++)
+        PlanStep(text: texts[index], done: index < done),
+    ]);
+    return {'status': 'shown', 'steps': texts.length, 'done': done};
   }
 
   Future<({CourseSchedule schedule, bool stale})> _schedule() =>
@@ -623,20 +654,17 @@ final class AssistantTools {
       repeat: repeat,
       intervalDays: _intervalDays(args, repeat),
     );
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.create,
-        expected: collection,
-        next: collection.copyWith(
-          categories: [...collection.categories, ?resolved.added],
-          plans: [...collection.plans, plan],
-        ),
-        after: _occurrence(plan),
-        rule: plan,
-        category: resolved.added,
-        categoryName:
-            resolved.added?.name ?? _categoryName(collection, plan.category),
+    return _commit(
+      kind: PlanChangeKind.create,
+      expected: collection,
+      next: collection.copyWith(
+        categories: [...collection.categories, ?resolved.added],
+        plans: [...collection.plans, plan],
       ),
+      after: _occurrence(plan),
+      rule: plan,
+      categoryName:
+          resolved.added?.name ?? _categoryName(collection, plan.category),
     );
   }
 
@@ -689,22 +717,18 @@ final class AssistantTools {
           )
         : _occurrence(next);
     final updated = collection.copyWith(categories: categories);
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.update,
-        expected: collection,
-        next: next == null
-            ? updated.replaceOccurrence(entry, after)
-            : updated.replaceSeries(next),
-        entry: entry,
-        before: entry.occurrence,
-        after: after,
-        rule: next,
-        series: series,
-        category: resolved?.added,
-        categoryName:
-            resolved?.added?.name ?? _categoryName(collection, after.category),
-      ),
+    return _commit(
+      kind: PlanChangeKind.update,
+      expected: collection,
+      next: next == null
+          ? updated.replaceOccurrence(entry, after)
+          : updated.replaceSeries(next),
+      before: entry.occurrence,
+      after: after,
+      rule: next,
+      series: series,
+      categoryName:
+          resolved?.added?.name ?? _categoryName(collection, after.category),
     );
   }
 
@@ -721,17 +745,14 @@ final class AssistantTools {
       endsAt: end,
       category: entry.occurrence.category,
     );
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.move,
-        expected: collection,
-        next: collection.replaceOccurrence(entry, after),
-        entry: entry,
-        before: entry.occurrence,
-        after: after,
-        rule: entry.rule,
-        categoryName: _categoryName(collection, after.category),
-      ),
+    return _commit(
+      kind: PlanChangeKind.move,
+      expected: collection,
+      next: collection.replaceOccurrence(entry, after),
+      before: entry.occurrence,
+      after: after,
+      rule: entry.rule,
+      categoryName: _categoryName(collection, after.category),
     );
   }
 
@@ -740,18 +761,15 @@ final class AssistantTools {
     final entry = await _requireEntry(args['reference'], collection);
     final series = _seriesScope(args, entry);
     final deleting = series && entry.rule != null;
-    return _draft(
-      PlanProposal(
-        kind: deleting ? PlanChangeKind.delete : PlanChangeKind.cancel,
-        expected: collection,
-        next: deleting
-            ? collection.deleteSeries(entry)
-            : collection.replaceOccurrence(entry, null),
-        entry: entry,
-        before: entry.occurrence,
-        series: deleting,
-        categoryName: _categoryName(collection, entry.occurrence.category),
-      ),
+    return _commit(
+      kind: deleting ? PlanChangeKind.delete : PlanChangeKind.cancel,
+      expected: collection,
+      next: deleting
+          ? collection.deleteSeries(entry)
+          : collection.replaceOccurrence(entry, null),
+      before: entry.occurrence,
+      series: deleting,
+      categoryName: _categoryName(collection, entry.occurrence.category),
     );
   }
 
@@ -763,16 +781,14 @@ final class AssistantTools {
       name: name,
       colorValue: _color(_optional(args, 'color', max: 9)),
     );
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.categoryCreate,
-        expected: collection,
-        next: collection.copyWith(
-          categories: [...collection.categories, category],
-        ),
-        category: category,
-        categoryName: name,
+    return _commit(
+      kind: PlanChangeKind.categoryCreate,
+      expected: collection,
+      next: collection.copyWith(
+        categories: [...collection.categories, category],
       ),
+      category: category,
+      categoryName: name,
     );
   }
 
@@ -793,19 +809,17 @@ final class AssistantTools {
           ? _color(_required(args, 'color', max: 9))
           : category.colorValue,
     );
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.categoryUpdate,
-        expected: collection,
-        next: collection.copyWith(
-          categories: [
-            for (final item in collection.categories)
-              item.id == updated.id ? updated : item,
-          ],
-        ),
-        category: updated,
-        categoryName: updated.name,
+    return _commit(
+      kind: PlanChangeKind.categoryUpdate,
+      expected: collection,
+      next: collection.copyWith(
+        categories: [
+          for (final item in collection.categories)
+            item.id == updated.id ? updated : item,
+        ],
       ),
+      category: updated,
+      categoryName: updated.name,
     );
   }
 
@@ -817,19 +831,17 @@ final class AssistantTools {
         'Reassign plans in this category before deleting it.',
       );
     }
-    return _draft(
-      PlanProposal(
-        kind: PlanChangeKind.categoryDelete,
-        expected: collection,
-        next: collection.copyWith(
-          categories: [
-            for (final item in collection.categories)
-              if (item.id != category.id) item,
-          ],
-        ),
-        category: category,
-        categoryName: category.name,
+    return _commit(
+      kind: PlanChangeKind.categoryDelete,
+      expected: collection,
+      next: collection.copyWith(
+        categories: [
+          for (final item in collection.categories)
+            if (item.id != category.id) item,
+        ],
       ),
+      category: category,
+      categoryName: category.name,
     );
   }
 
@@ -846,8 +858,8 @@ final class AssistantTools {
   }
 
   /// Resolves a reference and confirms the entry still describes the same
-  /// visible occurrence, so a stale draft cannot rewrite a newer edit. A rule
-  /// reference resolves to that rule's first stored occurrence.
+  /// visible occurrence, so a stale reference cannot rewrite a newer edit. A
+  /// rule reference resolves to that rule's first stored occurrence.
   Future<CalendarPlanEntry> _requireEntry(
     String? reference,
     CustomPlanCollection collection,
@@ -921,33 +933,70 @@ final class AssistantTools {
     category: plan.category,
   );
 
-  Future<Object> _draft(PlanProposal proposal) async {
+  /// Saves one change immediately and reports it to the UI summary.
+  Future<Object> _commit({
+    required PlanChangeKind kind,
+    required CustomPlanCollection expected,
+    required CustomPlanCollection next,
+    CourseOccurrence? before,
+    CourseOccurrence? after,
+    CustomPlan? rule,
+    CustomPlanCategory? category,
+    String? categoryName,
+    bool series = false,
+  }) async {
     await _checkAccount();
-    if (_drafted) {
-      return {'error': 'This turn already has a draft awaiting confirmation.'};
+    if (++_writes > _maxWrites) {
+      return {'error': 'Change limit reached for this turn.'};
     }
-    _drafted = true;
-    onProposal(proposal);
-    final after = proposal.after;
-    final rule = proposal.rule;
+    await plans.save(
+      account,
+      expected: expected,
+      next: next,
+      validate: _checkAccount,
+    );
+    final change = PlanChange(
+      kind: kind,
+      title: after?.name ?? before?.name ?? category?.name,
+      start: after?.startsAt,
+      end: after?.endsAt,
+      location: after?.location,
+      categoryName: categoryName,
+      repeat: rule?.repeat,
+      intervalDays: rule?.repeat == PlanRepeat.intervalDays
+          ? rule!.intervalDays
+          : null,
+      series: series,
+    );
+    onChanged?.call(change);
     return {
-      'status': 'awaiting_user_confirmation',
-      'change': proposal.kind.name,
+      'status': 'applied',
+      'change': kind.name,
       if (after != null) ...{
         'title': after.name,
         'start': after.startsAt.toIso8601String(),
         'end': after.endsAt.toIso8601String(),
         'location': after.location,
       },
-      'category': ?proposal.categoryName,
+      'category': ?categoryName,
       if (rule != null) ...{
-        'repeat': rule.repeat.name,
+        'repeat': _repeatName(rule.repeat),
         if (rule.repeat == PlanRepeat.intervalDays)
           'interval_days': rule.intervalDays.toString(),
       },
-      if (proposal.series) 'scope': 'series',
+      if (series) 'scope': 'series',
+      'remaining_changes': _maxWrites - _writes,
     };
   }
+
+  /// Tool arguments use snake case, so echoing the same spelling avoids
+  /// surprising the model with Dart enum names.
+  String _repeatName(PlanRepeat repeat) => switch (repeat) {
+    PlanRepeat.none => 'none',
+    PlanRepeat.daily => 'daily',
+    PlanRepeat.weekly => 'weekly',
+    PlanRepeat.intervalDays => 'interval_days',
+  };
 
   DateTime _dayStart(DateTime date, {int offset = 0}) =>
       DateTime(date.year, date.month, date.day + offset);
@@ -961,45 +1010,4 @@ final class AssistantTools {
       a.startsAt == b.startsAt &&
       a.endsAt == b.endsAt &&
       a.category == b.category;
-
-  /// Commits a confirmed draft. The repository rejects a stale [expected], so a
-  /// concurrent calendar edit is never overwritten.
-  Future<void> apply(PlanProposal proposal) async {
-    await _checkAccount();
-    final after = proposal.after;
-    if (after != null) {
-      final timetable = await _schedule();
-      if (timetable.stale) {
-        throw StateError('The timetable could not be refreshed.');
-      }
-      final start = _dayStart(after.startsAt);
-      final conflicts = proposal.expected.entriesBetween(
-        timetable.schedule.occurrences,
-        start,
-        _dayStart(start, offset: 1),
-      );
-      final entry = proposal.entry;
-      if (conflicts.any(
-        (item) =>
-            (entry == null || !_sameOccurrence(item, entry)) &&
-            item.occurrence.startsAt.isBefore(after.endsAt) &&
-            item.occurrence.endsAt.isAfter(after.startsAt),
-      )) {
-        throw const PlanConflict();
-      }
-    }
-    await plans.save(
-      account,
-      expected: proposal.expected,
-      next: proposal.next,
-      validate: _checkAccount,
-    );
-    // The turn's one draft has been committed; a later turn (or a direct test
-    // call) may start drafting again.
-    _drafted = false;
-  }
-}
-
-final class PlanConflict implements Exception {
-  const PlanConflict();
 }

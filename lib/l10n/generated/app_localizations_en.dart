@@ -28,17 +28,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not finish the reply. Check your model, API key, and connection';
 
   @override
-  String get assistantPlanSaved => 'Plan saved to calendar';
-
-  @override
-  String get assistantPlanConflict =>
-      'This time overlaps with an existing calendar entry';
-
-  @override
-  String get assistantApplyError =>
-      'Could not save the plan. Check your timetable or ask for a fresh draft';
-
-  @override
   String get assistantExample => 'What assignments are due this week?';
 
   @override
@@ -66,6 +55,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantNewPlan => 'New plan';
 
   @override
+  String get assistantApplied => 'Applied to calendar';
+
+  @override
   String get assistantUpdatePlan => 'Edit plan';
 
   @override
@@ -84,9 +76,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantCategoryDelete => 'Delete category';
 
   @override
-  String get assistantScopeSeries => 'Entire series';
-
-  @override
   String get assistantReadingPlans => 'Reading plans';
 
   @override
@@ -94,9 +83,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantMovePlan => 'Move this occurrence';
-
-  @override
-  String get assistantApply => 'Apply to calendar';
 
   @override
   String get assistantPrivacy =>

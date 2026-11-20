@@ -136,24 +136,6 @@ abstract class AppLocalizations {
   /// **'Could not finish the reply. Check your model, API key, and connection'**
   String get assistantRequestError;
 
-  /// No description provided for @assistantPlanSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Plan saved to calendar'**
-  String get assistantPlanSaved;
-
-  /// No description provided for @assistantPlanConflict.
-  ///
-  /// In en, this message translates to:
-  /// **'This time overlaps with an existing calendar entry'**
-  String get assistantPlanConflict;
-
-  /// No description provided for @assistantApplyError.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not save the plan. Check your timetable or ask for a fresh draft'**
-  String get assistantApplyError;
-
   /// No description provided for @assistantExample.
   ///
   /// In en, this message translates to:
@@ -208,6 +190,12 @@ abstract class AppLocalizations {
   /// **'New plan'**
   String get assistantNewPlan;
 
+  /// No description provided for @assistantApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied to calendar'**
+  String get assistantApplied;
+
   /// No description provided for @assistantUpdatePlan.
   ///
   /// In en, this message translates to:
@@ -244,12 +232,6 @@ abstract class AppLocalizations {
   /// **'Delete category'**
   String get assistantCategoryDelete;
 
-  /// No description provided for @assistantScopeSeries.
-  ///
-  /// In en, this message translates to:
-  /// **'Entire series'**
-  String get assistantScopeSeries;
-
   /// No description provided for @assistantReadingPlans.
   ///
   /// In en, this message translates to:
@@ -267,12 +249,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Move this occurrence'**
   String get assistantMovePlan;
-
-  /// No description provided for @assistantApply.
-  ///
-  /// In en, this message translates to:
-  /// **'Apply to calendar'**
-  String get assistantApply;
 
   /// No description provided for @assistantPrivacy.
   ///

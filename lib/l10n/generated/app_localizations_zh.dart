@@ -27,15 +27,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantRequestError => '回复未能完成，请检查模型、API 密钥和网络';
 
   @override
-  String get assistantPlanSaved => '计划已保存到日历';
-
-  @override
-  String get assistantPlanConflict => '该时段与现有日历安排冲突';
-
-  @override
-  String get assistantApplyError => '无法保存计划，请检查课表或让助手重新拟定';
-
-  @override
   String get assistantExample => '这周有哪些作业要交？';
 
   @override
@@ -63,6 +54,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantNewPlan => '新增计划';
 
   @override
+  String get assistantApplied => '已应用到日历';
+
+  @override
   String get assistantUpdatePlan => '修改计划';
 
   @override
@@ -81,9 +75,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantCategoryDelete => '删除分类';
 
   @override
-  String get assistantScopeSeries => '整个系列';
-
-  @override
   String get assistantReadingPlans => '正在查看计划';
 
   @override
@@ -91,9 +82,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantMovePlan => '仅移动本次计划';
-
-  @override
-  String get assistantApply => '应用到日历';
 
   @override
   String get assistantPrivacy => '消息和相关日历或作业信息会发送到所选地址，校园账号凭据保留在本机';
@@ -741,15 +729,6 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get assistantRequestError => '回复未能完成，请检查模型、API 密钥和网络';
 
   @override
-  String get assistantPlanSaved => '计划已保存到日历';
-
-  @override
-  String get assistantPlanConflict => '该时段与现有日历安排冲突';
-
-  @override
-  String get assistantApplyError => '无法保存计划，请检查课表或让助手重新拟定';
-
-  @override
   String get assistantExample => '这周有哪些作业要交？';
 
   @override
@@ -777,6 +756,9 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get assistantNewPlan => '新增计划';
 
   @override
+  String get assistantApplied => '已应用到日历';
+
+  @override
   String get assistantUpdatePlan => '修改计划';
 
   @override
@@ -795,9 +777,6 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   String get assistantCategoryDelete => '删除分类';
 
   @override
-  String get assistantScopeSeries => '整个系列';
-
-  @override
   String get assistantReadingPlans => '正在查看计划';
 
   @override
@@ -805,9 +784,6 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 
   @override
   String get assistantMovePlan => '仅移动本次计划';
-
-  @override
-  String get assistantApply => '应用到日历';
 
   @override
   String get assistantPrivacy => '消息和相关日历或作业信息会发送到所选地址，校园账号凭据保留在本机';
@@ -1455,15 +1431,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get assistantRequestError => '回覆未能完成，請檢查模型、API 金鑰和網路';
 
   @override
-  String get assistantPlanSaved => '計畫已儲存到行事曆';
-
-  @override
-  String get assistantPlanConflict => '此時段與現有行事曆安排衝突';
-
-  @override
-  String get assistantApplyError => '無法儲存計畫，請檢查課表或請助理重新擬定';
-
-  @override
   String get assistantExample => '這週有哪些作業要交？';
 
   @override
@@ -1491,6 +1458,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get assistantNewPlan => '新增計畫';
 
   @override
+  String get assistantApplied => '已套用到行事曆';
+
+  @override
   String get assistantUpdatePlan => '修改計畫';
 
   @override
@@ -1509,9 +1479,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get assistantCategoryDelete => '刪除分類';
 
   @override
-  String get assistantScopeSeries => '整個系列';
-
-  @override
   String get assistantReadingPlans => '正在查看計畫';
 
   @override
@@ -1519,9 +1486,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get assistantMovePlan => '僅移動本次計畫';
-
-  @override
-  String get assistantApply => '套用到行事曆';
 
   @override
   String get assistantPrivacy => '訊息和相關行事曆或作業資訊會傳送到所選位址，校園帳號憑證保留在本機';
