@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:forui/forui.dart';
 import 'package:thulium/l10n/generated/app_localizations.dart';
 import 'package:thulium_auth/thulium_auth.dart';
@@ -68,6 +69,45 @@ void main() {
     expect(find.byType(StudyPage), findsOneWidget);
     expect(find.byKey(const ValueKey('study-shortcut-reserved')), findsNothing);
   });
+
+  testWidgets('opens the assistant from the center tab', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final store = MemoryAuthSessionStore();
+    await store.write(_savedSession());
+
+    await tester.pumpWidget(ThuliumApp(sessionStore: store));
+    await tester.pumpAndSettle();
+    final tabs = find.byType(FBottomNavigationBarItem);
+    expect(tabs, findsNWidgets(5));
+    expect(
+      find.descendant(of: tabs.at(2), matching: find.text('Assistant')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Assistant'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configure model'));
+    await tester.pumpAndSettle();
+    expect(find.text('API key'), findsOneWidget);
+    await tester.tap(find.text('Custom endpoint'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Base URL'), findsOneWidget);
+    final fields = find.byType(EditableText);
+    await tester.enterText(fields.at(0), 'https://gateway.example/v1');
+    await tester.enterText(fields.at(2), 'test-model');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save configuration'));
+    await tester.pumpAndSettle();
+    expect(find.byType(FDialog), findsNothing);
+
+    final saved = await const FlutterSecureStorage().read(
+      key: 'thulium.assistant.v1.${_savedSession().userId}.credentials',
+    );
+    expect(saved, contains('"baseUrl":"https://gateway.example/v1"'));
+    expect(saved, contains('"key":""'));
+    // Pinned Forui text fields hit Flutter's merged-semantics assertion when
+    // controls change during widget tests. This test exercises the save flow.
+  }, semanticsEnabled: false);
 
   testWidgets('opens settings from the authenticated home', (tester) async {
     final store = MemoryAuthSessionStore();

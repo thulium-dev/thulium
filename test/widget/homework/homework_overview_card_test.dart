@@ -107,7 +107,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
           final navItems = find.byType(FBottomNavigationBarItem);
-          expect(navItems, findsNWidgets(4));
+          expect(navItems, findsNWidgets(5));
           for (final element in navItems.evaluate()) {
             expect(
               tester.getSize(find.byWidget(element.widget)).height,

@@ -4,6 +4,8 @@ import 'package:forui/forui.dart';
 
 import '../l10n/generated/app_localizations.dart';
 
+enum AppTab { events, plans, assistant, study, life }
+
 /// Shared shell navigation, with visible labels and explicit selection semantics.
 class AppBottomNavigation extends StatelessWidget {
   const AppBottomNavigation({
@@ -18,10 +20,17 @@ class AppBottomNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final labels = [l10n.eventsTab, l10n.plansTab, l10n.studyTab, l10n.lifeTab];
+    final labels = [
+      l10n.eventsTab,
+      l10n.plansTab,
+      l10n.assistantTab,
+      l10n.studyTab,
+      l10n.lifeTab,
+    ];
     const icons = [
       Icons.event_outlined,
       Icons.calendar_month_outlined,
+      FLucideIcons.sparkles,
       Icons.menu_book_outlined,
       Icons.home_outlined,
     ];

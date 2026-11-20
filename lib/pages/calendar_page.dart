@@ -20,7 +20,7 @@ import 'package:thulium/l10n/generated/app_localizations.dart';
 
 import '../auth/secure_auth_session_store.dart';
 import '../auth/secure_course_schedule_cache_store.dart';
-import '../auth/secure_custom_plan_store.dart';
+import '../plans/personal_plan_repository.dart';
 import '../calendar/calendar_ics_export.dart';
 import '../calendar/calendar_export_labels.dart';
 import '../calendar/calendar_visual_export.dart';
@@ -42,12 +42,14 @@ final class AcademicCalendarPage extends StatefulWidget {
     required this.onSessionExpired,
     this.sessionStore,
     this.courseCatalog,
+    this.plans,
     super.key,
   });
 
   final VoidCallback onSessionExpired;
   final AuthSessionStore? sessionStore;
   final LearnCourseCatalog? courseCatalog;
+  final PersonalPlanRepository? plans;
 
   @override
   State<AcademicCalendarPage> createState() => _AcademicCalendarPageState();
@@ -65,7 +67,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   CourseSchedule? _schedule;
   CustomPlanCollection _customPlans = CustomPlanCollection.empty();
   String? _userId;
-  final _customPlanStore = SecureCustomPlanStore();
+  late final _plans = widget.plans ?? PersonalPlanRepository();
   Object? _loadError;
   bool _isLoading = true;
   bool _showingStaleCache = false;
@@ -85,6 +87,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _plans.addListener(_plansChanged);
     // Read the clock again on every tick instead of advancing a stored time;
     // this also corrects drift after the app has been suspended.
     _nowTimer = Timer.periodic(
@@ -113,6 +116,8 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
 
   @override
   void dispose() {
+    _plans.removeListener(_plansChanged);
+    if (widget.plans == null) _plans.dispose();
     _nowTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _weekScrollSync.dispose();
@@ -162,7 +167,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
               )
               .timeout(_LOAD_TIMEOUT);
       if (!mounted) return;
-      final customPlans = await _customPlanStore.readFor(userId!);
+      final customPlans = await _plans.readFor(userId!);
       if (!mounted) return;
       debugPrint(
         '[calendar] loading completed occurrences=${schedule.occurrences.length}',
@@ -173,7 +178,7 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
         _schedule = catalog != null && catalog.semester == schedule.term.id
             ? catalog.applyEnglishNames(schedule)
             : schedule;
-        _customPlans = customPlans;
+        _customPlans = _plans.latestChangeFor(userId!) ?? customPlans;
         _userId = userId;
         _showingStaleCache = source == CourseScheduleSource.staleCache;
         _selectedWeek = (_selectedWeek ?? todayWeek).clamp(
@@ -403,11 +408,16 @@ final class _AcademicCalendarPageState extends State<AcademicCalendarPage>
     );
   }
 
+  void _plansChanged() {
+    final userId = _userId;
+    final latest = userId == null ? null : _plans.latestChangeFor(userId);
+    if (latest != null) setState(() => _customPlans = latest);
+  }
+
   Future<void> _persistCustomPlans(CustomPlanCollection next) async {
     final userId = _userId;
     if (userId == null) throw StateError('No student account is available.');
-    await _customPlanStore.writeFor(userId, next);
-    if (mounted) setState(() => _customPlans = next);
+    await _plans.save(userId, expected: _customPlans, next: next);
   }
 
   String _categoryName(AppLocalizations l10n, String category) {

@@ -100,6 +100,240 @@ abstract class AppLocalizations {
     Locale('zh', 'TW'),
   ];
 
+  /// No description provided for @assistantTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get assistantTab;
+
+  /// No description provided for @assistantAccountUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to use the assistant'**
+  String get assistantAccountUnavailable;
+
+  /// No description provided for @assistantConfigure.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure model'**
+  String get assistantConfigure;
+
+  /// No description provided for @assistantClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear conversation'**
+  String get assistantClear;
+
+  /// No description provided for @assistantStorageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not access assistant storage'**
+  String get assistantStorageError;
+
+  /// No description provided for @assistantRequestError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not finish the reply. Check your model, API key, and connection'**
+  String get assistantRequestError;
+
+  /// No description provided for @assistantPlanSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan saved to calendar'**
+  String get assistantPlanSaved;
+
+  /// No description provided for @assistantPlanConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This time overlaps with an existing calendar entry'**
+  String get assistantPlanConflict;
+
+  /// No description provided for @assistantApplyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the plan. Check your timetable or ask for a fresh draft'**
+  String get assistantApplyError;
+
+  /// No description provided for @assistantExample.
+  ///
+  /// In en, this message translates to:
+  /// **'What assignments are due this week?'**
+  String get assistantExample;
+
+  /// No description provided for @assistantReadingCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading calendar'**
+  String get assistantReadingCalendar;
+
+  /// No description provided for @assistantReadingAssignments.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading assignments'**
+  String get assistantReadingAssignments;
+
+  /// No description provided for @assistantWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a reply'**
+  String get assistantWaiting;
+
+  /// No description provided for @assistantHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about your plans or assignments'**
+  String get assistantHint;
+
+  /// No description provided for @assistantStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop generating'**
+  String get assistantStop;
+
+  /// No description provided for @assistantSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get assistantSend;
+
+  /// No description provided for @assistantStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation stopped'**
+  String get assistantStopped;
+
+  /// No description provided for @assistantNewPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'New plan'**
+  String get assistantNewPlan;
+
+  /// No description provided for @assistantUpdatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit plan'**
+  String get assistantUpdatePlan;
+
+  /// No description provided for @assistantCancelPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this occurrence'**
+  String get assistantCancelPlan;
+
+  /// No description provided for @assistantDeletePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete plan series'**
+  String get assistantDeletePlan;
+
+  /// No description provided for @assistantCategoryCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'New category'**
+  String get assistantCategoryCreate;
+
+  /// No description provided for @assistantCategoryUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit category'**
+  String get assistantCategoryUpdate;
+
+  /// No description provided for @assistantCategoryDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete category'**
+  String get assistantCategoryDelete;
+
+  /// No description provided for @assistantScopeSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Entire series'**
+  String get assistantScopeSeries;
+
+  /// No description provided for @assistantReadingPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading plans'**
+  String get assistantReadingPlans;
+
+  /// No description provided for @assistantReadingCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading categories'**
+  String get assistantReadingCategories;
+
+  /// No description provided for @assistantMovePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Move this occurrence'**
+  String get assistantMovePlan;
+
+  /// No description provided for @assistantApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to calendar'**
+  String get assistantApply;
+
+  /// No description provided for @assistantPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Your messages and relevant calendar or assignment details are sent to the selected endpoint. Your campus login stays on this device.'**
+  String get assistantPrivacy;
+
+  /// No description provided for @assistantApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get assistantApiKey;
+
+  /// No description provided for @assistantProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get assistantProvider;
+
+  /// No description provided for @assistantCustomProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom endpoint'**
+  String get assistantCustomProvider;
+
+  /// No description provided for @assistantBaseUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Base URL'**
+  String get assistantBaseUrl;
+
+  /// No description provided for @assistantInvalidBaseUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Use HTTPS or a loopback HTTP address with no credentials, query, or fragment'**
+  String get assistantInvalidBaseUrl;
+
+  /// No description provided for @assistantOptionalKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional for endpoints that do not require authentication'**
+  String get assistantOptionalKey;
+
+  /// No description provided for @assistantKeepKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to keep the existing key'**
+  String get assistantKeepKey;
+
+  /// No description provided for @assistantModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get assistantModel;
+
+  /// No description provided for @assistantConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Save configuration'**
+  String get assistantConnect;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

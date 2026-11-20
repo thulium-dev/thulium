@@ -19,6 +19,8 @@ import '../widgets/app_bottom_navigation.dart';
 import '../widgets/homework_overview_card.dart';
 import 'settings_page.dart';
 import 'calendar_page.dart';
+import 'assistant_page.dart';
+import '../plans/personal_plan_repository.dart';
 import 'study_page.dart';
 import 'course_detail_page.dart';
 import '../study/course_content_source.dart';
@@ -49,7 +51,11 @@ final class HomePage extends StatefulWidget {
 final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   static const _LOAD_TIMEOUT = Duration(minutes: 2);
 
-  int _selectedIndex = 0;
+  AppTab _tab = AppTab.events;
+  final _personalPlans = PersonalPlanRepository();
+  late final AuthSessionStore _assistantSession =
+      widget.sessionStore ?? SecureAuthSessionStore();
+  Future<AuthSession?>? _assistantAccount;
   bool _hasOpenedPlans = false;
   bool _requiresSignIn = false;
   late String _semester;
@@ -90,6 +96,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _personalPlans.dispose();
     super.dispose();
   }
 
@@ -271,15 +278,36 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  Map<String, Object?> _assistantHomework(String account) {
+    if (_homeworkUserId != account || !_hasHomeworkSnapshot) {
+      return {
+        'available': false,
+        'loading': _homeworkLoading || _coursesLoading,
+      };
+    }
+    return {
+      'available': true,
+      'stale':
+          _homeworkFailed ||
+          _homeworkLoading ||
+          _coursesStale ||
+          _courseError != null,
+      'updated_at': _homeworkUpdatedAt?.toIso8601String(),
+      'truncated': _homeworkAssignments.length > 100,
+      'assignments': [
+        for (final assignment in _homeworkAssignments.take(100))
+          {
+            'title': assignment.title,
+            'course': assignment.course.name,
+            'deadline': assignment.deadline?.toLocal().toIso8601String(),
+          },
+      ],
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final sections = [
-      (title: l10n.eventsTitle, description: l10n.eventsDescription),
-      (title: l10n.plansTitle, description: l10n.plansDescription),
-      (title: l10n.studyTitle, description: l10n.studyDescription),
-      (title: l10n.lifeTitle, description: l10n.lifeDescription),
-    ];
     final theme = context.theme;
     final headerIconSize = theme.style.sizes.tile;
     final headerTop = theme.style.pagePadding.top;
@@ -309,17 +337,20 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             )
           : null,
       footer: AppBottomNavigation(
-        index: _selectedIndex,
+        index: _tab.index,
         onChange: (index) => setState(() {
-          _selectedIndex = index;
-          if (index == 1) _hasOpenedPlans = true;
+          _tab = AppTab.values[index];
+          if (_tab == AppTab.plans) _hasOpenedPlans = true;
+          if (_tab == AppTab.assistant) {
+            _assistantAccount = _assistantSession.read();
+          }
         }),
       ),
       child: SafeArea(
         bottom: false,
         child: Stack(
           children: [
-            if (_selectedIndex == 0)
+            if (_tab == AppTab.events)
               Positioned.fill(
                 top: calendarTop,
                 child: HomeworkOverviewCard(
@@ -336,7 +367,7 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   onRefresh: () => _loadCourses(forceRefresh: true),
                 ),
               ),
-            if (_selectedIndex == 3)
+            if (_tab == AppTab.life)
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 640),
@@ -347,12 +378,12 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          sections[_selectedIndex].title,
+                          l10n.lifeTitle,
                           style: context.theme.typography.xl2,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          sections[_selectedIndex].description,
+                          l10n.lifeDescription,
                           style: context.theme.typography.md,
                         ),
                       ],
@@ -364,18 +395,50 @@ final class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Positioned.fill(
                 top: calendarTop,
                 child: Offstage(
-                  offstage: _selectedIndex != 1,
+                  offstage: _tab != AppTab.plans,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
                     child: AcademicCalendarPage(
                       sessionStore: widget.sessionStore,
                       onSessionExpired: widget.onSessionExpired,
                       courseCatalog: _courseCatalog,
+                      plans: _personalPlans,
                     ),
                   ),
                 ),
               ),
-            if (_selectedIndex == 2)
+            if (_assistantAccount case final account?)
+              Positioned.fill(
+                top: calendarTop,
+                child: Offstage(
+                  offstage: _tab != AppTab.assistant,
+                  child: TickerMode(
+                    enabled: _tab == AppTab.assistant,
+                    child: FutureBuilder<AuthSession?>(
+                      future: account,
+                      builder: (context, snapshot) {
+                        final session = snapshot.data;
+                        if (session != null) {
+                          return AssistantPage(
+                            key: ValueKey(session.userId),
+                            account: session.userId,
+                            session: _assistantSession,
+                            plans: _personalPlans,
+                            homework: () => _assistantHomework(session.userId),
+                          );
+                        }
+                        if (snapshot.connectionState != ConnectionState.done) {
+                          return const SizedBox.shrink();
+                        }
+                        return Center(
+                          child: Text(l10n.assistantAccountUnavailable),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            if (_tab == AppTab.study)
               Positioned.fill(
                 top: calendarTop,
                 child: StudyPage(

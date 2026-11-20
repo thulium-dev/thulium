@@ -9,6 +9,129 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get assistantTab => 'Assistant';
+
+  @override
+  String get assistantAccountUnavailable => 'Sign in to use the assistant';
+
+  @override
+  String get assistantConfigure => 'Configure model';
+
+  @override
+  String get assistantClear => 'Clear conversation';
+
+  @override
+  String get assistantStorageError => 'Could not access assistant storage';
+
+  @override
+  String get assistantRequestError =>
+      'Could not finish the reply. Check your model, API key, and connection';
+
+  @override
+  String get assistantPlanSaved => 'Plan saved to calendar';
+
+  @override
+  String get assistantPlanConflict =>
+      'This time overlaps with an existing calendar entry';
+
+  @override
+  String get assistantApplyError =>
+      'Could not save the plan. Check your timetable or ask for a fresh draft';
+
+  @override
+  String get assistantExample => 'What assignments are due this week?';
+
+  @override
+  String get assistantReadingCalendar => 'Reading calendar';
+
+  @override
+  String get assistantReadingAssignments => 'Reading assignments';
+
+  @override
+  String get assistantWaiting => 'Waiting for a reply';
+
+  @override
+  String get assistantHint => 'Ask about your plans or assignments';
+
+  @override
+  String get assistantStop => 'Stop generating';
+
+  @override
+  String get assistantSend => 'Send message';
+
+  @override
+  String get assistantStopped => 'Generation stopped';
+
+  @override
+  String get assistantNewPlan => 'New plan';
+
+  @override
+  String get assistantUpdatePlan => 'Edit plan';
+
+  @override
+  String get assistantCancelPlan => 'Cancel this occurrence';
+
+  @override
+  String get assistantDeletePlan => 'Delete plan series';
+
+  @override
+  String get assistantCategoryCreate => 'New category';
+
+  @override
+  String get assistantCategoryUpdate => 'Edit category';
+
+  @override
+  String get assistantCategoryDelete => 'Delete category';
+
+  @override
+  String get assistantScopeSeries => 'Entire series';
+
+  @override
+  String get assistantReadingPlans => 'Reading plans';
+
+  @override
+  String get assistantReadingCategories => 'Reading categories';
+
+  @override
+  String get assistantMovePlan => 'Move this occurrence';
+
+  @override
+  String get assistantApply => 'Apply to calendar';
+
+  @override
+  String get assistantPrivacy =>
+      'Your messages and relevant calendar or assignment details are sent to the selected endpoint. Your campus login stays on this device.';
+
+  @override
+  String get assistantApiKey => 'API key';
+
+  @override
+  String get assistantProvider => 'Provider';
+
+  @override
+  String get assistantCustomProvider => 'Custom endpoint';
+
+  @override
+  String get assistantBaseUrl => 'Base URL';
+
+  @override
+  String get assistantInvalidBaseUrl =>
+      'Use HTTPS or a loopback HTTP address with no credentials, query, or fragment';
+
+  @override
+  String get assistantOptionalKey =>
+      'Optional for endpoints that do not require authentication';
+
+  @override
+  String get assistantKeepKey => 'Leave blank to keep the existing key';
+
+  @override
+  String get assistantModel => 'Model';
+
+  @override
+  String get assistantConnect => 'Save configuration';
+
+  @override
   String get appTitle => 'Thulium';
 
   @override

@@ -9,6 +9,124 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get assistantTab => '助手';
+
+  @override
+  String get assistantAccountUnavailable => '登录后可使用助手';
+
+  @override
+  String get assistantConfigure => '配置模型';
+
+  @override
+  String get assistantClear => '清空对话';
+
+  @override
+  String get assistantStorageError => '无法访问助手的本地存储';
+
+  @override
+  String get assistantRequestError => '回复未能完成，请检查模型、API 密钥和网络';
+
+  @override
+  String get assistantPlanSaved => '计划已保存到日历';
+
+  @override
+  String get assistantPlanConflict => '该时段与现有日历安排冲突';
+
+  @override
+  String get assistantApplyError => '无法保存计划，请检查课表或让助手重新拟定';
+
+  @override
+  String get assistantExample => '这周有哪些作业要交？';
+
+  @override
+  String get assistantReadingCalendar => '正在查看日历';
+
+  @override
+  String get assistantReadingAssignments => '正在查看作业';
+
+  @override
+  String get assistantWaiting => '正在等待回复';
+
+  @override
+  String get assistantHint => '询问计划或作业';
+
+  @override
+  String get assistantStop => '停止生成';
+
+  @override
+  String get assistantSend => '发送消息';
+
+  @override
+  String get assistantStopped => '已停止生成';
+
+  @override
+  String get assistantNewPlan => '新增计划';
+
+  @override
+  String get assistantUpdatePlan => '修改计划';
+
+  @override
+  String get assistantCancelPlan => '取消本次计划';
+
+  @override
+  String get assistantDeletePlan => '删除整个计划';
+
+  @override
+  String get assistantCategoryCreate => '新增分类';
+
+  @override
+  String get assistantCategoryUpdate => '修改分类';
+
+  @override
+  String get assistantCategoryDelete => '删除分类';
+
+  @override
+  String get assistantScopeSeries => '整个系列';
+
+  @override
+  String get assistantReadingPlans => '正在查看计划';
+
+  @override
+  String get assistantReadingCategories => '正在查看分类';
+
+  @override
+  String get assistantMovePlan => '仅移动本次计划';
+
+  @override
+  String get assistantApply => '应用到日历';
+
+  @override
+  String get assistantPrivacy => '消息和相关日历或作业信息会发送到所选地址，校园账号凭据保留在本机';
+
+  @override
+  String get assistantApiKey => 'API 密钥';
+
+  @override
+  String get assistantProvider => '服务商';
+
+  @override
+  String get assistantCustomProvider => '自定义地址';
+
+  @override
+  String get assistantBaseUrl => 'Base URL';
+
+  @override
+  String get assistantInvalidBaseUrl =>
+      '请使用 HTTPS 或本机 HTTP 地址，地址中不要带凭据、查询参数或片段';
+
+  @override
+  String get assistantOptionalKey => '无需认证的服务可留空';
+
+  @override
+  String get assistantKeepKey => '留空以保留现有密钥';
+
+  @override
+  String get assistantModel => '模型';
+
+  @override
+  String get assistantConnect => '保存配置';
+
+  @override
   String get appTitle => 'Thulium';
 
   @override
@@ -605,6 +723,124 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
   AppLocalizationsZhCn() : super('zh_CN');
 
   @override
+  String get assistantTab => '助手';
+
+  @override
+  String get assistantAccountUnavailable => '登录后可使用助手';
+
+  @override
+  String get assistantConfigure => '配置模型';
+
+  @override
+  String get assistantClear => '清空对话';
+
+  @override
+  String get assistantStorageError => '无法访问助手的本地存储';
+
+  @override
+  String get assistantRequestError => '回复未能完成，请检查模型、API 密钥和网络';
+
+  @override
+  String get assistantPlanSaved => '计划已保存到日历';
+
+  @override
+  String get assistantPlanConflict => '该时段与现有日历安排冲突';
+
+  @override
+  String get assistantApplyError => '无法保存计划，请检查课表或让助手重新拟定';
+
+  @override
+  String get assistantExample => '这周有哪些作业要交？';
+
+  @override
+  String get assistantReadingCalendar => '正在查看日历';
+
+  @override
+  String get assistantReadingAssignments => '正在查看作业';
+
+  @override
+  String get assistantWaiting => '正在等待回复';
+
+  @override
+  String get assistantHint => '询问计划或作业';
+
+  @override
+  String get assistantStop => '停止生成';
+
+  @override
+  String get assistantSend => '发送消息';
+
+  @override
+  String get assistantStopped => '已停止生成';
+
+  @override
+  String get assistantNewPlan => '新增计划';
+
+  @override
+  String get assistantUpdatePlan => '修改计划';
+
+  @override
+  String get assistantCancelPlan => '取消本次计划';
+
+  @override
+  String get assistantDeletePlan => '删除整个计划';
+
+  @override
+  String get assistantCategoryCreate => '新增分类';
+
+  @override
+  String get assistantCategoryUpdate => '修改分类';
+
+  @override
+  String get assistantCategoryDelete => '删除分类';
+
+  @override
+  String get assistantScopeSeries => '整个系列';
+
+  @override
+  String get assistantReadingPlans => '正在查看计划';
+
+  @override
+  String get assistantReadingCategories => '正在查看分类';
+
+  @override
+  String get assistantMovePlan => '仅移动本次计划';
+
+  @override
+  String get assistantApply => '应用到日历';
+
+  @override
+  String get assistantPrivacy => '消息和相关日历或作业信息会发送到所选地址，校园账号凭据保留在本机';
+
+  @override
+  String get assistantApiKey => 'API 密钥';
+
+  @override
+  String get assistantProvider => '服务商';
+
+  @override
+  String get assistantCustomProvider => '自定义地址';
+
+  @override
+  String get assistantBaseUrl => 'Base URL';
+
+  @override
+  String get assistantInvalidBaseUrl =>
+      '请使用 HTTPS 或本机 HTTP 地址，地址中不要带凭据、查询参数或片段';
+
+  @override
+  String get assistantOptionalKey => '无需认证的服务可留空';
+
+  @override
+  String get assistantKeepKey => '留空以保留现有密钥';
+
+  @override
+  String get assistantModel => '模型';
+
+  @override
+  String get assistantConnect => '保存配置';
+
+  @override
   String get appTitle => 'Thulium';
 
   @override
@@ -1199,6 +1435,124 @@ class AppLocalizationsZhCn extends AppLocalizationsZh {
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
 class AppLocalizationsZhTw extends AppLocalizationsZh {
   AppLocalizationsZhTw() : super('zh_TW');
+
+  @override
+  String get assistantTab => '助理';
+
+  @override
+  String get assistantAccountUnavailable => '登入後可使用助理';
+
+  @override
+  String get assistantConfigure => '設定模型';
+
+  @override
+  String get assistantClear => '清除對話';
+
+  @override
+  String get assistantStorageError => '無法存取助理的本機儲存';
+
+  @override
+  String get assistantRequestError => '回覆未能完成，請檢查模型、API 金鑰和網路';
+
+  @override
+  String get assistantPlanSaved => '計畫已儲存到行事曆';
+
+  @override
+  String get assistantPlanConflict => '此時段與現有行事曆安排衝突';
+
+  @override
+  String get assistantApplyError => '無法儲存計畫，請檢查課表或請助理重新擬定';
+
+  @override
+  String get assistantExample => '這週有哪些作業要交？';
+
+  @override
+  String get assistantReadingCalendar => '正在查看行事曆';
+
+  @override
+  String get assistantReadingAssignments => '正在查看作業';
+
+  @override
+  String get assistantWaiting => '正在等待回覆';
+
+  @override
+  String get assistantHint => '詢問計畫或作業';
+
+  @override
+  String get assistantStop => '停止產生';
+
+  @override
+  String get assistantSend => '傳送訊息';
+
+  @override
+  String get assistantStopped => '已停止產生';
+
+  @override
+  String get assistantNewPlan => '新增計畫';
+
+  @override
+  String get assistantUpdatePlan => '修改計畫';
+
+  @override
+  String get assistantCancelPlan => '取消本次計畫';
+
+  @override
+  String get assistantDeletePlan => '刪除整個計畫';
+
+  @override
+  String get assistantCategoryCreate => '新增分類';
+
+  @override
+  String get assistantCategoryUpdate => '修改分類';
+
+  @override
+  String get assistantCategoryDelete => '刪除分類';
+
+  @override
+  String get assistantScopeSeries => '整個系列';
+
+  @override
+  String get assistantReadingPlans => '正在查看計畫';
+
+  @override
+  String get assistantReadingCategories => '正在查看分類';
+
+  @override
+  String get assistantMovePlan => '僅移動本次計畫';
+
+  @override
+  String get assistantApply => '套用到行事曆';
+
+  @override
+  String get assistantPrivacy => '訊息和相關行事曆或作業資訊會傳送到所選位址，校園帳號憑證保留在本機';
+
+  @override
+  String get assistantApiKey => 'API 金鑰';
+
+  @override
+  String get assistantProvider => '服務供應商';
+
+  @override
+  String get assistantCustomProvider => '自訂端點';
+
+  @override
+  String get assistantBaseUrl => 'Base URL';
+
+  @override
+  String get assistantInvalidBaseUrl =>
+      '請使用 HTTPS 或本機 HTTP 位址，網址中請勿包含憑證、查詢參數或片段';
+
+  @override
+  String get assistantOptionalKey => '無需驗證的服務可留空';
+
+  @override
+  String get assistantKeepKey => '留空以保留現有金鑰';
+
+  @override
+  String get assistantModel => '模型';
+
+  @override
+  String get assistantConnect => '儲存設定';
 
   @override
   String get appTitle => 'Thulium';
